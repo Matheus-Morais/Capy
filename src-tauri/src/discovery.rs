@@ -149,6 +149,11 @@ fn held_lock(path: &Path) -> Result<bool, ()> {
 }
 
 fn diagnostic(agent: &str, count: usize, problems: usize, present: bool) -> Integration {
+    let discarded = if problems == 1 {
+        "1 registro descartado".into()
+    } else {
+        format!("{problems} registros descartados")
+    };
     let sessions = if count == 1 {
         "1 sessão aberta".into()
     } else {
@@ -160,7 +165,7 @@ fn diagnostic(agent: &str, count: usize, problems: usize, present: bool) -> Inte
             "Fonte local não encontrada.".into()
         } else if problems > 0 {
             format!(
-                "{sessions} · {problems} registros ilegíveis ou incompatíveis. Fonte experimental."
+                "{sessions} · {discarded} (presença não confirmada ou leitura incompatível). Fonte experimental."
             )
         } else {
             format!("{sessions} · descoberta local experimental.")
@@ -208,6 +213,8 @@ fn scan_with(sources: &Sources, birth: impl Fn(u32) -> Option<u64>) -> Report {
                         record.session_id.clone(),
                         session("Claude Code", "claude", &record.session_id, &record.cwd),
                     );
+                } else {
+                    problems += 1;
                 }
             }
         }

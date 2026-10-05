@@ -57,7 +57,14 @@ fn claude_requires_matching_process_identity() {
     });
     assert_eq!(report.sessions.len(), 1);
     assert_eq!(report.sessions[0].id, format!("claude:{A}"));
-    assert!(scan_with(&fixture.sources(), |_| None).sessions.is_empty());
+    assert!(report.integrations[0]
+        .message
+        .contains("1 registro descartado"));
+    let report = scan_with(&fixture.sources(), |_| None);
+    assert!(report.sessions.is_empty());
+    assert!(report.integrations[0]
+        .message
+        .contains("2 registros descartados"));
     assert!(process_birth(std::process::id()).is_some());
     assert_eq!(process_birth(u32::MAX), None);
 }
@@ -119,8 +126,12 @@ fn missing_and_bad_sources_are_reported() {
     );
     let report = scan_with(&fixture.sources(), |_| Some(99));
     assert_eq!(report.sessions.len(), 1);
-    assert!(report.integrations[0].message.contains("1 registros"));
-    assert!(report.integrations[1].message.contains("1 registros"));
+    assert!(report.integrations[0]
+        .message
+        .contains("1 registro descartado"));
+    assert!(report.integrations[1]
+        .message
+        .contains("1 registro descartado"));
     fixture.write("claude/sessions/large.json", &" ".repeat(65_537));
     assert!(
         small_json::<serde_json::Value>(&fixture.0.join("claude/sessions/large.json")).is_err()
@@ -154,7 +165,9 @@ fn held_lock_without_metadata_or_with_unknown_source_is_diagnostic() {
     let owner = fixture.codex(A, "future-source".into());
     let report = scan_with(&fixture.sources(), |_| None);
     assert!(report.sessions.is_empty());
-    assert!(report.integrations[1].message.contains("1 registros"));
+    assert!(report.integrations[1]
+        .message
+        .contains("1 registro descartado"));
     fs::remove_file(
         fixture
             .0
@@ -163,6 +176,8 @@ fn held_lock_without_metadata_or_with_unknown_source_is_diagnostic() {
     .unwrap();
     let report = scan_with(&fixture.sources(), |_| None);
     assert!(report.sessions.is_empty());
-    assert!(report.integrations[1].message.contains("1 registros"));
+    assert!(report.integrations[1]
+        .message
+        .contains("1 registro descartado"));
     drop(owner);
 }
