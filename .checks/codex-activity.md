@@ -23,6 +23,7 @@ Proof: Rust `runtime_status_mapping`.
 
 **C2** — Só IDs previamente descobertos e carregados recebem estado; ID/cwd divergentes não recebem estado.
 Proof: Rust `only_matching_live_threads_are_enriched`.
+Proof: Rust `websocket_probe_is_read_only` (IDs carregados versus ausentes).
 
 **C3** — Uma espera deixa de aparecer após working, idle, ausência ou falha, sem cache.
 Proof: Rust `waiting_is_replaced_on_every_observation`.

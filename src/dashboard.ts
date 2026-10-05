@@ -19,7 +19,7 @@ function render(data: Snapshot) {
   document.querySelector<HTMLElement>('#quotaTitle span')!.textContent = realMode ? 'Não conectadas' : 'Simulação';
   const integrations = document.getElementById('integrations')!;
   integrations.hidden = !realMode;
-  integrations.innerHTML = '<h2>Descoberta de sessões</h2>' + (data.integrations.length ? data.integrations.map(i => `<p><strong>${escape(i.agent)}</strong><br>${escape(i.message)}</p>`).join('') : '<p>Buscando sessões locais…</p>');
+  integrations.innerHTML = '<h2>Integrações locais</h2>' + (data.integrations.length ? data.integrations.map(i => `<p><strong>${escape(i.agent)}</strong><br>${escape(i.message)}</p>`).join('') : '<p>Buscando sessões locais…</p>');
   const footer = document.querySelector<HTMLElement>('.sheet-footer > span');
   if (footer) footer.textContent = realMode ? 'Atualiza a cada 5 s' : '3 agentes no exemplo';
   const restore = document.getElementById('restore') as HTMLButtonElement;

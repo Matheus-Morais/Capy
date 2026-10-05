@@ -1,6 +1,6 @@
 # Capy
 
-Aplicativo desktop para Windows em Rust + Tauri 2, com interface TypeScript, HTML/CSS e mascote SVG. Descobre sessões abertas de Claude Code e Codex; atividade, respostas e cotas reais ainda não estão conectadas.
+Aplicativo desktop para Windows em Rust + Tauri 2, com interface TypeScript, HTML/CSS e mascote SVG. Descobre sessões abertas de Claude Code e Codex e acompanha a atividade do Codex pelo daemon local existente.
 
 ## Aplicativo desktop
 
@@ -18,11 +18,13 @@ A posição é salva ao ocultar, fechar uma janela ou sair normalmente, em `%APP
 
 O desktop inicia em **Sessões reais** e atualiza a descoberta a cada cinco segundos. Claude Code é identificado pelo registro local de sessão e pela identidade de criação do processo; Codex, pelo bloqueio mantido pela conversa e seus metadados. Históricos encerrados e subagentes Codex ficam fora da lista. As fontes são experimentais e podem mudar com atualizações dos agentes. `CLAUDE_CONFIG_DIR` e `CODEX_HOME` são respeitados; os caminhos padrão usam o perfil do Windows.
 
-Presença não confirma atividade: as sessões reais mostram **Estado desconhecido**, sem botões de permissão, resposta ou terminal. Antigravity tem integração pendente, indicada no diagnóstico. Ocultações persistem em `hidden-sessions.json`, junto à posição; restaurar limpa essa preferência. Nenhuma configuração dos agentes é alterada e nenhum conteúdo de conversa ou credencial é copiado.
+O Codex pode mostrar **Trabalhando**, **Precisa de você** ou **Ociosa**. Ociosa significa ausência de turno ativo, não conclusão de tarefa. A leitura usa o daemon já aberto, sem iniciar ou retomar conversas, com prazo de cinco segundos por ciclo. Sessões fora desse daemon ou falhas de conexão mostram **Estado desconhecido**; um estado anterior não é conservado após falha. Pedidos devem ser respondidos no Codex, sem botões de resposta ou terminal no Capy. A consulta solicita somente o resumo (`includeTurns: false`), usa identidade/projeto/estado e descarta os demais campos; nenhum conteúdo de conversa ou credencial é persistido.
+
+Claude Code ainda mostra atividade desconhecida. Antigravity tem integração pendente, indicada no diagnóstico. Ocultações persistem em `hidden-sessions.json`, junto à posição; restaurar limpa essa preferência. Nenhuma configuração dos agentes é alterada.
 
 O painel permite voltar aos cenários **Demo**. Pedidos, respostas e cotas nesses cenários são demonstrações locais; nenhuma permissão executa comandos reais. Cotas não conectadas aparecem sem porcentagens no modo real. O preview de navegador permanece simulado.
 
-Diagnóstico sem abrir janelas: `capy.exe --discover-report "caminho-do-relatorio.json"`. O relatório contém os identificadores e projetos locais descobertos; não o publique como fixture.
+Diagnóstico sem abrir janelas: `capy.exe --discover-report "caminho-do-relatorio.json"` (presença) ou `capy.exe --activity-report "caminho-do-relatorio.json"` (presença e estado atual do Codex). O relatório contém os identificadores e projetos locais descobertos; não o publique como fixture.
 
 ## Protótipo HTML preservado
 

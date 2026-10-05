@@ -1,9 +1,10 @@
-use crate::{discovery, DesktopState};
-use std::time::Duration;
+use crate::{activity, discovery, DesktopState};
+use std::time::{Duration, Instant};
 use tauri::{Emitter, Manager};
 
 pub fn schedule(app: tauri::AppHandle) {
     std::thread::spawn(move || loop {
+        let started = Instant::now();
         let state = app.state::<DesktopState>();
         let real = state
             .demo
@@ -11,7 +12,9 @@ pub fn schedule(app: tauri::AppHandle) {
             .map(|s| s.scenario == "real")
             .unwrap_or(false);
         if real {
-            let mut report = discovery::scan(&discovery::Sources::local());
+            let sources = discovery::Sources::local();
+            let mut report = discovery::scan(&sources);
+            activity::enrich(&sources, &mut report);
             let snapshot = (|| {
                 let mut data = state.demo.lock().ok()?;
                 if data.scenario != "real" {
@@ -31,6 +34,6 @@ pub fn schedule(app: tauri::AppHandle) {
                 }
             }
         }
-        std::thread::sleep(Duration::from_secs(5));
+        std::thread::sleep(Duration::from_secs(5).saturating_sub(started.elapsed()));
     });
 }

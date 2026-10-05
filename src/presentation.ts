@@ -8,15 +8,16 @@ export function sessionRow(s: Session, real: boolean): string {
     ? '<button class="primary" data-action="allow">Permitir uma vez</button><button data-action="deny">Negar</button>'
     : '<button class="primary" data-action="answer" data-answer="Só balão">Só balão</button><button data-action="answer" data-answer="Balão e som">Balão e som</button>'
     : '<button data-action="terminal">Ver terminal simulado</button>';
-  const states: Record<string, string> = { waiting: 'Precisa de você', working: 'Trabalhando', done: 'Concluída' };
-  return `<article class="session ${escape(real ? 'unknown' : s.state)}" data-id="${escape(s.id)}"><div class="session-top"><span class="agent-mark ${escape(s.kind)}" aria-hidden="true">${escape(s.symbol)}</span><h2>${escape(s.project)}</h2><button class="icon-button" data-action="hide" aria-label="Ocultar sessão ${escape(s.project)}">${eye}</button></div><p class="session-meta">${escape(s.agent)} · ${escape(s.origin)}</p>${real ? `<p class="session-id">Sessão ${escape(s.id.split(':').slice(1).join(':') || s.id)}</p>` : ''}<p class="session-message">${escape(s.message)}</p>${!real && s.state === 'waiting' && s.command ? `<code class="request-command">${escape(s.command)}</code>` : ''}${buttons ? `<div class="actions">${buttons}</div>` : ''}<p class="state-line"><span aria-hidden="true"></span>${real ? 'Estado desconhecido' : states[s.state] ?? 'Estado desconhecido'}</p></article>`;
+  const states: Record<string, string> = { waiting: 'Precisa de você', working: 'Trabalhando', idle: 'Ociosa', done: 'Concluída' };
+  const state = real && !['waiting', 'working', 'idle', 'unknown'].includes(s.state) ? 'unknown' : s.state;
+  return `<article class="session ${escape(state)}" data-id="${escape(s.id)}"><div class="session-top"><span class="agent-mark ${escape(s.kind)}" aria-hidden="true">${escape(s.symbol)}</span><h2>${escape(s.project)}</h2><button class="icon-button" data-action="hide" aria-label="Ocultar sessão ${escape(s.project)}">${eye}</button></div><p class="session-meta">${escape(s.agent)} · ${escape(s.origin)}</p>${real ? `<p class="session-id">Sessão ${escape(s.id.split(':').slice(1).join(':') || s.id)}</p>` : ''}<p class="session-message">${escape(s.message)}</p>${!real && s.state === 'waiting' && s.command ? `<code class="request-command">${escape(s.command)}</code>` : ''}${buttons ? `<div class="actions">${buttons}</div>` : ''}<p class="state-line"><span aria-hidden="true"></span>${states[state] ?? 'Estado desconhecido'}</p></article>`;
 }
 
 export function petState(data: Snapshot): string {
   const followed = data.sessions.filter(s => !s.hidden);
   if (followed.some(s => s.state === 'waiting')) return 'waiting';
   if (followed.some(s => s.state === 'working')) return 'working';
-  if (followed.some(s => s.state === 'unknown')) return 'idle';
+  if (followed.some(s => s.state === 'unknown' || s.state === 'idle')) return 'idle';
   return followed.length ? 'done' : 'sleeping';
 }
 

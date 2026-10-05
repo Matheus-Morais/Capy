@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod activity;
 mod demo;
 mod discovery;
 mod geometry;
@@ -287,10 +288,14 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     if let Some(path) = args
         .iter()
-        .position(|a| a == "--discover-report")
+        .position(|a| a == "--discover-report" || a == "--activity-report")
         .and_then(|i| args.get(i + 1))
     {
-        let report = discovery::scan(&discovery::Sources::local());
+        let sources = discovery::Sources::local();
+        let mut report = discovery::scan(&sources);
+        if args.iter().any(|a| a == "--activity-report") {
+            activity::enrich(&sources, &mut report);
+        }
         let result = serde_json::to_vec_pretty(&report)
             .map_err(|e| e.to_string())
             .and_then(|bytes| std::fs::write(path, bytes).map_err(|e| e.to_string()));

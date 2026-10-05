@@ -134,7 +134,7 @@ pub fn schedule(app: tauri::AppHandle, report_path: PathBuf) {
                 "".into(),
                 "real".into(),
             )?;
-            for _ in 0..70 {
+            for _ in 0..120 {
                 if app
                     .state::<crate::DesktopState>()
                     .demo
@@ -152,11 +152,12 @@ pub fn schedule(app: tauri::AppHandle, report_path: PathBuf) {
                 snapshot.scenario == "real" && snapshot.integrations.len() == 3,
             ));
             checks.push((
-                "real_sessions_unknown",
-                snapshot
-                    .sessions
-                    .iter()
-                    .all(|s| s.state == "unknown" && s.request.is_none()),
+                "real_activity_states_valid",
+                snapshot.sessions.iter().all(|s| {
+                    ["unknown", "working", "waiting", "idle"].contains(&s.state.as_str())
+                        && s.request.is_none()
+                        && s.command.is_none()
+                }),
             ));
             checks.push((
                 "real_responses_rejected",

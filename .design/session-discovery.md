@@ -55,7 +55,7 @@ IPC `demo_snapshot` mantém o contrato existente e acrescenta diagnósticos de d
 
 ### Atividade
 
-Spike: demonstrar eventos atuais de um agente externo, incluindo pedido expirado, sem deduzir estado do histórico. A leitura de hooks ou conexão ao app-server existente será escolhida após essa prova.
+Codex: conexão de leitura ao daemon existente demonstrada; `.design/codex-activity.md` define o enriquecimento por estado runtime e a remoção de esperas antigas. A descoberta isolada permanece `unknown`. Hooks do Claude ainda exigem prova própria.
 
 ### Antigravity
 

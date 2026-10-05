@@ -7,3 +7,4 @@
 /.impeccable/*.pid
 /scratch/
 /.checks/discovery-local.json
+/.checks/activity-local.json

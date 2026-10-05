@@ -28,7 +28,7 @@ html { scrollbar-width:thin; scrollbar-color:#c1b9a7 #faf7ed; }
 .session-top h2 { overflow-wrap:anywhere; min-width:0; }
 .session-meta,.session-id { overflow-wrap:anywhere; }
 .session-id { font-size:12px; color:var(--muted); margin:0 0 10px; }
-.unknown .state-line { color:var(--muted); }
+.unknown .state-line, .idle .state-line { color:var(--muted); }
 .integrations { padding:16px 20px; border-top:1px solid var(--rule); }
 .integrations h2 { margin:0 0 12px; font-size:13px; font-weight:650; }
 .integrations p,.quota-unavailable { font-size:12px; line-height:1.6; color:var(--muted); margin:0 0 12px; }
