@@ -127,6 +127,48 @@ pub fn schedule(app: tauri::AppHandle, report_path: PathBuf) {
                 "unknown_window_rejected",
                 crate::hide_window(app.clone(), "unknown".into()).is_err(),
             ));
+            crate::demo_action(
+                app.clone(),
+                app.state::<crate::DesktopState>(),
+                "scenario".into(),
+                "".into(),
+                "real".into(),
+            )?;
+            for _ in 0..70 {
+                if app
+                    .state::<crate::DesktopState>()
+                    .demo
+                    .lock()
+                    .map(|s| s.integrations.len() == 3)
+                    .unwrap_or(false)
+                {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+            let snapshot = crate::demo_snapshot(app.state::<crate::DesktopState>())?;
+            checks.push((
+                "real_discovery_poll_ready",
+                snapshot.scenario == "real" && snapshot.integrations.len() == 3,
+            ));
+            checks.push((
+                "real_sessions_unknown",
+                snapshot
+                    .sessions
+                    .iter()
+                    .all(|s| s.state == "unknown" && s.request.is_none()),
+            ));
+            checks.push((
+                "real_responses_rejected",
+                crate::demo_action(
+                    app.clone(),
+                    app.state::<crate::DesktopState>(),
+                    "allow".into(),
+                    "any".into(),
+                    "".into(),
+                )
+                .is_err(),
+            ));
             Ok(())
         })();
         let passed = result.is_ok() && checks.iter().all(|(_, passed)| *passed);
@@ -141,6 +183,7 @@ pub fn schedule(app: tauri::AppHandle, report_path: PathBuf) {
             .lock()
             .map(|r| r.clone())
             .unwrap_or_default();
+        let passed = passed && ui_errors.is_empty();
         let report = serde_json::json!({ "passed": passed, "checks": checks.iter().map(|(name, passed)| serde_json::json!({"name":name, "passed":passed})).collect::<Vec<_>>(), "error":result.err(), "ready":ready, "uiErrors":ui_errors });
         if let Some(parent) = report_path.parent() {
             let _ = std::fs::create_dir_all(parent);

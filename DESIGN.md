@@ -198,5 +198,5 @@ Controls use a 7px radius; status labels use 8px, command snippets 5px, and agen
 
 ### Don't:
 - **Don't** nest cards inside the session list; use rows and soft dividers.
-- **Don't** imply live agent discovery, responses, or quota access from the demonstration.
+- **Don't** imply live responses or quota access from the demonstration. Native real mode identifies open Claude Code/Codex sessions with unknown activity; show source diagnostics and no simulated action or quota percentage on real rows.
 - **Don't** replace or modify the approved front-facing mascot artwork.

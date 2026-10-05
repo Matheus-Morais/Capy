@@ -49,7 +49,7 @@ Reunir o acompanhamento de sessões de agentes, a visibilidade de cotas por cont
 - `.design/capy.md` registra as decisões e os pontos em aberto da descoberta.
 - `prototypes/capivara.html` é uma cópia idêntica do protótipo aprovado em 2026-10-05 no Claude Code.
 - A conversa original identificada é `a1957091-4b33-4223-9e07-a7eb68ad177d`.
-- Ainda não existe integração comprovada deste projeto com os agentes reais.
+- Em 2026-10-05 a leitura local identificou sessões abertas reais de Claude Code (Prisma) e Codex (Capy), com processo/bloqueio validado. Atividade, pedidos, respostas, terminal, cotas e Antigravity seguem sem integração comprovada. `.design/session-discovery.md` delimita essa primeira etapa.
 
 ## Product Principles
 

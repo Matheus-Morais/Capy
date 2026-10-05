@@ -1,6 +1,6 @@
 # Capy
 
-Primeira base desktop para Windows em Rust + Tauri 2, com interface TypeScript, HTML/CSS e mascote SVG. Sessões e cotas continuam simuladas.
+Aplicativo desktop para Windows em Rust + Tauri 2, com interface TypeScript, HTML/CSS e mascote SVG. Descobre sessões abertas de Claude Code e Codex; atividade, respostas e cotas reais ainda não estão conectadas.
 
 ## Aplicativo desktop
 
@@ -14,7 +14,15 @@ A capivara aparece sozinha, de frente, sobre a área de trabalho. Clique para ab
 
 Na bandeja: clique esquerdo abre o resumo; clique direito oferece Mostrar Capy, Ocultar Capy, Resumo, Painel completo e Sair. Fechar uma janela a oculta. Use Sair para encerrar o aplicativo. Uma segunda abertura reutiliza a mesma instância.
 
-A posição é salva ao ocultar, fechar uma janela ou sair normalmente, em `%APPDATA%/dev.capy.desktop/position.json`; a restauração verifica os monitores disponíveis. Pedidos, respostas e cotas são demonstrações locais; nenhuma permissão executa comandos reais.
+A posição é salva ao ocultar, fechar uma janela ou sair normalmente, em `%APPDATA%/dev.capy.desktop/position.json`; a restauração verifica os monitores disponíveis.
+
+O desktop inicia em **Sessões reais** e atualiza a descoberta a cada cinco segundos. Claude Code é identificado pelo registro local de sessão e pela identidade de criação do processo; Codex, pelo bloqueio mantido pela conversa e seus metadados. Históricos encerrados e subagentes Codex ficam fora da lista. As fontes são experimentais e podem mudar com atualizações dos agentes. `CLAUDE_CONFIG_DIR` e `CODEX_HOME` são respeitados; os caminhos padrão usam o perfil do Windows.
+
+Presença não confirma atividade: as sessões reais mostram **Estado desconhecido**, sem botões de permissão, resposta ou terminal. Antigravity tem integração pendente, indicada no diagnóstico. Ocultações persistem em `hidden-sessions.json`, junto à posição; restaurar limpa essa preferência. Nenhuma configuração dos agentes é alterada e nenhum conteúdo de conversa ou credencial é copiado.
+
+O painel permite voltar aos cenários **Demo**. Pedidos, respostas e cotas nesses cenários são demonstrações locais; nenhuma permissão executa comandos reais. Cotas não conectadas aparecem sem porcentagens no modo real. O preview de navegador permanece simulado.
+
+Diagnóstico sem abrir janelas: `capy.exe --discover-report "caminho-do-relatorio.json"`. O relatório contém os identificadores e projetos locais descobertos; não o publique como fixture.
 
 ## Protótipo HTML preservado
 

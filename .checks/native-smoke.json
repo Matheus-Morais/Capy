@@ -67,14 +67,26 @@
     {
       "name": "unknown_window_rejected",
       "passed": true
+    },
+    {
+      "name": "real_discovery_poll_ready",
+      "passed": true
+    },
+    {
+      "name": "real_sessions_unknown",
+      "passed": true
+    },
+    {
+      "name": "real_responses_rejected",
+      "passed": true
     }
   ],
   "error": null,
   "passed": true,
   "ready": [
-    "panel",
+    "summary",
     "pet",
-    "summary"
+    "panel"
   ],
   "uiErrors": []
 }

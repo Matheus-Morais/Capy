@@ -3,9 +3,10 @@ import { listen } from '@tauri-apps/api/event';
 import fixture from '../assets/demo.json';
 
 export interface Session { id: string; project: string; agent: string; symbol: string; kind: string; origin: string; state: string; request: string | null; message: string; command: string | null; hidden: boolean }
-export interface Snapshot { sessions: Session[]; scenario: string; reduceMotion: boolean }
+export interface Integration { agent: string; message: string }
+export interface Snapshot { sessions: Session[]; scenario: string; reduceMotion: boolean; integrations: Integration[] }
 export const native = isTauri();
-let browserSnapshot: Snapshot = { sessions: structuredClone(fixture), scenario: 'waiting', reduceMotion: false };
+let browserSnapshot: Snapshot = { sessions: structuredClone(fixture), scenario: 'waiting', reduceMotion: false, integrations: [] };
 const listeners: Array<(value: Snapshot) => void> = [];
 
 export async function snapshot(): Promise<Snapshot> {
@@ -21,6 +22,7 @@ export async function subscribeVisibility(callback: (open: boolean) => void): Pr
 export async function action(action: string, id = '', answer = ''): Promise<void> {
   if (native) { await invoke('demo_action', { action, id, answer }); return; }
   if (action === 'scenario') {
+    if (answer === 'real') throw new Error('A descoberta real está disponível no aplicativo desktop.');
     browserSnapshot.scenario = answer;
     browserSnapshot.sessions = answer === 'sleeping' ? [] : structuredClone(fixture);
     if (answer !== 'waiting') browserSnapshot.sessions.forEach(s => { s.state = answer; s.message = answer === 'working' ? 'O agente está executando sua tarefa.' : 'A tarefa foi concluída. Confira o resultado no terminal.'; });

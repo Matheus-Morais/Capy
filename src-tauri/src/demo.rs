@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Session {
     pub id: String,
     pub project: String,
@@ -20,6 +20,7 @@ pub struct Snapshot {
     pub sessions: Vec<Session>,
     pub scenario: String,
     pub reduce_motion: bool,
+    pub integrations: Vec<crate::discovery::Integration>,
 }
 impl Default for Snapshot {
     fn default() -> Self {
@@ -28,23 +29,36 @@ impl Default for Snapshot {
                 .expect("bundled demo fixture is valid"),
             scenario: "waiting".into(),
             reduce_motion: false,
+            integrations: vec![],
         }
     }
 }
 impl Snapshot {
+    pub fn real() -> Self {
+        Self {
+            sessions: vec![],
+            scenario: "real".into(),
+            reduce_motion: false,
+            integrations: vec![],
+        }
+    }
     pub fn apply(&mut self, action: &str, id: &str, answer: &str) -> Result<(), String> {
+        if self.scenario == "real" && ["allow", "deny", "answer"].contains(&action) {
+            return Err("Responder a sessões reais ainda não está disponível".into());
+        }
         match action {
             "scenario" => {
-                if !["waiting", "working", "done", "sleeping"].contains(&answer) {
+                if !["real", "waiting", "working", "done", "sleeping"].contains(&answer) {
                     return Err("Cenário desconhecido".into());
                 }
                 self.scenario = answer.into();
-                self.sessions = if answer == "sleeping" {
+                self.integrations.clear();
+                self.sessions = if answer == "sleeping" || answer == "real" {
                     vec![]
                 } else {
                     Self::default().sessions
                 };
-                if answer != "waiting" {
+                if answer != "waiting" && answer != "real" {
                     for session in &mut self.sessions {
                         session.state = answer.into();
                         session.message = if answer == "working" {
@@ -103,6 +117,18 @@ impl Snapshot {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn real_mode_rejects_simulated_responses() {
+        let mut data = Snapshot::real();
+        for action in ["allow", "deny", "answer"] {
+            assert!(data.apply(action, "any", "").is_err());
+        }
+        data.apply("scenario", "", "waiting").unwrap();
+        assert_eq!(data.sessions.len(), 3);
+        data.apply("scenario", "", "real").unwrap();
+        assert!(data.sessions.is_empty());
+        assert_eq!(data.scenario, "real");
+    }
     #[test]
     fn permission_and_question_continue_only_their_session() {
         let mut data = Snapshot::default();

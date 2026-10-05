@@ -53,6 +53,8 @@ Capy acompanha o trabalho de agentes no Windows com uma capivara animada e uma v
 | [Cotas](#cotas) | Recursos disponíveis por provedor e conta | open |
 | [Mascote](#mascote) | Capivara com estados compreensíveis e presença discreta | design |
 
+A base desktop foi concluída e o usuário validou o arraste em 2026-10-05. A primeira etapa de descoberta real está descrita em [session-discovery.md](session-discovery.md): presença local de Claude Code/Codex, estado desconhecido e ocultação persistente. Os estados e ações desta descoberta permanecem abertos conforme as linhas abaixo.
+
 Ordem proposta da descoberta: Atenção → Sessões → Cotas → Mascote integrado. A exploração visual do mascote já existe e pode continuar em paralelo.
 
 ### Atenção

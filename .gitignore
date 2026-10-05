@@ -6,3 +6,4 @@
 /.impeccable/*.log
 /.impeccable/*.pid
 /scratch/
+/.checks/discovery-local.json

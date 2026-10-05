@@ -4,6 +4,7 @@ import '../prototypes/pet.css';
 import '../prototypes/front-pet.css';
 import './style.css';
 import { desktopCommand, native, showError, snapshot, subscribe, subscribeVisibility, type Snapshot } from './bridge';
+import { petState } from './presentation';
 
 document.getElementById('petArtwork')!.innerHTML = artwork;
 const button = document.getElementById('petToggle') as HTMLButtonElement;
@@ -13,11 +14,11 @@ let lastState = '';
 function render(data: Snapshot) {
   const followed = data.sessions.filter(s => !s.hidden);
   const waiting = followed.filter(s => s.state === 'waiting').length;
-  const state = waiting ? 'waiting' : followed.some(s => s.state === 'working') ? 'working' : followed.length ? 'done' : 'sleeping';
+  const state = petState(data);
   if (state !== lastState) { pet.setAttribute('class', `s-${state} p-${state === 'working' ? 'sit' : state === 'sleeping' ? 'lie' : 'stand'}`); lastState = state; }
   badge.hidden = !waiting;
   badge.textContent = String(waiting);
-  document.getElementById('petStatus')!.textContent = waiting ? `${waiting} precisam de você` : state === 'working' ? 'Agentes trabalhando' : state === 'done' ? 'Trabalho concluído' : 'Capy descansando';
+  document.getElementById('petStatus')!.textContent = waiting ? `${waiting} precisam de você` : state === 'working' ? 'Agentes trabalhando' : state === 'idle' ? 'Sessões abertas' : state === 'done' ? 'Trabalho concluído' : 'Capy descansando';
   document.body.classList.toggle('reduce-motion', data.reduceMotion);
 }
 

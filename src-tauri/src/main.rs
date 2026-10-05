@@ -1,7 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod demo;
+mod discovery;
 mod geometry;
+mod monitor;
 mod position;
 mod smoke;
 
@@ -17,6 +19,7 @@ use tauri::{Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewWind
 
 struct DesktopState {
     demo: Mutex<demo::Snapshot>,
+    preferences: Mutex<discovery::Preferences>,
     position_path: OnceLock<PathBuf>,
     ready: Mutex<HashSet<String>>,
     ui_errors: Mutex<Vec<String>>,
@@ -237,6 +240,23 @@ fn demo_action(
 ) -> Result<(), String> {
     let snapshot = {
         let mut data = state.demo.lock().map_err(|_| "Estado indisponível")?;
+        if data.scenario == "real" && ["hide", "restore"].contains(&action.as_str()) {
+            let mut preferences = state
+                .preferences
+                .lock()
+                .map_err(|_| "Preferências indisponíveis")?;
+            let mut updated = preferences.clone();
+            if action == "hide" {
+                if !data.sessions.iter().any(|s| s.id == id) {
+                    return Err("Sessão não encontrada".into());
+                }
+                updated.hidden.insert(id.clone());
+            } else {
+                updated.hidden.clear();
+            }
+            updated.save()?;
+            *preferences = updated;
+        }
         data.apply(&action, &id, &answer)?;
         data.clone()
     };
@@ -265,6 +285,21 @@ fn tray_action(app: &tauri::AppHandle, id: &str) -> Result<(), String> {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if let Some(path) = args
+        .iter()
+        .position(|a| a == "--discover-report")
+        .and_then(|i| args.get(i + 1))
+    {
+        let report = discovery::scan(&discovery::Sources::local());
+        let result = serde_json::to_vec_pretty(&report)
+            .map_err(|e| e.to_string())
+            .and_then(|bytes| std::fs::write(path, bytes).map_err(|e| e.to_string()));
+        if let Err(error) = result {
+            eprintln!("Discovery report: {error}");
+            std::process::exit(1);
+        }
+        return;
+    }
     let smoke_path = args
         .iter()
         .position(|a| a == "--self-test")
@@ -273,7 +308,12 @@ fn main() {
     let test_mode = smoke_path.is_some();
     let builder = tauri::Builder::default()
         .manage(DesktopState {
-            demo: Mutex::new(demo::Snapshot::default()),
+            demo: Mutex::new(if test_mode {
+                demo::Snapshot::default()
+            } else {
+                demo::Snapshot::real()
+            }),
+            preferences: Mutex::new(discovery::Preferences::default()),
             position_path: OnceLock::new(),
             ready: Mutex::new(HashSet::new()),
             ui_errors: Mutex::new(Vec::new()),
@@ -303,8 +343,14 @@ fn main() {
             };
             app.state::<DesktopState>()
                 .position_path
-                .set(position_path)
+                .set(position_path.clone())
                 .map_err(|_| "Caminho de posição já inicializado")?;
+            *app.state::<DesktopState>()
+                .preferences
+                .lock()
+                .map_err(|_| "Preferências indisponíveis")? =
+                discovery::Preferences::load(position_path.with_file_name("hidden-sessions.json"));
+            monitor::schedule(app.handle().clone());
             let menu = Menu::with_items(
                 app,
                 &[
