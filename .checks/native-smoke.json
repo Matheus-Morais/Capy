@@ -73,7 +73,7 @@
       "passed": true
     },
     {
-      "name": "real_sessions_unknown",
+      "name": "real_activity_states_valid",
       "passed": true
     },
     {
@@ -85,8 +85,8 @@
   "passed": true,
   "ready": [
     "panel",
-    "summary",
-    "pet"
+    "pet",
+    "summary"
   ],
   "uiErrors": []
 }
