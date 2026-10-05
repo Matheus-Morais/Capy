@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Capy — experimente o resumo</title>
+  <link rel="stylesheet" href="pet.css">
+  <link rel="stylesheet" href="preview.css">
+  <script src="preview.js" defer></script>
+</head>
+<body>
+  <header class="demo-bar">
+    <div><strong>Capy</strong><span>Protótipo interativo</span></div>
+    <p>Sessões, cotas e respostas simuladas.</p>
+    <button id="reset" class="quiet dark">Recomeçar</button>
+  </header>
+
+  <main class="workspace" id="workspace">
+    <section class="work-scene" aria-label="Exemplo de área de trabalho">
+      <div class="scene-title"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Seu trabalho continua por aqui</span></div>
+      <div class="scene-body">
+        <nav class="project-list" aria-label="Projetos da demonstração">
+          <span>Projetos</span><p>Token-Watch</p><p>Terminal-Hub</p><p>Capy</p>
+        </nav>
+        <div class="editor">
+          <span class="file-tab">capy · visão do produto</span>
+          <h1>Uma companhia.<br>Várias IAs trabalhando.</h1>
+          <p>Enquanto você segue com seu trabalho,<br>o Capy acompanha as sessões.</p>
+          <div class="scene-terminal"><span>Claude Code · Token-Watch</span><code>Aguardando sua permissão…</code><span>Codex · Terminal-Hub</span><code>Uma pergunta precisa de resposta.</code><span>Antigravity · Capy</span><code>Desenhando o resumo compacto…</code></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="fullPanel" class="full-panel" aria-label="Painel completo do Capy" hidden>
+      <div class="full-title"><div><h1>Suas sessões</h1><p>Projetos, agentes e o que precisa de você.</p></div><button id="closeFull" class="quiet">Voltar à área de trabalho</button></div>
+      <div id="fullSessions"></div>
+      <div id="hiddenSessions" class="hidden-list"></div>
+    </section>
+
+    <section class="demo-controls" aria-label="Experimentar cenários">
+      <p>Experimente os estados</p>
+      <div class="scenario-buttons"><button data-scenario="waiting" aria-pressed="true">Precisam de você</button><button data-scenario="working" aria-pressed="false">Trabalhando</button><button data-scenario="done" aria-pressed="false">Concluídas</button><button data-scenario="sleeping" aria-pressed="false">Sem sessões</button></div>
+      <label><input id="reduceMotion" type="checkbox"> Reduzir movimento</label>
+      <p class="guide">Arraste a capivara. Clique nela para abrir ou fechar o resumo.<br>Com foco nela, use as setas para mudar sua posição.</p>
+    </section>
+  </main>
+
+  <div id="companion" class="companion">
+    <section id="summary" class="summary" aria-labelledby="summaryTitle">
+      <header class="summary-header"><div><h2 id="summaryTitle">Capy</h2><p id="summarySubtitle"></p></div><button id="closeSummary" class="icon-button" aria-label="Fechar resumo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></header>
+      <div id="sessions" class="sessions"></div>
+      <button id="restoreHidden" class="restore quiet" hidden></button>
+      <section class="quotas" aria-labelledby="quotaTitle"><h3 id="quotaTitle">Cotas disponíveis <span>Simulação</span></h3><div id="quotaRows"></div></section>
+      <footer class="summary-footer"><span>Descoberta automática</span><button id="openFull">Painel completo <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button></footer>
+    </section>
+    <div class="pet-row"><span id="petLabel" class="pet-label"></span><button id="petToggle" class="pet-toggle" aria-label="Capy: abrir ou fechar resumo" aria-controls="summary" aria-expanded="true"><svg id="pet" class="s-idle p-sit" viewBox="0 -20 270 230" role="img" aria-label="Capivara animada">
+      <defs>
+        <clipPath id="groundClip"><rect x="-6" y="176" width="282" height="30"/></clipPath>
+        <clipPath id="bodyClip"><path class="sil" d="M118,28 C146,26 172,34 184,46 C198,50 208,58 208,72 C208,86 198,94 186,96 C172,100 170,140 168,172 C140,184 88,186 62,176 C30,150 44,70 118,28 Z"/></clipPath>
+      </defs>
+
+      <line x1="-6" y1="183" x2="276" y2="183" stroke="#e3d6b4" stroke-width="2"/>
+      <g clip-path="url(#groundClip)">
+        <g id="ground">
+          <g id="tufts">
+            <path d="M20 190 l3 -9 l3 9 l3 -7 l3 7z M92 192 l3 -8 l3 8 l3 -6 l3 6z M150 190 l3 -9 l3 9 l3 -7 l3 7z M232 192 l3 -8 l3 8 l3 -6 l3 6z" fill="var(--grass)" opacity=".7"/>
+          </g>
+          <use href="#tufts" x="270"/>
+          <use href="#tufts" x="540"/>
+        </g>
+      </g>
+
+      <ellipse id="shadow" class="pose" cx="125" cy="184" rx="95" ry="6" fill="#000" opacity=".13"/>
+
+      <!-- notebook à frente (aparece quando trabalhando) -->
+      <g class="laptop" transform="translate(-24 0)">
+        <polygon points="196,176 252,176 262,170 206,170" fill="#7a8794" stroke="var(--line)" stroke-width="1.6" stroke-linejoin="round"/>
+        <polygon points="206,170 262,170 262,122 206,134" fill="#2b3340" stroke="var(--line)" stroke-width="1.6" stroke-linejoin="round"/>
+        <polygon points="210,167 258,167 258,127 210,138" fill="#0f1a2b"/>
+        <g class="code-lines">
+          <rect x="215" y="141" width="24" height="3" rx="1.5" fill="#6ee7a8"/>
+          <rect x="219" y="148" width="30" height="3" rx="1.5" fill="#7cc6ff"/>
+          <rect x="215" y="155" width="20" height="3" rx="1.5" fill="#ffd966"/>
+          <rect x="219" y="162" width="28" height="3" rx="1.5" fill="#ff9ec0"/>
+        </g>
+      </g>
+
+      <g id="rig">
+
+        <!-- pernas (atrás do corpo) -->
+        <g class="leg pose lg-bf"><g class="anim a">
+          <rect x="55" y="150" width="14" height="32" rx="7" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2"/></g></g>
+        <g class="leg pose lg-ff"><g class="anim b ffA">
+          <rect x="173" y="150" width="14" height="32" rx="7" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2"/></g></g>
+        <g class="leg pose lg-bn"><g class="anim b">
+          <rect x="81" y="150" width="14" height="32" rx="7" fill="var(--fur)" stroke="var(--line)" stroke-width="2"/></g></g>
+
+        <g id="bodyPose" class="pose">
+          <path class="sil" fill="var(--fur)" d="M118,28 C146,26 172,34 184,46 C198,50 208,58 208,72 C208,86 198,94 186,96 C172,100 170,140 168,172 C140,184 88,186 62,176 C30,150 44,70 118,28 Z"/>
+
+          <!-- tufos -->
+          <g fill="none" stroke="var(--line)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".7">
+            <path d="M84 138 l4 6 l3 -7 l4 7 l3 -6"/>
+            <path d="M112 158 l3 5 l3 -6 l3 6"/>
+          </g>
+
+          <!-- cabeça mais escura + focinho -->
+          <g clip-path="url(#bodyClip)">
+            <ellipse cx="112" cy="184" rx="86" ry="20" fill="var(--belly)" opacity=".7"/>
+            <g class="facepose pose">
+              <ellipse cx="184" cy="64" rx="36" ry="30" fill="var(--fur-dark)"/>
+              <ellipse cx="203" cy="76" rx="24" ry="28" fill="var(--muzzle)"/>
+            </g>
+          </g>
+
+          <path class="sil" fill="none" stroke="var(--line)" stroke-width="2.2" stroke-linejoin="round" d="M118,28 C146,26 172,34 184,46 C198,50 208,58 208,72 C208,86 198,94 186,96 C172,100 170,140 168,172 C140,184 88,186 62,176 C30,150 44,70 118,28 Z"/>
+        </g>
+
+        <!-- perna da frente mais próxima: na frente do corpo, sem borda no topo para nascer do peito -->
+        <g class="leg pose lg-fn"><g class="anim a fnA">
+          <path d="M148 168 L152 180 L168 180 L166 168 Z" fill="var(--fur)"/>
+          <path d="M148 168 L152 180 M166 168 L168 180" fill="none" stroke="var(--line)" stroke-width="2" stroke-linecap="round"/>
+        </g></g>
+
+        <!-- pés (na frente do corpo) -->
+        <g class="foot pose ft-bf"><g class="anim a">
+          <ellipse cx="65" cy="180" rx="10" ry="4.2" fill="var(--foot)" stroke="var(--line)" stroke-width="1.8"/></g></g>
+        <g class="foot pose ft-ff"><g class="anim b ffA">
+          <ellipse cx="183" cy="180" rx="10" ry="4.2" fill="var(--foot)" stroke="var(--line)" stroke-width="1.8"/></g></g>
+        <g class="foot pose ft-bn"><g class="anim b">
+          <ellipse cx="91" cy="180" rx="10" ry="4.2" fill="var(--foot)" stroke="var(--line)" stroke-width="1.8"/></g></g>
+        <g class="foot pose ft-fn"><g class="anim a fnA">
+          <ellipse cx="161" cy="180" rx="10" ry="4.2" fill="var(--foot)" stroke="var(--line)" stroke-width="1.8"/></g></g>
+
+        <!-- rosto -->
+        <g class="facepose pose"><g id="faceAnim">
+          <g id="ear">
+            <ellipse cx="132" cy="38" rx="8.5" ry="10" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2"/>
+            <ellipse cx="132.5" cy="40" rx="4" ry="5" fill="#e0a48a"/>
+          </g>
+
+          <ellipse cx="180" cy="68" rx="6.5" ry="4" fill="var(--blush)" opacity=".85"/>
+
+          <ellipse cx="200" cy="62" rx="4.2" ry="3.1" fill="var(--ink)"/>
+          <path d="M194 84 Q199 90 205 83" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
+
+          <g class="eye-open">
+            <circle cx="168" cy="54" r="3.8" fill="var(--ink)"/>
+            <circle cx="169.4" cy="52.6" r="1.3" fill="#fff"/>
+          </g>
+          <g class="eye-wide">
+            <circle cx="168" cy="54" r="5.6" fill="var(--ink)"/>
+            <circle cx="170" cy="51.8" r="1.9" fill="#fff"/>
+          </g>
+          <g class="eye-half">
+            <circle cx="168" cy="55" r="4" fill="var(--ink)"/>
+            <path d="M163 55 a5 5 0 0 1 10 0z" fill="var(--fur-dark)"/>
+            <path d="M162 55 H174" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
+          </g>
+          <path class="eye-happy" d="M162 57 Q168 48 174 57" fill="none" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round"/>
+          <path class="eye-closed" d="M162 53 Q168 59 174 53" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/>
+          <path class="brow-alert" d="M161 44 L175 47" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round"/>
+
+          <g class="sweat"><path d="M148 46 q5 8 0 12 q-5 -4 0 -12z" fill="#7cc6ff" stroke="var(--line)" stroke-width="1.2"/></g>
+        </g></g>
+
+        <!-- laranja -->
+        <g id="orange" class="pose"><g class="orange">
+          <circle cx="150" cy="20" r="9.5" fill="#ffa21f" stroke="var(--line)" stroke-width="2"/>
+          <path d="M150 11 q4 -7 10 -5 q-3 6 -10 5z" fill="#6aa84f" stroke="var(--line)" stroke-width="1.4" stroke-linejoin="round"/>
+          <circle cx="146.5" cy="17" r="2.2" fill="#fff" opacity=".45"/>
+        </g></g>
+
+      </g>
+
+      <!-- balão -->
+      <g class="bubble">
+        <rect x="118" y="-18" width="124" height="56" rx="14" fill="#fff" stroke="var(--line)" stroke-width="2"/>
+        <path d="M168 38 L178 50 L190 38z" fill="#fff" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/>
+        <rect x="170" y="36" width="18" height="4" fill="#fff"/>
+        <text x="180" y="-1" text-anchor="middle" font-size="11" font-family="Segoe UI, sans-serif" fill="#2a1c10" font-weight="600">Rodar este comando?</text>
+        <rect x="128" y="8" width="48" height="22" rx="11" fill="#22a06b"/>
+        <text x="152" y="23" text-anchor="middle" font-size="12" font-family="Segoe UI, sans-serif" fill="#fff" font-weight="600">Allow</text>
+        <rect x="184" y="8" width="48" height="22" rx="11" fill="#d1453b"/>
+        <text x="208" y="23" text-anchor="middle" font-size="12" font-family="Segoe UI, sans-serif" fill="#fff" font-weight="600">Deny</text>
+      </g>
+
+      <g class="sparkles">
+        <g><path d="M60 40 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z" fill="#ffc933"/></g>
+        <g><path d="M120 -6 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#ff8fb5"/></g>
+        <g><path d="M236 40 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#6cc9f0"/></g>
+      </g>
+
+      <g class="zzz" fill="#7d8fd6" font-family="Segoe UI, sans-serif" font-weight="700">
+        <text x="216" y="102" font-size="18">z</text>
+        <text x="228" y="88" font-size="22">z</text>
+        <text x="242" y="72" font-size="26">Z</text>
+      </g>
+    </svg><span id="petBadge" class="pet-badge"></span></button></div>
+  </div>
+  <div id="notice" class="notice" role="status" aria-live="polite"></div>
+</body>
+</html>

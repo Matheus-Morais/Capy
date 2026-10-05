@@ -1,0 +1,454 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-05T18:20:00-03:00",
+  "title": "Design System: Capy",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Oat Paper",
+        "canonical": "#faf7ed",
+        "tonalRamp": [
+          "#24221b",
+          "#403d34",
+          "#5e5a50",
+          "#7c786d",
+          "#9c978c",
+          "#bcb7ab",
+          "#ded9cc",
+          "#fffdf4"
+        ]
+      },
+      "paper-soft": {
+        "role": "neutral",
+        "displayName": "Soft Oat",
+        "canonical": "#f0ecdf",
+        "tonalRamp": [
+          "#211f19",
+          "#3c3931",
+          "#59564d",
+          "#777368",
+          "#969184",
+          "#b5b0a2",
+          "#d6d0c1",
+          "#f6f2e5"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Dark Brown Ink",
+        "canonical": "#302b21",
+        "tonalRamp": [
+          "#100f0c",
+          "#1d1a15",
+          "#2b2720",
+          "#39342b",
+          "#484238",
+          "#585145",
+          "#696253",
+          "#7b7363"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Bark",
+        "canonical": "#716957",
+        "tonalRamp": [
+          "#211e19",
+          "#38342c",
+          "#504b41",
+          "#696355",
+          "#837c6d",
+          "#9e9787",
+          "#bab3a2",
+          "#d7d0be"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Soft Divider",
+        "canonical": "#dfd8c8",
+        "tonalRamp": [
+          "#3b3933",
+          "#545147",
+          "#6e6a5f",
+          "#898477",
+          "#a49f90",
+          "#c0baaa",
+          "#ddd7c6",
+          "#faf4e2"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Quiet Olive",
+        "canonical": "#435b35",
+        "tonalRamp": [
+          "#11170d",
+          "#1c2616",
+          "#29351f",
+          "#364329",
+          "#445333",
+          "#53633e",
+          "#62754a",
+          "#728656"
+        ]
+      },
+      "alert": {
+        "role": "tertiary",
+        "displayName": "Warm Alert Amber",
+        "canonical": "#8a5b18",
+        "tonalRamp": [
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18"
+        ]
+      },
+      "button-border": {
+        "role": "neutral",
+        "displayName": "Warm Control Border",
+        "canonical": "#b9b09b",
+        "tonalRamp": [
+          "#b9b09b",
+          "#b9b09b",
+          "#b9b09b",
+          "#b9b09b",
+          "#b9b09b",
+          "#b9b09b",
+          "#b9b09b",
+          "#b9b09b"
+        ]
+      },
+      "button-hover": {
+        "role": "neutral",
+        "displayName": "Button Hover Oat",
+        "canonical": "#eae2d0",
+        "tonalRamp": [
+          "#eae2d0",
+          "#eae2d0",
+          "#eae2d0",
+          "#eae2d0",
+          "#eae2d0",
+          "#eae2d0",
+          "#eae2d0",
+          "#eae2d0"
+        ]
+      },
+      "waiting-row": {
+        "role": "tertiary",
+        "displayName": "Waiting Oat",
+        "canonical": "#f7f0df",
+        "tonalRamp": [
+          "#f7f0df",
+          "#f7f0df",
+          "#f7f0df",
+          "#f7f0df",
+          "#f7f0df",
+          "#f7f0df",
+          "#f7f0df",
+          "#f7f0df"
+        ]
+      },
+      "command": {
+        "role": "neutral",
+        "displayName": "Command Oat",
+        "canonical": "#ede7d8",
+        "tonalRamp": [
+          "#ede7d8",
+          "#ede7d8",
+          "#ede7d8",
+          "#ede7d8",
+          "#ede7d8",
+          "#ede7d8",
+          "#ede7d8",
+          "#ede7d8"
+        ]
+      },
+      "quota-track": {
+        "role": "neutral",
+        "displayName": "Quota Track",
+        "canonical": "#e3ddce",
+        "tonalRamp": [
+          "#e3ddce",
+          "#e3ddce",
+          "#e3ddce",
+          "#e3ddce",
+          "#e3ddce",
+          "#e3ddce",
+          "#e3ddce",
+          "#e3ddce"
+        ]
+      },
+      "quota-fill": {
+        "role": "secondary",
+        "displayName": "Quota Fill",
+        "canonical": "#73845b",
+        "tonalRamp": [
+          "#73845b",
+          "#73845b",
+          "#73845b",
+          "#73845b",
+          "#73845b",
+          "#73845b",
+          "#73845b",
+          "#73845b"
+        ]
+      },
+      "selected-scenario": {
+        "role": "secondary",
+        "displayName": "Selected Scenario",
+        "canonical": "#d9e1cc",
+        "tonalRamp": [
+          "#d9e1cc",
+          "#d9e1cc",
+          "#d9e1cc",
+          "#d9e1cc",
+          "#d9e1cc",
+          "#d9e1cc",
+          "#d9e1cc",
+          "#d9e1cc"
+        ]
+      },
+      "selected-border": {
+        "role": "secondary",
+        "displayName": "Selected Border",
+        "canonical": "#8fa37b",
+        "tonalRamp": [
+          "#8fa37b",
+          "#8fa37b",
+          "#8fa37b",
+          "#8fa37b",
+          "#8fa37b",
+          "#8fa37b",
+          "#8fa37b",
+          "#8fa37b"
+        ]
+      },
+      "focus": {
+        "role": "tertiary",
+        "displayName": "Focus Outline",
+        "canonical": "#8a5b18",
+        "tonalRamp": [
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18",
+          "#8a5b18"
+        ]
+      },
+      "error": {
+        "role": "tertiary",
+        "displayName": "Error Brown",
+        "canonical": "#7d352a",
+        "tonalRamp": [
+          "#7d352a",
+          "#7d352a",
+          "#7d352a",
+          "#7d352a",
+          "#7d352a",
+          "#7d352a",
+          "#7d352a",
+          "#7d352a"
+        ]
+      },
+      "pet-outline": {
+        "role": "secondary",
+        "displayName": "Mascot Outline",
+        "canonical": "#5d3a22",
+        "tonalRamp": [
+          "#5d3a22",
+          "#5d3a22",
+          "#5d3a22",
+          "#5d3a22",
+          "#5d3a22",
+          "#5d3a22",
+          "#5d3a22",
+          "#5d3a22"
+        ]
+      },
+      "pet-fur": {
+        "role": "secondary",
+        "displayName": "Caramel Fur",
+        "canonical": "#cf9565",
+        "tonalRamp": [
+          "#cf9565",
+          "#cf9565",
+          "#cf9565",
+          "#cf9565",
+          "#cf9565",
+          "#cf9565",
+          "#cf9565",
+          "#cf9565"
+        ]
+      },
+      "pet-shade": {
+        "role": "secondary",
+        "displayName": "Deep Caramel",
+        "canonical": "#b87d52",
+        "tonalRamp": [
+          "#b87d52",
+          "#b87d52",
+          "#b87d52",
+          "#b87d52",
+          "#b87d52",
+          "#b87d52",
+          "#b87d52",
+          "#b87d52"
+        ]
+      },
+      "pet-muzzle": {
+        "role": "secondary",
+        "displayName": "Muzzle Brown",
+        "canonical": "#a8693f",
+        "tonalRamp": [
+          "#a8693f",
+          "#a8693f",
+          "#a8693f",
+          "#a8693f",
+          "#a8693f",
+          "#a8693f",
+          "#a8693f",
+          "#a8693f"
+        ]
+      },
+      "pet-belly": {
+        "role": "secondary",
+        "displayName": "Belly Cream",
+        "canonical": "#e2b98f",
+        "tonalRamp": [
+          "#e2b98f",
+          "#e2b98f",
+          "#e2b98f",
+          "#e2b98f",
+          "#e2b98f",
+          "#e2b98f",
+          "#e2b98f",
+          "#e2b98f"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Sheet Title",
+        "purpose": "Heading of the compact native summary."
+      },
+      "panel-title": {
+        "displayName": "Panel Title",
+        "purpose": "Heading of the full native panel."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default page text."
+      },
+      "compact": {
+        "displayName": "Compact Copy",
+        "purpose": "Session details and supporting text."
+      },
+      "label": {
+        "displayName": "Control Label",
+        "purpose": "Actions and state labels."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "mascot-pose",
+        "value": "0.28s ease-in-out; front-nod 1.6s ease-in-out",
+        "purpose": "Small pose changes and front-facing idle/work motion in the approved SVG."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce; animation: none; transition: none",
+        "purpose": "Stops motion when requested."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow-panel",
+        "value": "620px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Session Action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main permission or response action for a waiting session.",
+      "html": "<button class=\"ds-primary\">Permitir uma vez</button>",
+      "css": ".ds-primary { border: 1px solid #435b35; border-radius: 7px; background: #435b35; color: #fff; padding: 8px 11px; font: 600 12px 'Segoe UI', sans-serif; cursor: pointer; } .ds-primary:hover { background: #324b27; border-color: #324b27; } .ds-primary:focus-visible { outline: 3px solid #8a5b18; outline-offset: 3px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Alternative session action with a quiet outline.",
+      "html": "<button class=\"ds-secondary\">Negar</button>",
+      "css": ".ds-secondary { border: 1px solid #b9b09b; border-radius: 7px; background: transparent; color: #302b21; padding: 8px 11px; font: 600 12px 'Segoe UI', sans-serif; cursor: pointer; } .ds-secondary:hover { background: #eae2d0; } .ds-secondary:focus-visible { outline: 3px solid #8a5b18; outline-offset: 3px; }"
+    },
+    {
+      "name": "Waiting Session Row",
+      "kind": "card",
+      "refersTo": "waiting-session",
+      "description": "Flat session row that highlights a request needing attention.",
+      "html": "<article class=\"ds-waiting\"><strong>Projeto</strong><p>Agente · Terminal externo</p><span>Precisa de você</span></article>",
+      "css": ".ds-waiting { border-top: 1px solid #dfd8c8; background: #f7f0df; color: #302b21; padding: 15px 20px; font: 400 12px/1.5 'Segoe UI', sans-serif; } .ds-waiting strong { font-size: 14px; font-weight: 650; } .ds-waiting p { color: #716957; } .ds-waiting span { color: #8a5b18; font-weight: 600; }"
+    },
+    {
+      "name": "Quota Row",
+      "kind": "custom",
+      "description": "Compact remaining quota indicator.",
+      "html": "<div class=\"ds-quota\"><span>Codex</span><div><i></i></div><strong>72%</strong></div>",
+      "css": ".ds-quota { display: grid; grid-template-columns: 110px 1fr 38px; align-items: center; gap: 10px; margin-top: 12px; color: #716957; font: 400 12px 'Segoe UI', sans-serif; } .ds-quota > div { height: 4px; overflow: hidden; border-radius: 3px; background: #e3ddce; } .ds-quota i { display: block; width: 72%; height: 100%; background: #73845b; } .ds-quota strong { color: #302b21; text-align: right; }"
+    },
+    {
+      "name": "Pet Waiting Badge",
+      "kind": "chip",
+      "description": "Amber count attached to the front-facing companion when sessions wait.",
+      "html": "<span class=\"ds-badge\">2</span>",
+      "css": ".ds-badge { display: inline-grid; min-width: 23px; height: 23px; place-items: center; border: 2px solid #faf7ed; border-radius: 50%; background: #8a5b18; color: #fff; font: 700 12px 'Segoe UI', sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Oat-Sheet Companion",
+    "overview": "Capy places a warm, front-facing animated capivara over a quiet synthetic Windows desktop. The approved front-facing SVG in `prototypes/front-pet.svg` is the standard artwork and is loaded unchanged by the TypeScript interface. A compact oat-colored summary carries the useful session detail; the wider panel gives the demonstration controls room without changing the product's calm, companion-like world.\n\nThe Rust and Tauri shell provides three native surfaces: a transparent 200×180 pet window, a 380×620 summary, and a 760×680 panel. The summary favors compact, readable rows, soft dividers, and clear labels. All displayed sessions, replies, scenarios, and quota values are explicitly synthetic demo data; the interface does not imply live agent integrations.",
+    "keyCharacteristics": [
+      "The approved front-facing capivara is the persistent companion and remains movable.",
+      "The native summary and full panel share warm oat surfaces, dark brown text, olive actions, and amber attention states.",
+      "Session rows stay flat and use soft dividers; demo controls live in the full panel.",
+      "Segoe UI and compact spacing keep session details legible."
+    ],
+    "rules": [
+      {
+        "name": "The Attention Amber Rule",
+        "body": "Use amber for requests and attention states; keep routine actions olive.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Use Segoe UI throughout the interface; reserve Consolas for command-like demo content.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do preserve the approved front-facing SVG as the standard companion artwork.",
+      "Do keep olive for routine actions and amber for attention states.",
+      "Do keep project, agent, and origin legible together in each session row.",
+      "Do label sessions, replies, and quota values as synthetic demonstration data.",
+      "Do keep the summary compact and expose the full panel for scenario controls."
+    ],
+    "donts": [
+      "Don't nest cards inside the session list; use rows and soft dividers.",
+      "Don't imply live agent discovery, responses, or quota access from the demonstration.",
+      "Don't replace or modify the approved front-facing mascot artwork."
+    ]
+  }
+}

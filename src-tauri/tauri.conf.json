@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Capy", "version": "0.1.0", "identifier": "dev.capy.desktop",
+  "build": { "beforeDevCommand": "npm run dev", "devUrl": "http://127.0.0.1:1420", "beforeBuildCommand": "npm run build", "frontendDist": "../dist" },
+  "app": {
+    "windows": [
+      { "label": "pet", "title": "Capy", "url": "index.html", "width": 200, "height": 180, "visible": false, "resizable": false, "decorations": false, "transparent": true, "alwaysOnTop": true, "skipTaskbar": true, "shadow": false },
+      { "label": "summary", "title": "Capy — resumo", "url": "summary.html", "width": 380, "height": 620, "minWidth": 340, "minHeight": 360, "visible": false, "resizable": true, "decorations": false, "alwaysOnTop": true, "skipTaskbar": true },
+      { "label": "panel", "title": "Capy — sessões", "url": "panel.html", "width": 760, "height": 680, "minWidth": 540, "minHeight": 420, "visible": false }
+    ],
+    "security": { "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost; connect-src ipc: http://ipc.localhost" }
+  },
+  "bundle": { "active": true, "targets": ["nsis"], "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"] }
+}

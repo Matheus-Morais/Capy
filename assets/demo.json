@@ -1,0 +1,5 @@
+[
+  {"id":"claude","project":"Token-Watch","agent":"Claude Code","symbol":"C","kind":"claude","origin":"Terminal externo","state":"waiting","request":"permission","message":"Executar os testes do projeto?","command":"python -m pytest","hidden":false},
+  {"id":"codex","project":"Terminal-Hub","agent":"Codex","symbol":"O","kind":"codex","origin":"Terminal externo","state":"waiting","request":"question","message":"Qual tipo de notificação você prefere?","command":null,"hidden":false},
+  {"id":"agy","project":"Capy","agent":"Antigravity","symbol":"A","kind":"agy","origin":"Criada no Capy","state":"working","request":null,"message":"Desenhando o resumo compacto.","command":null,"hidden":false}
+]

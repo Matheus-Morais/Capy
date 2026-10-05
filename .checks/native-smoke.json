@@ -1,0 +1,80 @@
+{
+  "checks": [
+    {
+      "name": "frontend_pet_ready",
+      "passed": true
+    },
+    {
+      "name": "startup_pet_only",
+      "passed": true
+    },
+    {
+      "name": "frameless_topmost",
+      "passed": true
+    },
+    {
+      "name": "logical_pet_size",
+      "passed": true
+    },
+    {
+      "name": "tray_present",
+      "passed": true
+    },
+    {
+      "name": "frontend_summary_ready",
+      "passed": true
+    },
+    {
+      "name": "summary_opens",
+      "passed": true
+    },
+    {
+      "name": "summary_hides",
+      "passed": true
+    },
+    {
+      "name": "frontend_panel_ready",
+      "passed": true
+    },
+    {
+      "name": "frontend_ipc_ready_all_three_windows",
+      "passed": true
+    },
+    {
+      "name": "panel_opens",
+      "passed": true
+    },
+    {
+      "name": "panel_hides",
+      "passed": true
+    },
+    {
+      "name": "pet_restores",
+      "passed": true
+    },
+    {
+      "name": "position_saved",
+      "passed": true
+    },
+    {
+      "name": "position_restored",
+      "passed": true
+    },
+    {
+      "name": "position_in_work_area",
+      "passed": true
+    },
+    {
+      "name": "unknown_window_rejected",
+      "passed": true
+    }
+  ],
+  "error": null,
+  "passed": true,
+  "ready": [
+    "pet",
+    "summary",
+    "panel"
+  ],
+  "uiErrors": []
+}

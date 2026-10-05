@@ -1,0 +1,12 @@
+#pet #rig { transform-origin: 135px 183px; }
+#pet #shadow { transform-origin: 135px 184px; }
+#pet #ear { transform-origin: 135px 40px; }
+#pet #orange { transform: none; }
+#pet.s-idle .eye-open { transform-origin: 135px 60px; }
+#pet.s-working .front-paws .anim { transform-box: fill-box; transform-origin: center; }
+#pet.s-working .front-paws .fnA { animation: tap .28s ease-in-out infinite alternate; }
+#pet.s-working .front-paws .ffA { animation: tap .28s -.14s ease-in-out infinite alternate; }
+#pet.s-working #faceAnim { animation: front-nod 1.6s ease-in-out infinite; }
+#pet.s-sleeping #faceAnim { transform: translateY(4px); }
+#pet.s-sleeping #ear { animation: none; }
+@keyframes front-nod { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }

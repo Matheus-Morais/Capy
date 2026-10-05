@@ -1,0 +1,123 @@
+:root { --fur:#cf9565; --fur-dark:#b87d52; --muzzle:#a8693f; --foot:#8a5530; --belly:#e2b98f; --ink:#3a2214; --line:#5d3a22; --blush:#f2a1a1; --grass:#6f9a54; }
+svg g { transform-box: view-box; }
+/* ===== silhueta: muda de forma entre sentada e em pé ===== */
+  .sil { d: path("M118,28 C146,26 172,34 184,46 C198,50 208,58 208,72 C208,86 198,94 186,96 C172,100 170,140 168,172 C140,184 88,186 62,176 C30,150 44,70 118,28 Z");
+         transition: d .9s cubic-bezier(.34,1.2,.5,1); }
+  svg.p-stand .sil, svg.p-lie .sil {
+    d: path("M140,64 C168,62 192,70 206,80 C222,82 232,92 232,106 C232,120 224,128 210,130 C200,138 194,158 186,168 C150,176 80,178 50,168 C18,150 40,80 140,64 Z"); }
+
+  .pose { transition: transform .9s cubic-bezier(.34,1.2,.5,1), opacity .4s;
+          transform: translate(0px,0px) scale(1,1) skewX(0deg); }
+  .foot, .foot > g { transform-box: fill-box; transform-origin: center; }
+  .leg, .leg > g { transform-box: fill-box; transform-origin: 50% 100%; }
+  #bodyPose { transform-origin: 120px 174px; }
+  #rig { transform-origin: 120px 183px; }
+  #shadow { transform-origin: 125px 184px; }
+  #ear { transform-origin: 132px 44px; }
+
+  /* rosto acompanha a forma */
+  svg.p-stand .facepose { transform: translate(24px,30px) scale(1,1) skewX(0deg); }
+  svg.p-lie   .facepose { transform: translate(28px,45px) scale(1,1) skewX(0deg); }
+  svg.p-lie #bodyPose { transform: translate(0px,8px) scale(1.04,.9) skewX(0deg); }
+  svg.p-sit #shadow { transform: scale(.62,1); }
+  svg.p-lie #shadow { transform: scale(1.05,1); }
+  svg.p-stand #orange { transform: translate(26px,38px) scale(1,1) skewX(0deg); }
+  svg.p-lie   #orange { transform: translate(30px,52px) scale(1,1) skewX(0deg); }
+
+  /* pernas e pés: sentada */
+  svg.p-sit .lg-bf, svg.p-sit .lg-bn { opacity: 0; }
+  svg.p-sit .lg-fn { transform: translate(2px,0px) scale(1,2.7) skewX(0deg); }
+  svg.p-sit .lg-ff, svg.p-sit .ft-ff { opacity: 0; }
+  svg.p-sit .ft-bn { transform: translate(24px,1px) scale(1,1) skewX(0deg); }
+  svg.p-sit .ft-bf { transform: translate(76px,1px) scale(1,1) skewX(0deg); }
+  svg.p-sit .ft-fn { transform: translate(2px,1px) scale(1,1) skewX(0deg); }
+  svg.p-sit .ft-ff { transform: translate(5px,1px) scale(1,1) skewX(0deg); }
+  svg.p-sit.s-working .ft-fn { transform: translate(20px,-5px) scale(1,1) skewX(0deg); }
+  svg.p-sit.s-working .lg-fn { transform: translate(20px,0px) scale(1,2.7) skewX(55deg); }
+  /* deitada */
+  svg.p-lie .leg, svg.p-lie .foot { opacity: 0; }
+
+  /* ===== movimentos contínuos ===== */
+  svg.s-idle:not(.walk) #rig, svg.s-sleeping #rig, svg.s-working #rig { animation: breathe 3.6s ease-in-out infinite; }
+  svg.s-sleeping #rig { animation-duration: 4.8s; }
+  @keyframes breathe { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.01,1.028); } }
+
+  svg.walk .anim.a { animation: step .8s linear infinite; }
+  svg.walk .anim.b { animation: step .8s -.4s linear infinite; }
+  svg.walk.slow .anim.a { animation-duration: 1.7s; }
+  svg.walk.slow .anim.b { animation-duration: 1.7s; animation-delay: -.85s; }
+  @keyframes step {
+    0%   { transform: translate(8px,0);  animation-timing-function: linear; }
+    50%  { transform: translate(-8px,0); animation-timing-function: ease-out; }
+    75%  { transform: translate(0,-6px); animation-timing-function: ease-in; }
+    100% { transform: translate(8px,0); }
+  }
+  svg.walk #rig { animation: bob .4s ease-in-out infinite; }
+  svg.walk.slow #rig { animation-duration: .85s; }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+  svg.walk #ground { animation: scroll 1.3s linear infinite; }
+  svg.walk.slow #ground { animation-duration: 3s; }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-270px); } }
+
+  svg.s-idle:not(.walk) #faceAnim { animation: look 7s ease-in-out infinite; }
+  @keyframes look { 0%,18%,100% { transform: translate(0,0); } 30%,44% { transform: translate(-2px,1px); } 56%,70% { transform: translate(2px,-1px); } }
+  svg.s-idle #ear { animation: ear 6s ease-in-out infinite; }
+  @keyframes ear { 0%,86%,100% { transform: rotate(0); } 90% { transform: rotate(-16deg); } 94% { transform: rotate(7deg); } }
+
+  svg.s-working #faceAnim { animation: nod 1.4s ease-in-out infinite; }
+  @keyframes nod { 0%,100% { transform: translate(0,0); } 50% { transform: translate(1px,2px); } }
+  svg.s-working .anim.fnA { animation: tap .28s ease-in-out infinite alternate; }
+  svg.s-working .anim.ffA { animation: tap .28s -.14s ease-in-out infinite alternate; }
+  @keyframes tap { from { transform: translateY(-1px); } to { transform: translateY(3px); } }
+  svg.s-working #ear { animation: ear 2.2s ease-in-out infinite; }
+
+  svg.s-waiting #rig { animation: hop 1.1s ease-in-out infinite; }
+  @keyframes hop { 0%,100% { transform: translateY(0) scale(1,1); } 20% { transform: translateY(0) scale(1.05,.94); }
+                   45% { transform: translateY(-16px) scale(.97,1.04); } 70% { transform: translateY(0) scale(1.04,.96); } }
+  svg.s-waiting #ear { animation: ear .6s ease-in-out infinite; }
+
+  svg.s-done #rig { animation: jump 1s ease-in-out infinite; }
+  @keyframes jump { 0%,100% { transform: translateY(0) scale(1.05,.93); } 40% { transform: translateY(-36px) scale(.95,1.07); } 70% { transform: translateY(0) scale(1.06,.92); } }
+  svg.s-done.p-stand .foot { transform: translate(0px,-9px) scale(1,.8) skewX(0deg); }
+  svg.s-done.p-stand .leg { transform: translate(0px,-8px) scale(1,.7) skewX(0deg); }
+  svg.s-done .sparkles g { animation: twinkle 1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  svg.s-done .sparkles g:nth-child(2) { animation-delay: .25s; }
+  svg.s-done .sparkles g:nth-child(3) { animation-delay: .5s; }
+  @keyframes twinkle { 0%,100% { transform: scale(.3); opacity: 0; } 50% { transform: scale(1); opacity: 1; } }
+
+  svg.s-tired #faceAnim { transform: translate(1px,6px); }
+  svg.s-tired .sweat path { animation: drip 1.8s ease-in infinite; }
+  @keyframes drip { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(22px); opacity: 0; } }
+  svg.s-tired #ear { transform: rotate(22deg); }
+
+  svg.s-sleeping .zzz text { animation: float 3s ease-in infinite; opacity: 0; }
+  svg.s-sleeping .zzz text:nth-child(2) { animation-delay: 1s; }
+  svg.s-sleeping .zzz text:nth-child(3) { animation-delay: 2s; }
+  @keyframes float { 0% { transform: translate(0,0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(14px,-34px); opacity: 0; } }
+
+  svg.s-waiting .bubble { animation: pop .5s ease-out both, bubble-bob 1.6s .5s ease-in-out infinite; transform-origin: 178px 56px; }
+  @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes bubble-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+  .laptop { opacity: 0; transition: opacity .5s; }
+  svg.s-working .laptop { opacity: 1; }
+  svg.s-working .code-lines rect { animation: type 1.6s steps(1) infinite; }
+  svg.s-working .code-lines rect:nth-child(2) { animation-delay: .4s; }
+  svg.s-working .code-lines rect:nth-child(3) { animation-delay: .8s; }
+  svg.s-working .code-lines rect:nth-child(4) { animation-delay: 1.2s; }
+  @keyframes type { 0% { opacity: .2; } 50% { opacity: 1; } }
+
+  /* ===== peças por estado ===== */
+  .eye-open, .eye-half, .eye-happy, .eye-closed, .eye-wide { display: none; }
+  .bubble, .zzz, .sweat, .sparkles, .orange, .brow-alert { display: none; }
+
+  svg.s-idle .eye-open { display: inline; animation: blink 5s infinite; transform-origin: 168px 54px; }
+  @keyframes blink { 0%,92%,100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
+  svg.s-idle .orange, svg.s-working .orange, svg.s-done .orange { display: inline; }
+  svg.s-working .eye-half, svg.s-tired .eye-half { display: inline; }
+  svg.s-waiting .eye-wide, svg.s-waiting .brow-alert, svg.s-waiting .bubble { display: inline; }
+  svg.s-done .eye-happy, svg.s-done .sparkles { display: inline; }
+  svg.s-tired .sweat { display: inline; }
+  svg.s-sleeping .eye-closed, svg.s-sleeping .zzz { display: inline; }
+
+  @media (prefers-reduced-motion: reduce) { svg * { animation: none !important; } }

@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capivara - protótipo</title>
+<style>
+  :root {
+    --bg: #1c1b19; --panel: #26241f; --text: #f1ece2; --muted: #a39b8b; --accent: #f59e0b;
+    --fur: #cf9565; --fur-dark: #b87d52; --muzzle: #a8693f; --foot: #8a5530; --belly: #e2b98f;
+    --ink: #3a2214; --line: #5d3a22; --blush: #f2a1a1; --grass: #6f9a54;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+         font-family: "Segoe UI", system-ui, sans-serif; display: flex; flex-direction: column;
+         align-items: center; padding: 24px 16px; gap: 14px; }
+  h1 { font-size: 18px; font-weight: 600; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0; }
+  .stage { background: #f7efd9; border-radius: 16px; width: min(560px, 100%); padding: 8px; }
+  svg { width: 100%; height: auto; display: block; overflow: visible; }
+  svg g { transform-box: view-box; }
+  .caption { text-align: center; font-size: 14px; min-height: 40px; max-width: 560px; margin: 0; }
+  .caption b { color: var(--accent); }
+  .row-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin: 4px 0 -6px; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  button { background: var(--panel); color: var(--text); border: 1px solid #3a372f; border-radius: 999px;
+           padding: 8px 16px; font: inherit; font-size: 14px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button[aria-pressed="true"] { background: var(--accent); color: #241a05; border-color: var(--accent); font-weight: 600; }
+
+  /* ===== silhueta: muda de forma entre sentada e em pé ===== */
+  .sil { d: path("M118,28 C146,26 172,34 184,46 C198,50 208,58 208,72 C208,86 198,94 186,96 C172,100 170,140 168,172 C140,184 88,186 62,176 C30,150 44,70 118,28 Z");
+         transition: d .9s cubic-bezier(.34,1.2,.5,1); }
+  svg.p-stand .sil, svg.p-lie .sil {
+    d: path("M140,64 C168,62 192,70 206,80 C222,82 232,92 232,106 C232,120 224,128 210,130 C200,138 194,158 186,168 C150,176 80,178 50,168 C18,150 40,80 140,64 Z"); }
+
+  .pose { transition: transform .9s cubic-bezier(.34,1.2,.5,1), opacity .4s;
+          transform: translate(0px,0px) scale(1,1) skewX(0deg); }
+  .foot, .foot > g { transform-box: fill-box; transform-origin: center; }
+  .leg, .leg > g { transform-box: fill-box; transform-origin: 50% 100%; }
+  #bodyPose { transform-origin: 120px 174px; }
+  #rig { transform-origin: 120px 183px; }
+  #shadow { transform-origin: 125px 184px; }
+  #ear { transform-origin: 132px 44px; }
+
+  /* rosto acompanha a forma */
+  svg.p-stand .facepose { transform: translate(24px,30px) scale(1,1) skewX(0deg); }
+  svg.p-lie   .facepose { transform: translate(28px,45px) scale(1,1) skewX(0deg); }
+  svg.p-lie #bodyPose { transform: translate(0px,8px) scale(1.04,.9) skewX(0deg); }
+  svg.p-sit #shadow { transform: scale(.62,1); }
+  svg.p-lie #shadow { transform: scale(1.05,1); }
+  svg.p-stand #orange { transform: translate(26px,38px) scale(1,1) skewX(0deg); }
+  svg.p-lie   #orange { transform: translate(30px,52px) scale(1,1) skewX(0deg); }
+
+  /* pernas e pés: sentada */
+  svg.p-sit .lg-bf, svg.p-sit .lg-bn { opacity: 0; }
+  svg.p-sit .lg-fn { transform: translate(2px,0px) scale(1,2.7) skewX(0deg); }
+  svg.p-sit .lg-ff, svg.p-sit .ft-ff { opacity: 0; }
+  svg.p-sit .ft-bn { transform: translate(24px,1px) scale(1,1) skewX(0deg); }
+  svg.p-sit .ft-bf { transform: translate(76px,1px) scale(1,1) skewX(0deg); }
+  svg.p-sit .ft-fn { transform: translate(2px,1px) scale(1,1) skewX(0deg); }
+  svg.p-sit .ft-ff { transform: translate(5px,1px) scale(1,1) skewX(0deg); }
+  svg.p-sit.s-working .ft-fn { transform: translate(20px,-5px) scale(1,1) skewX(0deg); }
+  svg.p-sit.s-working .lg-fn { transform: translate(20px,0px) scale(1,2.7) skewX(55deg); }
+  /* deitada */
+  svg.p-lie .leg, svg.p-lie .foot { opacity: 0; }
+
+  /* ===== movimentos contínuos ===== */
+  svg.s-idle:not(.walk) #rig, svg.s-sleeping #rig, svg.s-working #rig { animation: breathe 3.6s ease-in-out infinite; }
+  svg.s-sleeping #rig { animation-duration: 4.8s; }
+  @keyframes breathe { 0%,100% { transform: scale(1,1); } 50% { transform: scale(1.01,1.028); } }
+
+  svg.walk .anim.a { animation: step .8s linear infinite; }
+  svg.walk .anim.b { animation: step .8s -.4s linear infinite; }
+  svg.walk.slow .anim.a { animation-duration: 1.7s; }
+  svg.walk.slow .anim.b { animation-duration: 1.7s; animation-delay: -.85s; }
+  @keyframes step {
+    0%   { transform: translate(8px,0);  animation-timing-function: linear; }
+    50%  { transform: translate(-8px,0); animation-timing-function: ease-out; }
+    75%  { transform: translate(0,-6px); animation-timing-function: ease-in; }
+    100% { transform: translate(8px,0); }
+  }
+  svg.walk #rig { animation: bob .4s ease-in-out infinite; }
+  svg.walk.slow #rig { animation-duration: .85s; }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+  svg.walk #ground { animation: scroll 1.3s linear infinite; }
+  svg.walk.slow #ground { animation-duration: 3s; }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-270px); } }
+
+  svg.s-idle:not(.walk) #faceAnim { animation: look 7s ease-in-out infinite; }
+  @keyframes look { 0%,18%,100% { transform: translate(0,0); } 30%,44% { transform: translate(-2px,1px); } 56%,70% { transform: translate(2px,-1px); } }
+  svg.s-idle #ear { animation: ear 6s ease-in-out infinite; }
+  @keyframes ear { 0%,86%,100% { transform: rotate(0); } 90% { transform: rotate(-16deg); } 94% { transform: rotate(7deg); } }
+
+  svg.s-working #faceAnim { animation: nod 1.4s ease-in-out infinite; }
+  @keyframes nod { 0%,100% { transform: translate(0,0); } 50% { transform: translate(1px,2px); } }
+  svg.s-working .anim.fnA { animation: tap .28s ease-in-out infinite alternate; }
+  svg.s-working .anim.ffA { animation: tap .28s -.14s ease-in-out infinite alternate; }
+  @keyframes tap { from { transform: translateY(-1px); } to { transform: translateY(3px); } }
+  svg.s-working #ear { animation: ear 2.2s ease-in-out infinite; }
+
+  svg.s-waiting #rig { animation: hop 1.1s ease-in-out infinite; }
+  @keyframes hop { 0%,100% { transform: translateY(0) scale(1,1); } 20% { transform: translateY(0) scale(1.05,.94); }
+                   45% { transform: translateY(-16px) scale(.97,1.04); } 70% { transform: translateY(0) scale(1.04,.96); } }
+  svg.s-waiting #ear { animation: ear .6s ease-in-out infinite; }
+
+  svg.s-done #rig { animation: jump 1s ease-in-out infinite; }
+  @keyframes jump { 0%,100% { transform: translateY(0) scale(1.05,.93); } 40% { transform: translateY(-36px) scale(.95,1.07); } 70% { transform: translateY(0) scale(1.06,.92); } }
+  svg.s-done.p-stand .foot { transform: translate(0px,-9px) scale(1,.8) skewX(0deg); }
+  svg.s-done.p-stand .leg { transform: translate(0px,-8px) scale(1,.7) skewX(0deg); }
+  svg.s-done .sparkles g { animation: twinkle 1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  svg.s-done .sparkles g:nth-child(2) { animation-delay: .25s; }
+  svg.s-done .sparkles g:nth-child(3) { animation-delay: .5s; }
+  @keyframes twinkle { 0%,100% { transform: scale(.3); opacity: 0; } 50% { transform: scale(1); opacity: 1; } }
+
+  svg.s-tired #faceAnim { transform: translate(1px,6px); }
+  svg.s-tired .sweat path { animation: drip 1.8s ease-in infinite; }
+  @keyframes drip { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(22px); opacity: 0; } }
+  svg.s-tired #ear { transform: rotate(22deg); }
+
+  svg.s-sleeping .zzz text { animation: float 3s ease-in infinite; opacity: 0; }
+  svg.s-sleeping .zzz text:nth-child(2) { animation-delay: 1s; }
+  svg.s-sleeping .zzz text:nth-child(3) { animation-delay: 2s; }
+  @keyframes float { 0% { transform: translate(0,0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(14px,-34px); opacity: 0; } }
+
+  svg.s-waiting .bubble { animation: pop .5s ease-out both, bubble-bob 1.6s .5s ease-in-out infinite; transform-origin: 178px 56px; }
+  @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes bubble-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+  .laptop { opacity: 0; transition: opacity .5s; }
+  svg.s-working .laptop { opacity: 1; }
+  svg.s-working .code-lines rect { animation: type 1.6s steps(1) infinite; }
+  svg.s-working .code-lines rect:nth-child(2) { animation-delay: .4s; }
+  svg.s-working .code-lines rect:nth-child(3) { animation-delay: .8s; }
+  svg.s-working .code-lines rect:nth-child(4) { animation-delay: 1.2s; }
+  @keyframes type { 0% { opacity: .2; } 50% { opacity: 1; } }
+
+  /* ===== peças por estado ===== */
+  .eye-open, .eye-half, .eye-happy, .eye-closed, .eye-wide { display: none; }
+  .bubble, .zzz, .sweat, .sparkles, .orange, .brow-alert { display: none; }
+
+  svg.s-idle .eye-open { display: inline; animation: blink 5s infinite; transform-origin: 168px 54px; }
+  @keyframes blink { 0%,92%,100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
+  svg.s-idle .orange, svg.s-working .orange, svg.s-done .orange { display: inline; }
+  svg.s-working .eye-half, svg.s-tired .eye-half { display: inline; }
+  svg.s-waiting .eye-wide, svg.s-waiting .brow-alert, svg.s-waiting .bubble { display: inline; }
+  svg.s-done .eye-happy, svg.s-done .sparkles { display: inline; }
+  svg.s-tired .sweat { display: inline; }
+  svg.s-sleeping .eye-closed, svg.s-sleeping .zzz { display: inline; }
+
+  @media (prefers-reduced-motion: reduce) { svg * { animation: none !important; } }
+</style>
+</head>
+<body>
+  <h1>Capivara <span style="color:var(--muted);font-weight:400">· protótipo do pet</span></h1>
+  <p class="sub">Estados do produto e poses de teste, com transições animadas.</p>
+
+  <div class="stage">
+    <svg id="pet" class="s-idle p-sit" viewBox="0 -20 270 230" role="img" aria-label="Capivara animada">
+      <defs>
+        <clipPath id="groundClip"><rect x="-6" y="176" width="282" height="30"/></clipPath>
+        <clipPath id="bodyClip"><path class="sil" d="M118,28 C146,26 172,34 184,46 C198,50 208,58 208,72 C208,86 198,94 186,96 C172,100 170,140 168,172 C140,184 88,186 62,176 C30,150 44,70 118,28 Z"/></clipPath>
+      </defs>
+
+      <line x1="-6" y1="183" x2="276" y2="183" stroke="#e3d6b4" stroke-width="2"/>
+      <g clip-path="url(#groundClip)">
+        <g id="ground">
+          <g id="tufts">
+            <path d="M20 190 l3 -9 l3 9 l3 -7 l3 7z M92 192 l3 -8 l3 8 l3 -6 l3 6z M150 190 l3 -9 l3 9 l3 -7 l3 7z M232 192 l3 -8 l3 8 l3 -6 l3 6z" fill="var(--grass)" opacity=".7"/>
+          </g>
+          <use href="#tufts" x="270"/>
+          <use href="#tufts" x="540"/>
+        </g>
+      </g>
+
+      <ellipse id="shadow" class="pose" cx="125" cy="184" rx="95" ry="6" fill="#000" opacity=".13"/>
+
+      <!-- notebook à frente (aparece quando trabalhando) -->
+      <g class="laptop" transform="translate(-24 0)">
+        <polygon points="196,176 252,176 262,170 206,170" fill="#7a8794" stroke="var(--line)" stroke-width="1.6" stroke-linejoin="round"/>
+        <polygon points="206,170 262,170 262,122 206,134" fill="#2b3340" stroke="var(--line)" stroke-width="1.6" stroke-linejoin="round"/>
+        <polygon points="210,167 258,167 258,127 210,138" fill="#0f1a2b"/>
+        <g class="code-lines">
+          <rect x="215" y="141" width="24" height="3" rx="1.5" fill="#6ee7a8"/>
+          <rect x="219" y="148" width="30" height="3" rx="1.5" fill="#7cc6ff"/>
+          <rect x="215" y="155" width="20" height="3" rx="1.5" fill="#ffd966"/>
+          <rect x="219" y="162" width="28" height="3" rx="1.5" fill="#ff9ec0"/>
+        </g>
+      </g>
+
+      <g id="rig">
+
+        <!-- pernas (atrás do corpo) -->
+        <g class="leg pose lg-bf"><g class="anim a">
+          <rect x="55" y="150" width="14" height="32" rx="7" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2"/></g></g>
+        <g class="leg pose lg-ff"><g class="anim b ffA">
+          <rect x="173" y="150" width="14" height="32" rx="7" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2"/></g></g>
+        <g class="leg pose lg-bn"><g class="anim b">
+          <rect x="81" y="150" width="14" height="32" rx="7" fill="var(--fur)" stroke="var(--line)" stroke-width="2"/></g></g>
+
+        <g id="bodyPose" class="pose">
+          <path class="sil" fill="var(--fur)" d="M118,28 C146,26 172,34 184,46 C198,50 208,58 208,72 C208,86 198,94 186,96 C172,100 170,140 168,172 C140,184 88,186 62,176 C30,150 44,70 118,28 Z"/>
+
+          <!-- tufos -->
+          <g fill="none" stroke="var(--line)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".7">
+            <path d="M84 138 l4 6 l3 -7 l4 7 l3 -6"/>
+            <path d="M112 158 l3 5 l3 -6 l3 6"/>
+          </g>
+
+          <!-- cabeça mais escura + focinho -->
+          <g clip-path="url(#bodyClip)">
+            <ellipse cx="112" cy="184" rx="86" ry="20" fill="var(--belly)" opacity=".7"/>
+            <g class="facepose pose">
+              <ellipse cx="184" cy="64" rx="36" ry="30" fill="var(--fur-dark)"/>
+              <ellipse cx="203" cy="76" rx="24" ry="28" fill="var(--muzzle)"/>
+            </g>
+          </g>
+
+          <path class="sil" fill="none" stroke="var(--line)" stroke-width="2.2" stroke-linejoin="round" d="M118,28 C146,26 172,34 184,46 C198,50 208,58 208,72 C208,86 198,94 186,96 C172,100 170,140 168,172 C140,184 88,186 62,176 C30,150 44,70 118,28 Z"/>
+        </g>
+
+        <!-- perna da frente mais próxima: na frente do corpo, sem borda no topo para nascer do peito -->
+        <g class="leg pose lg-fn"><g class="anim a fnA">
+          <path d="M148 168 L152 180 L168 180 L166 168 Z" fill="var(--fur)"/>
+          <path d="M148 168 L152 180 M166 168 L168 180" fill="none" stroke="var(--line)" stroke-width="2" stroke-linecap="round"/>
+        </g></g>
+
+        <!-- pés (na frente do corpo) -->
+        <g class="foot pose ft-bf"><g class="anim a">
+          <ellipse cx="65" cy="180" rx="10" ry="4.2" fill="var(--foot)" stroke="var(--line)" stroke-width="1.8"/></g></g>
+        <g class="foot pose ft-ff"><g class="anim b ffA">
+          <ellipse cx="183" cy="180" rx="10" ry="4.2" fill="var(--foot)" stroke="var(--line)" stroke-width="1.8"/></g></g>
+        <g class="foot pose ft-bn"><g class="anim b">
+          <ellipse cx="91" cy="180" rx="10" ry="4.2" fill="var(--foot)" stroke="var(--line)" stroke-width="1.8"/></g></g>
+        <g class="foot pose ft-fn"><g class="anim a fnA">
+          <ellipse cx="161" cy="180" rx="10" ry="4.2" fill="var(--foot)" stroke="var(--line)" stroke-width="1.8"/></g></g>
+
+        <!-- rosto -->
+        <g class="facepose pose"><g id="faceAnim">
+          <g id="ear">
+            <ellipse cx="132" cy="38" rx="8.5" ry="10" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2"/>
+            <ellipse cx="132.5" cy="40" rx="4" ry="5" fill="#e0a48a"/>
+          </g>
+
+          <ellipse cx="180" cy="68" rx="6.5" ry="4" fill="var(--blush)" opacity=".85"/>
+
+          <ellipse cx="200" cy="62" rx="4.2" ry="3.1" fill="var(--ink)"/>
+          <path d="M194 84 Q199 90 205 83" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
+
+          <g class="eye-open">
+            <circle cx="168" cy="54" r="3.8" fill="var(--ink)"/>
+            <circle cx="169.4" cy="52.6" r="1.3" fill="#fff"/>
+          </g>
+          <g class="eye-wide">
+            <circle cx="168" cy="54" r="5.6" fill="var(--ink)"/>
+            <circle cx="170" cy="51.8" r="1.9" fill="#fff"/>
+          </g>
+          <g class="eye-half">
+            <circle cx="168" cy="55" r="4" fill="var(--ink)"/>
+            <path d="M163 55 a5 5 0 0 1 10 0z" fill="var(--fur-dark)"/>
+            <path d="M162 55 H174" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
+          </g>
+          <path class="eye-happy" d="M162 57 Q168 48 174 57" fill="none" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round"/>
+          <path class="eye-closed" d="M162 53 Q168 59 174 53" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/>
+          <path class="brow-alert" d="M161 44 L175 47" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round"/>
+
+          <g class="sweat"><path d="M148 46 q5 8 0 12 q-5 -4 0 -12z" fill="#7cc6ff" stroke="var(--line)" stroke-width="1.2"/></g>
+        </g></g>
+
+        <!-- laranja -->
+        <g id="orange" class="pose"><g class="orange">
+          <circle cx="150" cy="20" r="9.5" fill="#ffa21f" stroke="var(--line)" stroke-width="2"/>
+          <path d="M150 11 q4 -7 10 -5 q-3 6 -10 5z" fill="#6aa84f" stroke="var(--line)" stroke-width="1.4" stroke-linejoin="round"/>
+          <circle cx="146.5" cy="17" r="2.2" fill="#fff" opacity=".45"/>
+        </g></g>
+
+      </g>
+
+      <!-- balão -->
+      <g class="bubble">
+        <rect x="118" y="-18" width="124" height="56" rx="14" fill="#fff" stroke="var(--line)" stroke-width="2"/>
+        <path d="M168 38 L178 50 L190 38z" fill="#fff" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/>
+        <rect x="170" y="36" width="18" height="4" fill="#fff"/>
+        <text x="180" y="-1" text-anchor="middle" font-size="11" font-family="Segoe UI, sans-serif" fill="#2a1c10" font-weight="600">Rodar este comando?</text>
+        <rect x="128" y="8" width="48" height="22" rx="11" fill="#22a06b"/>
+        <text x="152" y="23" text-anchor="middle" font-size="12" font-family="Segoe UI, sans-serif" fill="#fff" font-weight="600">Allow</text>
+        <rect x="184" y="8" width="48" height="22" rx="11" fill="#d1453b"/>
+        <text x="208" y="23" text-anchor="middle" font-size="12" font-family="Segoe UI, sans-serif" fill="#fff" font-weight="600">Deny</text>
+      </g>
+
+      <g class="sparkles">
+        <g><path d="M60 40 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z" fill="#ffc933"/></g>
+        <g><path d="M120 -6 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#ff8fb5"/></g>
+        <g><path d="M236 40 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#6cc9f0"/></g>
+      </g>
+
+      <g class="zzz" fill="#7d8fd6" font-family="Segoe UI, sans-serif" font-weight="700">
+        <text x="216" y="102" font-size="18">z</text>
+        <text x="228" y="88" font-size="22">z</text>
+        <text x="242" y="72" font-size="26">Z</text>
+      </g>
+    </svg>
+  </div>
+
+  <p class="caption" id="caption"></p>
+
+  <div class="row-label">Estados do produto</div>
+  <div class="buttons" id="states"></div>
+
+  <div class="row-label">Poses de teste</div>
+  <div class="buttons" id="poses"></div>
+
+<script>
+  const states = {
+    idle:     { label: "Parado",          pose: "sit", auto: true,
+                text: "<b>Sem novidade.</b> Ela passeia sozinha: fica sentada, levanta, anda um pouco e senta de novo." },
+    working:  { label: "Trabalhando",     pose: "sit",
+                text: "<b>Claude está trabalhando.</b> Sentada, digitando no notebook à frente, com a laranja na cabeça." },
+    waiting:  { label: "Precisa de você", pose: "stand",
+                text: "<b>Pedido de permissão.</b> Em pé, pulinhos de atenção e um balão com Allow / Deny (ideia do coucou)." },
+    done:     { label: "Terminou",        pose: "stand",
+                text: "<b>Sessão terminou.</b> Pulo feliz, olhos sorrindo e brilhos." },
+    tired:    { label: "Cota acabando",   pose: "stand", walk: true, slow: true,
+                text: "<b>Cota perto do fim.</b> Arrastando os pés, cabeça baixa, orelha caída e suor (ideia do Token-Watch)." },
+    sleeping: { label: "Dormindo",        pose: "lie",
+                text: "<b>Nenhuma sessão ativa.</b> Deitada, cochilando, com os zzz subindo." }
+  };
+  const manualPoses = {
+    sit:   { label: "Sentada",  pose: "sit",   text: "<b>Sentada.</b> Pose base." },
+    stand: { label: "Em pé",    pose: "stand", text: "<b>Em pé.</b> O corpo muda de forma: de sentada para em pé." },
+    lie:   { label: "Deitada",  pose: "lie",   text: "<b>Deitada.</b> Corpo achatado no chão, patinhas recolhidas." },
+    walk:  { label: "Andando",  pose: "stand", walk: true, text: "<b>Andando.</b> Patinhas em diagonal e o chão correndo para trás." }
+  };
+
+  const pet = document.getElementById("pet");
+  const caption = document.getElementById("caption");
+  const statesBox = document.getElementById("states");
+  const posesBox = document.getElementById("poses");
+  let timer = null;
+
+  function paint(stateKey, def) {
+    pet.setAttribute("class", `s-${stateKey} p-${def.pose}` + (def.walk ? " walk" : "") + (def.slow ? " slow" : ""));
+  }
+  function mark(box, key) {
+    box.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.key === key));
+  }
+  function clearMarks() { [statesBox, posesBox].forEach(b => mark(b, null)); }
+
+  const idleSeq = [
+    { pose: "sit",   t: 6000 },
+    { pose: "stand", t: 3000 },
+    { pose: "stand", walk: true, t: 4500 },
+    { pose: "stand", t: 2500 }
+  ];
+  function runIdle(i = 0) {
+    const step = idleSeq[i % idleSeq.length];
+    paint("idle", step);
+    timer = setTimeout(() => runIdle(i + 1), step.t);
+  }
+
+  function setState(key) {
+    clearTimeout(timer);
+    const def = states[key];
+    clearMarks(); mark(statesBox, key);
+    caption.innerHTML = def.text;
+    if (def.auto) runIdle(); else paint(key, def);
+  }
+  function setPose(key) {
+    clearTimeout(timer);
+    const def = manualPoses[key];
+    clearMarks(); mark(posesBox, key);
+    caption.innerHTML = def.text;
+    paint("idle", def);
+  }
+
+  Object.entries(states).forEach(([key, s]) => {
+    const b = document.createElement("button");
+    b.textContent = s.label; b.dataset.key = key;
+    b.addEventListener("click", () => setState(key));
+    statesBox.appendChild(b);
+  });
+  Object.entries(manualPoses).forEach(([key, s]) => {
+    const b = document.createElement("button");
+    b.textContent = s.label; b.dataset.key = key;
+    b.addEventListener("click", () => setPose(key));
+    posesBox.appendChild(b);
+  });
+
+  const hash = location.hash.slice(1);
+  if (manualPoses[hash]) setPose(hash);
+  else if (states[hash]) setState(hash);
+  else setState("idle");
+</script>
+</body>
+</html>
