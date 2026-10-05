@@ -1,5 +1,7 @@
 # Capy
 
+Estado da última entrega e roteiro de retomada: [NEXT_STEPS.md](NEXT_STEPS.md).
+
 Aplicativo desktop para Windows em Rust + Tauri 2, com interface TypeScript, HTML/CSS e mascote SVG. Descobre sessões abertas de Claude Code e Codex e acompanha a atividade do Codex pelo daemon local existente.
 
 ## Aplicativo desktop
