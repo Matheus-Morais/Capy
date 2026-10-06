@@ -2,6 +2,8 @@
 
 Atualizado em 2026-10-06: esperas reais do Codex comprovadas pelo release e verificadas independentemente (C1–C7 PASS).
 
+Prévia local atual: [0.2.0-alpha.2](releases/0.2.0-alpha.2/NOTES.md), com acesso à origem Codex e cotas reais da conta conectada. Executável em `releases/0.2.0-alpha.2/Capy.exe`; checklist de cotas em `.checks/quotas-codex.md`. O estado das seis entregas finais fica em `.checks/releases.md`; todas continuam abertas. Publicação remota foi dispensada pelo usuário. Os registros abaixo descrevem as entregas anteriores e seus limites.
+
 ## Onde paramos
 
 - Desktop Windows em Rust/Tauri 2 com capivara frontal, arraste, resumo, painel e bandeja. O usuário confirmou o arraste.
