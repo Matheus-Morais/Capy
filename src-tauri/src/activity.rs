@@ -2,9 +2,9 @@ use crate::discovery::{Integration, Report, Sources};
 use serde::Deserialize;
 use serde_json::Value;
 
-mod protocol;
+pub(crate) mod protocol;
 #[cfg(windows)]
-mod proxy;
+pub(crate) mod proxy;
 const SESSION_LIMIT: usize = 64;
 
 #[derive(Deserialize)]

@@ -1,11 +1,12 @@
 import './style.css';
 import { action, desktopCommand, native, showError, snapshot, subscribe, type Snapshot } from './bridge';
-import { escape, sessionRow, quotaRows } from './presentation';
+import { escape, sessionRow, renderQuotas } from './presentation';
 
 const sessions = document.getElementById('sessions')!;
 const notice = document.getElementById('notice')!;
 let realMode = false;
 const opening = new Set<string>();
+let cancelQuotaExpiry: (() => void) | undefined;
 function render(data: Snapshot) {
   if (realMode !== (data.scenario === 'real')) notice.textContent = '';
   realMode = data.scenario === 'real';
@@ -22,8 +23,9 @@ function render(data: Snapshot) {
     }
   }
   document.querySelector<HTMLElement>('.simulation')!.textContent = realMode ? 'Sessões reais · descoberta local experimental' : 'Demonstração · sessões, respostas e cotas simuladas';
-  document.getElementById('quotaRows')!.innerHTML = quotaRows(realMode);
-  document.querySelector<HTMLElement>('#quotaTitle span')!.textContent = realMode ? 'Não conectadas' : 'Simulação';
+  cancelQuotaExpiry?.();
+  cancelQuotaExpiry = renderQuotas(document.getElementById('quotaRows')!, realMode, data.quotas ?? []);
+  document.querySelector<HTMLElement>('#quotaTitle span')!.textContent = realMode ? 'Fonte e atualização' : 'Simulação';
   const integrations = document.getElementById('integrations')!;
   integrations.hidden = !realMode;
   integrations.innerHTML = '<h2>Integrações locais</h2>' + (data.integrations.length ? data.integrations.map(i => `<p><strong>${escape(i.agent)}</strong><br>${escape(i.message)}</p>`).join('') : '<p>Buscando sessões locais…</p>');

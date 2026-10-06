@@ -91,11 +91,18 @@ pub(super) fn query_child(
     ids: Vec<String>,
     timeout: Duration,
 ) -> Result<Vec<Observation>, ()> {
+    query_task(child, timeout, move |pipes| protocol::observe(pipes, &ids))
+}
+fn query_task<R: Send + 'static>(
+    child: &mut Child,
+    timeout: Duration,
+    task: impl FnOnce(Pipes) -> Result<R, ()> + Send + 'static,
+) -> Result<R, ()> {
     let result = match (child.stdin.take(), child.stdout.take()) {
         (Some(input), Some(output)) => {
             let (sender, receiver) = mpsc::sync_channel(1);
             std::thread::spawn(move || {
-                let _ = sender.send(protocol::observe(Pipes { input, output }, &ids));
+                let _ = sender.send(task(Pipes { input, output }));
             });
             receiver.recv_timeout(timeout).unwrap_or(Err(()))
         }
@@ -106,8 +113,16 @@ pub(super) fn query_child(
     result
 }
 pub(super) fn query(home: &Path, ids: Vec<String>) -> Result<Vec<Observation>, ()> {
+    let mut child = spawn_proxy(home)?;
+    query_child(&mut child, ids, Duration::from_secs(5))
+}
+pub(crate) fn quota(home: &Path) -> Result<crate::quotas::RawSample, ()> {
+    let mut child = spawn_proxy(home)?;
+    query_task(&mut child, Duration::from_secs(8), protocol::quota)
+}
+fn spawn_proxy(home: &Path) -> Result<Child, ()> {
     let exe = executable(home)?;
-    let mut child = Command::new(exe)
+    Command::new(exe)
         .args(["app-server", "proxy", "--sock"])
         .arg(home.join("app-server-control/app-server-control.sock"))
         .creation_flags(0x08000000)
@@ -115,6 +130,5 @@ pub(super) fn query(home: &Path, ids: Vec<String>) -> Result<Vec<Observation>, (
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
-        .map_err(|_| ())?;
-    query_child(&mut child, ids, Duration::from_secs(5))
+        .map_err(|_| ())
 }

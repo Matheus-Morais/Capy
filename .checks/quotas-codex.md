@@ -11,6 +11,7 @@ Reutilizar o proxy limitado do daemon existente e o monitor; Snapshot ganha quot
 | Identidade da fonte | account/read(refreshToken:false), rateLimits/read, account/read novamente; comparar conta antes/depois | juntar saldo com identidade lida só uma vez mistura contas numa troca |
 | Estado por janela | provider/account/bucket/period, usedPercent, duração, resetsAt, observedAt, fresh/stale/unavailable | um percentual agregado mistura janelas e omite origem/expiração |
 | Falha/expiração | retirar percentual ao falhar atualização, passar de 120 s ou atingir reset | continuar exibindo saldo antigo como atual |
+| Responsividade | um worker de cotas, cache serial e caixa de resultado em memória; somente monitor principal publica Snapshot | leitura de cotas inline bloqueia atividade até 8 s; dois publishers podem emitir snapshots fora de ordem |
 
 ## Checks
 
@@ -35,7 +36,7 @@ Proof: `node scripts/verify-codex-quotas.mjs`.
 - Failure/dependency: C2/C3; proxy timeout 8 s e filho próprio encerrado.
 - Idempotency/retry: C3, leitura a cada 60 s; nenhuma escrita no provedor.
 - Authorization: C1, somente conta conectada ao daemon existente.
-- Concurrency: leitura serial no monitor; identidade antes/depois C1/C2.
+- Concurrency: leitura serial no worker da fonte, caixa de resultado em memória e somente monitor principal publica; identidade antes/depois e notificação account/updated invalidam a amostra C1/C2.
 - Lifecycle: C3; dados só em memória, reset em segundos Unix.
 - Transitions: C3, indisponível não é saldo zero.
 - Observability: C4, status/motivo e fonte; sem credenciais ou logs de e-mail.
@@ -43,3 +44,7 @@ Proof: `node scripts/verify-codex-quotas.mjs`.
 ## Handoff
 
 Slice completo no principal (~10 arquivos/25k tokens). Verificador fresh obrigatório após commit. Isso não encerra a etapa de cotas: fontes reais Claude/Antigravity e múltiplas contas ainda precisam de prova e implementação. Release final 0.5.0 continua pendente.
+
+## Execução
+
+35 testes Rust e 9 testes JS passaram no código alpha.2, incluindo C1–C4. C5 passou contra o executável debug; precisa repetir contra o release compilado deste commit. A inspeção visual usa somente uma fixture sintética de navegador, sem equivalência com validação nativa do desktop. Publicação remota dispensada pelo usuário; artefatos locais continuam autorizados.

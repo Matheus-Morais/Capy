@@ -4,7 +4,8 @@ import fixture from '../assets/demo.json';
 
 export interface Session { id: string; project: string; agent: string; symbol: string; kind: string; origin: string; state: string; request: string | null; message: string; command: string | null; hidden: boolean; source_action?: { label: string; available: boolean; reason: string | null } }
 export interface Integration { agent: string; message: string }
-export interface Snapshot { sessions: Session[]; scenario: string; reduceMotion: boolean; integrations: Integration[] }
+export interface QuotaRow { provider: string; account: string | null; bucket: string | null; period: string | null; window: { usedPercent: number; windowDurationMins: number; resetsAt: number } | null; observedAt: number | null; state: string; message: string }
+export interface Snapshot { sessions: Session[]; scenario: string; reduceMotion: boolean; integrations: Integration[]; quotas?: QuotaRow[] }
 export const native = isTauri();
 let browserSnapshot: Snapshot = { sessions: structuredClone(fixture), scenario: 'waiting', reduceMotion: false, integrations: [] };
 const listeners: Array<(value: Snapshot) => void> = [];

@@ -8,6 +8,7 @@ mod discovery;
 mod geometry;
 mod monitor;
 mod position;
+mod quotas;
 mod smoke;
 mod source_access;
 
@@ -320,6 +321,21 @@ fn main() {
     }
     if args.iter().any(|a| a == "--claude-hook") {
         claude_activity::collect();
+        return;
+    }
+    if let Some(path) = args
+        .iter()
+        .position(|a| a == "--quota-report")
+        .and_then(|i| args.get(i + 1))
+    {
+        let rows = quotas::Cache::default().poll(&discovery::Sources::local());
+        if serde_json::to_vec_pretty(&rows)
+            .map_err(|e| e.to_string())
+            .and_then(|bytes| std::fs::write(path, bytes).map_err(|e| e.to_string()))
+            .is_err()
+        {
+            std::process::exit(1);
+        }
         return;
     }
     if let Some(path) = args

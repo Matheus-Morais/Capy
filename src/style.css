@@ -50,6 +50,9 @@ html { scrollbar-width:thin; scrollbar-color:#c1b9a7 #faf7ed; }
 .quota-track { height:4px; background:#e3ddce; border-radius:3px; overflow:hidden; }
 .quota-track span { display:block; height:100%; background:#73845b; }
 .quota-row strong { text-align:right; color:#302b21; font-variant-numeric:tabular-nums; }
+.quota-source + .quota-source { border-top:1px solid var(--rule); margin-top:16px; padding-top:12px; }
+.quota-source h3 { font-size:12px; font-weight:600; margin:0 0 5px; overflow-wrap:anywhere; }
+.quota-meta { color:var(--muted); font-size:12px; line-height:1.5; margin:5px 0 0; overflow-wrap:anywhere; }
 .sheet-footer { position:sticky; bottom:0; display:flex; align-items:center; justify-content:space-between; padding:12px 20px; background:#f0ecdf; border-top:1px solid var(--rule); font-size:12px; gap:10px; }
 .sheet-footer > span { color:var(--muted); }
 .sheet-footer button { display:flex; align-items:center; gap:5px; border:0; color:var(--accent); font-weight:650; font-size:12px; padding:5px 0; }
