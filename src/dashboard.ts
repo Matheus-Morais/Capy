@@ -2,6 +2,7 @@ import './style.css';
 import { action, desktopCommand, native, showError, snapshot, subscribe, respondIntervention, setInterventionSubscription, type Snapshot } from './bridge';
 import { escape, sessionRow, renderQuotas } from './presentation';
 import { pendingIntervention, interventionContext, captureInterventionAnswers, restoreInterventionAnswers } from './interventions-ui';
+import { runInterventionSubscriptionClick } from './intervention-subscription';
 
 const sessions = document.getElementById('sessions')!;
 const notice = document.getElementById('notice')!;
@@ -65,10 +66,10 @@ sessions.addEventListener('click', event => {
     return;
   }
   if (button.dataset.action === 'connect-interventions') {
+    const operation = runInterventionSubscriptionClick(button, id, setInterventionSubscription);
+    if (!operation) return;
     const enabled = button.dataset.enabled === 'true';
-    button.disabled = true;
-    button.setAttribute('aria-busy', 'true');
-    void setInterventionSubscription(id, enabled).then(() => {
+    void operation.then(() => {
       notice.textContent = enabled ? 'Conexão de respostas iniciada para este cartão Codex.' : 'Conexão de respostas encerrada.';
     }).catch(showError).finally(() => void snapshot().then(render).catch(showError));
     return;

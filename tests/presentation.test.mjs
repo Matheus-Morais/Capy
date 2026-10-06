@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sessionRow, petState, quotaRows, renderQuotas } from '../src/presentation.ts';
 import { pendingIntervention, interventionContext, captureInterventionAnswers, restoreInterventionAnswers } from '../src/interventions-ui.ts';
+import { runInterventionSubscriptionClick } from '../src/intervention-subscription.ts';
 
 const session = { id:'codex:11111111-1111-1111-1111-111111111111', project:'Project <script>', agent:'Codex', kind:'codex', symbol:'O', origin:'C:\\work\\Project', state:'unknown', request:null, command:null, message:'Sessão aberta.', hidden:false };
 test('source access is driven by backend availability and escapes its reason', () => {
@@ -66,6 +67,22 @@ test('intervention submission resolves only the current visible pending Codex id
   assert.equal(pendingIntervention({...data,interventions:[{...request,status:'submitting'}]},'fresh'),undefined);
   assert.equal(pendingIntervention({...data,sessions:[{...session,hidden:true}]},'fresh'),undefined);
   assert.equal(pendingIntervention({...data,interventions:[{...request,generation:''}]},'fresh'),undefined);
+});
+test('only an explicit Codex subscription button click invokes the connection', async () => {
+  const attrs = {};
+  const calls = [];
+  const subscribe = async (...args) => { calls.push(args); return 'connected'; };
+  const other = {dataset:{action:'hide',enabled:'true'},disabled:false,setAttribute:(key,value) => attrs[key]=value};
+  assert.equal(runInterventionSubscriptionClick(other, session.id, subscribe), undefined);
+  assert.deepEqual(calls, []);
+  const button = {dataset:{action:'connect-interventions',enabled:'true'},disabled:false,setAttribute:(key,value) => attrs[key]=value};
+  const operation = runInterventionSubscriptionClick(button, session.id, subscribe);
+  assert.equal(button.disabled, true);
+  assert.equal(attrs['aria-busy'], 'true');
+  assert.equal(await operation, 'connected');
+  assert.deepEqual(calls, [[session.id,true]]);
+  assert.equal(runInterventionSubscriptionClick(button, session.id, subscribe), undefined);
+  assert.equal(calls.length, 1);
 });
 test('intervention answer and focus survive redraw only while the same request nonce remains', () => {
   const field = (nonce, value, checked = false) => {
