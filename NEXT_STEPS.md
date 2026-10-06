@@ -1,30 +1,29 @@
 # Retomada do Capy
 
-Salvo em 2026-10-05 a pedido do usuário: encerrar o trabalho de hoje e retomar amanhã.
+Atualizado em 2026-10-06: integração de atividade Claude implementada e verificada independentemente.
 
 ## Onde paramos
 
 - Desktop Windows em Rust/Tauri 2 com capivara frontal, arraste, resumo, painel e bandeja. O usuário confirmou o arraste.
 - Descoberta real de Claude Code e Codex, com validação de presença, projeto, identidade e ocultação persistente.
 - Codex: leitura do daemon já aberto, sem iniciar ou retomar conversas. Estados working/waiting/idle/unknown; falhas descartam o estado anterior. Idle não significa conclusão.
-- Pedidos reais são respondidos no Codex. Capy ainda não oferece resposta ou acesso ao terminal real.
-- Claude: presença funciona; atividade continua desconhecida. Antigravity e cotas reais seguem pendentes.
-- O release atualizado foi reaberto ao encerrar a entrega: `src-tauri/target/release/capy.exe`.
-- Últimos commits da entrega: `f4c9551` (atividade Codex), `e25aaaf` (verificação independente).
-- Validação: 7 testes JS, 18 Rust e 20 verificações nativas passaram; revisão independente C1–C7 PASS.
+- Pedidos reais são respondidos no agente de origem. Capy ainda não oferece resposta ou acesso ao terminal real.
+- Claude: hooks silenciosos opcionais, identidade por sessão/PID/criação/projeto e ancestral Claude nativo. Evidência expira em 30 s; Stop é unknown porque pode continuar. Sessões sem hooks ou sem evidência recente permanecem unknown. Antigravity e cotas reais seguem pendentes.
+- Release compilado e reaberto: `src-tauri/target/release/capy.exe`. Hooks habilitados na configuração local; sessões Claude já abertas precisam ser reiniciadas pelo usuário para carregar a habilitação.
+- Commits desta etapa: `8626c8a` (contrato e prova), `9d0e5ff` (integração).
+- Validação: 7 testes JS, 22 Rust e 20 verificações nativas passaram; prova release própria demonstrou working → waiting → working → unknown com continuação e remoção da sessão encerrada. Verificação independente C1–C6 PASS; evidências em `.checks/claude-activity.verified.md`.
 
-## Próximo trabalho: atividade do Claude Code
+## Atividade Claude entregue
 
-1. Ler `.design/session-discovery.md`, `.design/codex-activity.md` e os relatórios em `.checks/` para preservar os contratos já comprovados.
-2. Provar hooks numa sessão de teste própria e isolada, preservando os hooks/configurações existentes. Não usar a sessão externa do Prisma como sessão de teste.
-3. Demonstrar eventos de início de trabalho, espera e término/continuação; verificar que uma intervenção desaparece quando deixa de ser válida.
-4. Definir um coletor mínimo ligado à identidade da sessão/processo, com leitura limitada, ordenação e expiração. Guardar somente metadados necessários, sem prompts, respostas, histórico ou credenciais.
-5. Após a prova, registrar contrato e checklist, implementar a integração e a habilitação reversível dos hooks sem sobrescrever os demais. Manter unknown quando a observação não for confiável.
-6. Rodar testes e validação nativa, obter verificação independente e reabrir o release atualizado.
+Habilitação: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/claude-hooks.ps1 -Action Enable`; remoção: `-Action Disable`. Preserva hooks alheios; remoção invalida registros e bloqueia hooks ainda carregados até nova habilitação. Reiniciar sessões Claude para carregar a configuração. Remover antes de mover o repositório, pois o hook usa caminho absoluto do release.
+
+Provas isoladas: `scripts/verify-claude-settings.ps1` e `node scripts/verify-claude-hooks.mjs`. Esta última inicia somente uma sessão própria, com teto de US$ 1, nega sua única escrita e testa continuação via Stop. Não usar a sessão externa do Prisma como sessão de teste.
+
+Limites: prova real usa print/SDK, não diálogo interativo; idle_prompt, perguntas, elicitações e subagentes não têm prova real completa. TTL implica unknown em trabalho/espera longa. Registrar somente metadados mínimos; não inferir ociosidade de Stop.
 
 Não declarar respostas pelo Capy disponíveis com base apenas na observação de hooks.
 
-## Depois, em ordem proposta
+## Próximo trabalho, em ordem proposta
 
 1. **Codex em espera real:** validar ambas as flags de intervenção e a remoção do pedido em sessão de teste própria. Hoje essas transições têm testes de contrato; o spike real demonstrou active/idle, e o release confirmou working. Testar também desconexão/reabertura e revisar limites de 64 sessões/1 MiB, hoje verificados estruturalmente.
 2. **Antigravity:** provar presença e projeto na CLI/IDE. Diretórios de histórico não comprovam sessão aberta; evitar interpretar conversas protobuf para inferir atividade.
@@ -47,5 +46,8 @@ Não declarar respostas pelo Capy disponíveis com base apenas na observação d
 - `.design/capy.md`: decisões do produto.
 - `.design/session-discovery.md`: presença e integrações pendentes.
 - `.design/codex-activity.md`: contrato de atividade Codex.
+- `.design/claude-activity.md`: contrato de atividade Claude.
+- `.checks/claude-hooks-spike.md` e `.checks/claude-activity.md`: prova e checklist da etapa Claude.
+- `.checks/claude-activity.verified.md`: verificação independente e limitações.
 - `.checks/session-discovery.verified.md` e `.checks/codex-activity.verified.md`: evidências e limitações.
 - `README.md`: execução e comportamento atual.
