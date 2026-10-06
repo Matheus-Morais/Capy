@@ -6,10 +6,11 @@ As respostas são enviadas uma única vez ao pedido que aparece no cartão. Iden
 
 ## Validação desta prévia
 
-- 40 testes Rust e 11 testes JavaScript passaram.
+- 40 testes Rust e 13 testes JavaScript passaram.
 - `npm run build` passou.
 - `npm run verify:native` passou.
 - O runner `scripts/verify-codex-interventions.mjs` passou em conversa própria no release Windows: pergunta entregue, resposta antiga recusada sem liberar a seguinte, aprovação de alteração negada e arquivo ausente.
+- Verificação independente repetiu os testes, a prova real, o build de prova e o release sem harness; ver relatório `.checks/interventions-codex.round3.verified.md`.
 - O runner exige a build de prova `npm run desktop:build -- --features intervention-proof`. Essa feature fica fora do executável desta entrega.
 
-Esta é uma prévia alpha, não a entrega 0.4.0 final. Ainda falta verificação independente da feature, QA visual nativo do cartão real e validação das demais etapas do produto. Uma conclusão de `serverRequest/resolved` pode indicar resolução na origem ou limpeza do pedido; a UI informa somente “Pedido resolvido no Codex”.
+Esta é uma prévia alpha, não a entrega 0.4.0 final. QA visual nativo do cartão real segue pendente porque a janela Capy não ficou acessível à automação. A conversa de produto indicada no checklist também não foi disponibilizada ao verificador. As demais etapas do produto seguem abertas. Uma conclusão de `serverRequest/resolved` pode indicar resolução na origem ou limpeza do pedido; a UI informa somente “Pedido resolvido no Codex”.
