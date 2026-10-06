@@ -1,7 +1,7 @@
 import './style.css';
 import { action, desktopCommand, native, showError, snapshot, subscribe, respondIntervention, setInterventionSubscription, type Snapshot } from './bridge';
 import { escape, sessionRow, renderQuotas } from './presentation';
-import { pendingIntervention, interventionContext } from './interventions-ui';
+import { pendingIntervention, interventionContext, captureInterventionAnswers, restoreInterventionAnswers } from './interventions-ui';
 
 const sessions = document.getElementById('sessions')!;
 const notice = document.getElementById('notice')!;
@@ -12,12 +12,7 @@ let latestSnapshot: Snapshot | undefined;
 let cancelQuotaExpiry: (() => void) | undefined;
 function render(data: Snapshot) {
   latestSnapshot = data;
-  const retained = new Map<string, { value: string; checked: boolean; focused: boolean }>();
-  for (const input of sessions.querySelectorAll<HTMLInputElement>('[data-question-answer],[data-free-answer]')) {
-    const requestNonce = input.closest<HTMLElement>('[data-request]')?.dataset.request;
-    const key = input.dataset.freeAnswer ? `free:${input.dataset.freeAnswer}` : `choice:${input.dataset.questionAnswer}:${input.name}`;
-    if (requestNonce) retained.set(`${requestNonce}\0${key}`, { value: input.value, checked: input.checked, focused: document.activeElement === input });
-  }
+  const retained = captureInterventionAnswers(sessions.querySelectorAll<HTMLInputElement>('[data-question-answer],[data-free-answer]'), document.activeElement);
   if (realMode !== (data.scenario === 'real')) notice.textContent = '';
   realMode = data.scenario === 'real';
   const visible = data.sessions.filter(s => !s.hidden).sort((a,b) => Number(b.state === 'waiting') - Number(a.state === 'waiting'));
@@ -26,12 +21,7 @@ function render(data: Snapshot) {
   sessions.innerHTML = visible.length ? visible.map(s => sessionRow(s, realMode, data.interventions.filter(r => r.sessionId === s.id), data.subscriptions.find(sub => sub.sessionId === s.id))).join('') : realMode
     ? '<div class="empty"><h2>Nenhuma sessão visível.</h2><p>Abra uma sessão de Claude Code ou Codex. A lista é atualizada automaticamente a cada 5 segundos; sessões ocultas podem ser restauradas abaixo.</p></div>'
     : '<div class="empty"><h2>Tudo tranquilo por aqui.</h2><p>Restaure as sessões ocultas ou escolha outro cenário no painel completo.</p></div>';
-  for (const input of sessions.querySelectorAll<HTMLInputElement>('[data-question-answer],[data-free-answer]')) {
-    const requestNonce = input.closest<HTMLElement>('[data-request]')?.dataset.request;
-    const key = input.dataset.freeAnswer ? `free:${input.dataset.freeAnswer}` : `choice:${input.dataset.questionAnswer}:${input.name}`;
-    const saved = requestNonce ? retained.get(`${requestNonce}\0${key}`) : undefined;
-    if (saved) { input.value = saved.value; input.checked = saved.checked; if (saved.focused) input.focus({ preventScroll:true }); }
-  }
+  restoreInterventionAnswers(sessions.querySelectorAll<HTMLInputElement>('[data-question-answer],[data-free-answer]'), retained);
   for (const row of sessions.querySelectorAll<HTMLElement>('[data-id]')) {
     if (opening.has(row.dataset.id!)) {
       const button = row.querySelector<HTMLButtonElement>('[data-action="open-source"]');

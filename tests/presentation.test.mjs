@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sessionRow, petState, quotaRows, renderQuotas } from '../src/presentation.ts';
-import { pendingIntervention, interventionContext } from '../src/interventions-ui.ts';
+import { pendingIntervention, interventionContext, captureInterventionAnswers, restoreInterventionAnswers } from '../src/interventions-ui.ts';
 
 const session = { id:'codex:11111111-1111-1111-1111-111111111111', project:'Project <script>', agent:'Codex', kind:'codex', symbol:'O', origin:'C:\\work\\Project', state:'unknown', request:null, command:null, message:'Sessão aberta.', hidden:false };
 test('source access is driven by backend availability and escapes its reason', () => {
@@ -56,6 +56,25 @@ test('intervention submission resolves only the current visible pending Codex id
   assert.equal(pendingIntervention({...data,interventions:[{...request,status:'submitting'}]},'fresh'),undefined);
   assert.equal(pendingIntervention({...data,sessions:[{...session,hidden:true}]},'fresh'),undefined);
   assert.equal(pendingIntervention({...data,interventions:[{...request,generation:''}]},'fresh'),undefined);
+});
+test('intervention answer and focus survive redraw only while the same request nonce remains', () => {
+  const field = (nonce, value, checked = false) => {
+    const calls = [];
+    const input = { name:`answer-${nonce}-q`, value, checked, dataset:{questionAnswer:'q'}, closest:() => ({dataset:{request:nonce}}), focus:options => calls.push(options), calls };
+    return input;
+  };
+  const before = field('same','Continue',true);
+  const saved = captureInterventionAnswers([before],before);
+  const redraw = field('same','',false);
+  restoreInterventionAnswers([redraw],saved);
+  assert.equal(redraw.value,'Continue');
+  assert.equal(redraw.checked,true);
+  assert.deepEqual(redraw.calls,[{preventScroll:true}]);
+  const replacement = field('new','',false);
+  restoreInterventionAnswers([replacement],saved);
+  assert.equal(replacement.value,'');
+  assert.equal(replacement.checked,false);
+  assert.deepEqual(replacement.calls,[]);
 });
 test('idle sessions never imply completion', () => {
   const idle = {...session, state:'idle'};
