@@ -6,8 +6,8 @@ Prévia do desenvolvimento em andamento. Nenhuma das seis etapas está declarada
 - Codex: card com abertura da conversa pelo ID técnico via link registrado no Windows, com revalidação de presença/projeto antes da abertura. Suporta associação de executável e AppID empacotado.
 - Configuração Antigravity reversível em scripts/antigravity-hooks.ps1; não foi habilitada globalmente no ambiente do usuário.
 
-Validação: 32 testes Rust, 8 testes JS, build TypeScript/Vite e configuração Antigravity no Windows PowerShell 5.1. Layout do renderer conferido no navegador com dados sintéticos.
+Validação: 32 testes Rust, 8 testes JS, build TypeScript/Vite e configuração Antigravity no Windows PowerShell 5.1. Teste nativo de inicialização passou com as três WebViews prontas e sem erros UI. Layout do renderer conferido no navegador com dados sintéticos. Verificador independente aprovou 4/4 provas unitárias do slice Codex; não comprova a seleção de uma conversa no app.
 
 Pendências: prova CLI completa interrompida por RESOURCE_EXHAUSTED/429; sessão IDE ainda não comprovada; seleção da conversa após abertura do link ainda não comprovada no app; acesso às origens Claude/Antigravity, respostas, cotas, suporte Claude ampliado e QA visual desktop.
 
-O relatório SHA256.json acompanhará o executável local depois da compilação. Publicação remota cancelada pelo usuário.
+Executável local: Capy.exe. Integridade e commit de compilação: SHA256.json. Publicação remota cancelada pelo usuário.
