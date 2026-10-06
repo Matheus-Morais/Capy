@@ -6,6 +6,7 @@ mod claude_activity;
 mod demo;
 mod discovery;
 mod geometry;
+mod interventions;
 mod monitor;
 mod position;
 mod quotas;

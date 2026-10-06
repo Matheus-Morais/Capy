@@ -22,7 +22,7 @@ Reutilizar descoberta de sessão/identidade, estado real/demo e apresentação d
 
 ### S1 — Resposta no pedido exato · ~15 arquivos · ~100 KB · ~25k leitura
 
-**C1** — parser reconhece somente os três métodos soportados, valida thread/turn/item/ID RPC e perguntas (1–4, opções 2–4, texto até 4096 bytes); payload acima de 64 KiB e formatos desconhecidos não habilitam resposta.
+**C1** — parser reconhece somente os três métodos suportados, valida thread/turn/item/ID RPC e perguntas (1–4, opções 2–4, texto até 4096 bytes); payload acima de 64 KiB e formatos desconhecidos não habilitam resposta.
 Proof: Rust `interventions::tests::request_contract_and_bounds`.
 
 **C2** — aprovação mostra comando/cwd ou mudanças de arquivos antes da decisão; rede gerenciada, permissões adicionais e stdin sem contexto suportado não habilitam aceitação; decisões de sessão/política são rejeitadas.
@@ -57,3 +57,7 @@ Proof: `node scripts/verify-codex-interventions.mjs` — named proofs `question_
 ## Handoff
 
 S1 inteiro (~25k leitura) no principal. Os campos de protocolo do spike já foram comprovados, mas nenhum C1–C7 está fechado por essa investigação. Verificador independente fresh obrigatório após o último commit da feature inteira; range f5434a1..HEAD. As etapas gerais e releases finais permanecem abertas até suas provas completas.
+
+## Estado da implementação
+
+Primeiro checkpoint: parser/contexto/geração de resposta em src-tauri/src/interventions.rs e provas C1/C2 passaram na camada própria (2 testes nomeados). O módulo ainda não está conectado ao transporte persistente, ao Snapshot ou ao frontend: nenhum controle novo real foi habilitado e nenhuma release nova foi gerada a partir desse checkpoint. Próximo trabalho obrigatório: registro de callbacks por geração e ciclo C3/C4, transporte C5, cards C6, runner release C7 e verificação independente da feature completa. Não usar os probes da investigação como substitutos desses gates.
