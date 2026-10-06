@@ -12,6 +12,10 @@ use windows_sys::Win32::{
 };
 
 pub(super) fn claude_ancestor() -> Option<(u32, u64)> {
+    ancestor_named(&["claude.exe"])
+}
+
+pub(crate) fn ancestor_named(names: &[&str]) -> Option<(u32, u64)> {
     unsafe {
         let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if snapshot == INVALID_HANDLE_VALUE {
@@ -46,11 +50,11 @@ pub(super) fn claude_ancestor() -> Option<(u32, u64)> {
                 return None;
             }
             let path = String::from_utf16(&path[..len as usize]).ok()?;
-            if path
-                .rsplit(['\\', '/'])
-                .next()?
-                .eq_ignore_ascii_case("claude.exe")
-            {
+            if names.iter().any(|name| {
+                path.rsplit(['\\', '/'])
+                    .next()
+                    .is_some_and(|actual| actual.eq_ignore_ascii_case(name))
+            }) {
                 return Some((parent, parent_birth));
             }
             pid = parent;

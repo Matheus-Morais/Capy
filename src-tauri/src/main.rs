@@ -288,6 +288,14 @@ fn tray_action(app: &tauri::AppHandle, id: &str) -> Result<(), String> {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if let Some(event) = args
+        .iter()
+        .position(|a| a == "--antigravity-hook")
+        .and_then(|i| args.get(i + 1))
+    {
+        antigravity::collect(event);
+        return;
+    }
     if args.iter().any(|a| a == "--claude-hook") {
         claude_activity::collect();
         return;

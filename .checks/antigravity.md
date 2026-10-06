@@ -54,4 +54,5 @@ Etapa inteira no agente principal. Verificador após tarefas concluídas. C7 ain
 
 - Slice 1: descoberta por presença/metadados implementada. C1 e C2 passaram em 27 testes Rust, nenhum falhou ou foi ignorado. Ainda não verificados independentemente; não equivalem à prova runtime C6/C7.
 - Slice 2: coletor de hooks e configuração reversível (C3–C5), pendente.
+  Implementado: 29 testes Rust passaram; C3/C4 por contrato e script C5 passou no Windows PowerShell 5.1. Prova real ainda pendente. IDE sem bloqueio tem presença conservadora apenas enquanto há evento com PID/criação válidos e até 30s; não comprova todas as conversas abertas sem hooks.
 - Slice 3: provas próprias CLI/IDE (C6/C7), verificador, versão e publicação, pendente.

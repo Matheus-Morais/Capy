@@ -100,3 +100,35 @@ fn invalid_metadata_is_diagnostic() {
     assert!(workspace(&"x".repeat(65_537)).is_err());
     drop(owner);
 }
+
+fn sample_observation() -> Observation {
+    Observation {
+        version: 1,
+        id: ID.into(),
+        cwd: "C:\\work\\Project".into(),
+        variant: "antigravity-ide".into(),
+        pid: 42,
+        birth: 100,
+        at_ms: 100_000,
+        state: "working".into(),
+    }
+}
+#[test]
+fn hook_presence_requires_live_identity() {
+    let o = sample_observation();
+    assert!(valid_observation(&o, 100_000, |_| Some(100)));
+    assert!(!valid_observation(&o, 100_000, |_| None));
+    assert!(!valid_observation(&o, 100_000, |_| Some(101)));
+}
+#[test]
+fn activity_is_bounded_and_never_done() {
+    let mut o = sample_observation();
+    assert!(valid_observation(&o, 130_000, |_| Some(100)));
+    assert!(!valid_observation(&o, 130_001, |_| Some(100)));
+    assert!(!valid_observation(&o, 99_999, |_| Some(100)));
+    assert_eq!(event_state("PreInvocation"), "working");
+    assert_eq!(event_state("PostToolUse"), "working");
+    assert_eq!(event_state("Stop"), "unknown");
+    o.state = "done".into();
+    assert!(!valid_observation(&o, 100_000, |_| Some(100)));
+}

@@ -282,7 +282,7 @@ fn enrich_with(
     }
 }
 #[cfg(windows)]
-mod process;
+pub(crate) mod process;
 #[cfg(not(windows))]
 mod process {
     pub fn claude_ancestor() -> Option<(u32, u64)> {
