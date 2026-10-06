@@ -24,6 +24,7 @@ pub struct Integration {
 pub struct Sources {
     pub claude: PathBuf,
     pub codex: PathBuf,
+    pub antigravity: PathBuf,
 }
 
 impl Sources {
@@ -38,6 +39,9 @@ impl Sources {
             codex: std::env::var_os("CODEX_HOME")
                 .map(PathBuf::from)
                 .unwrap_or_else(|| home.join(".codex")),
+            antigravity: std::env::var_os("CAPY_ANTIGRAVITY_HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| home.join(".gemini")),
         }
     }
 }
@@ -63,7 +67,7 @@ struct CodexMetadata {
     source: serde_json::Value,
 }
 
-fn uuid(value: &str) -> bool {
+pub(crate) fn uuid(value: &str) -> bool {
     value.len() == 36
         && value.bytes().enumerate().all(|(i, b)| {
             if [8, 13, 18, 23].contains(&i) {
@@ -74,7 +78,7 @@ fn uuid(value: &str) -> bool {
         })
 }
 
-fn session(agent: &str, kind: &str, id: &str, cwd: &str) -> Session {
+pub(crate) fn session(agent: &str, kind: &str, id: &str, cwd: &str) -> Session {
     let project = cwd
         .trim_end_matches(['/', '\\'])
         .rsplit(['/', '\\'])
@@ -85,7 +89,12 @@ fn session(agent: &str, kind: &str, id: &str, cwd: &str) -> Session {
         id: format!("{kind}:{id}"),
         project: project.into(),
         agent: agent.into(),
-        symbol: if kind == "claude" { "C" } else { "O" }.into(),
+        symbol: match kind {
+            "claude" => "C",
+            "antigravity" => "A",
+            _ => "O",
+        }
+        .into(),
         kind: kind.into(),
         origin: cwd.into(),
         state: "unknown".into(),
@@ -139,7 +148,7 @@ pub fn process_birth(_: u32) -> Option<u64> {
     None
 }
 
-fn held_lock(path: &Path) -> Result<bool, ()> {
+pub(crate) fn held_lock(path: &Path) -> Result<bool, ()> {
     let file = File::open(path).map_err(|_| ())?;
     match file.try_lock_shared() {
         Ok(()) => Ok(false),
@@ -295,12 +304,7 @@ fn scan_with(sources: &Sources, birth: impl Fn(u32) -> Option<u64>) -> Report {
         lock_dir.exists(),
     ));
     report.sessions.extend(found.into_values());
-    report.integrations.push(Integration {
-        agent: "Antigravity".into(),
-        message:
-            "Integração pendente: presença e projeto ainda precisam de validação na CLI e IDE."
-                .into(),
-    });
+    crate::antigravity::scan(sources, &mut report);
     report.sessions.sort_by(|a, b| a.id.cmp(&b.id));
     report
 }

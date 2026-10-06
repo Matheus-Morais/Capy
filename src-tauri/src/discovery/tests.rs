@@ -24,6 +24,7 @@ impl Fixture {
         Sources {
             claude: self.0.join("claude"),
             codex: self.0.join("codex"),
+            antigravity: self.0.join("antigravity"),
         }
     }
     fn claude(&self, id: &str, pid: u32, birth: &str) {

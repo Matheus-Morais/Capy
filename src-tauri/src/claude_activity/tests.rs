@@ -17,6 +17,7 @@ impl Fixture {
         let sources = Sources {
             claude: dir.clone(),
             codex: dir.join("codex"),
+            antigravity: dir.join("antigravity"),
         };
         fs::create_dir_all(dir.join("sessions")).unwrap();
         fs::create_dir_all(directory(&sources)).unwrap();
