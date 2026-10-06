@@ -13,6 +13,8 @@ pub struct Session {
     pub message: String,
     pub command: Option<String>,
     pub hidden: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_action: Option<crate::source_access::SourceAction>,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

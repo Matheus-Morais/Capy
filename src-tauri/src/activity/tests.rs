@@ -14,6 +14,7 @@ fn sample(id: &str) -> crate::demo::Session {
         message: String::new(),
         command: None,
         hidden: false,
+        source_action: None,
     }
 }
 fn observation(id: &str, status: serde_json::Value) -> Observation {

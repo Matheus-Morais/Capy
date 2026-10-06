@@ -23,3 +23,4 @@ Cada etapa terá checklist, provas, verificador independente, bump coerente npm/
 - SQLite será consultado em modo read-only somente por ID com bloqueio mantido; não consultar title, preview, raw_summary ou status salvo como prova de atividade.
 - Hooks oficiais oferecem conversationId/workspacePaths. Não interpretar protobuf de conversa nem substituir cota real por percentual de demonstração.
 - Nenhuma publicação ou etapa foi declarada concluída.
+- Prévia local 0.2.0-alpha.1: implementação Antigravity em andamento e slice de acesso Codex. Não substitui 0.2.0/0.3.0 finais; provas CLI/IDE/seleção de conversa continuam pendentes. Notas em releases/0.2.0-alpha.1/NOTES.md.

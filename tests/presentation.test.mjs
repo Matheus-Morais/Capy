@@ -3,6 +3,19 @@ import assert from 'node:assert/strict';
 import { sessionRow, petState, quotaRows } from '../src/presentation.ts';
 
 const session = { id:'codex:11111111-1111-1111-1111-111111111111', project:'Project <script>', agent:'Codex', kind:'codex', symbol:'O', origin:'C:\\work\\Project', state:'unknown', request:null, command:null, message:'Sessão aberta.', hidden:false };
+test('source access is driven by backend availability and escapes its reason', () => {
+  assert.doesNotMatch(sessionRow(session, true), /data-action="open-source"/);
+  const available = sessionRow({...session, source_action:{ label:'Abrir no Codex', available:true, reason:null }}, true);
+  assert.match(available, /data-action="open-source">Abrir no Codex/);
+  assert.doesNotMatch(available, / disabled|data-action="(?:allow|deny|answer|terminal)"/);
+  const missing = sessionRow({...session, source_action:{ label:'Abrir <app>', available:false, reason:'Link ausente <script>' }}, true);
+  assert.match(missing, /data-action="open-source" disabled>Abrir &lt;app&gt;/);
+  assert.match(missing, /Link ausente &lt;script&gt;/);
+  assert.doesNotMatch(missing, /<script>/);
+  const demo = sessionRow({...session, source_action:{ label:'Abrir no Codex', available:true, reason:null }}, false);
+  assert.match(demo, /Ver terminal simulado/);
+  assert.doesNotMatch(demo, /open-source/);
+});
 test('real rows show identity and unknown status without executable demo actions', () => {
   const html = sessionRow({...session, request:'permission', command:'dangerous'}, true);
   assert.match(html, /11111111-1111-1111-1111-111111111111/);

@@ -4,7 +4,8 @@ export const escape = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;',
 const eye = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10 5c5-1 9 3 11 7-1 2-2 3-4 4M7 7c-2 1-3 3-4 5 3 6 8 8 13 5m-7-7a3 3 0 0 0 4 4"/></svg>';
 
 export function sessionRow(s: Session, real: boolean): string {
-  const buttons = real ? '' : s.state === 'waiting' ? s.request === 'permission'
+  const source = s.source_action;
+  const buttons = real ? source ? `<button data-action="open-source"${source.available ? '' : ' disabled'}>${escape(source.label)}</button>${source.reason ? `<p class="source-reason">${escape(source.reason)}</p>` : ''}` : '' : s.state === 'waiting' ? s.request === 'permission'
     ? '<button class="primary" data-action="allow">Permitir uma vez</button><button data-action="deny">Negar</button>'
     : '<button class="primary" data-action="answer" data-answer="Só balão">Só balão</button><button data-action="answer" data-answer="Balão e som">Balão e som</button>'
     : '<button data-action="terminal">Ver terminal simulado</button>';

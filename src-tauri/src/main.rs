@@ -9,6 +9,7 @@ mod geometry;
 mod monitor;
 mod position;
 mod smoke;
+mod source_access;
 
 use geometry::{Area, Point};
 use std::{
@@ -213,6 +214,27 @@ fn demo_snapshot(state: State<'_, DesktopState>) -> Result<demo::Snapshot, Strin
         .map_err(|_| "Estado indisponível".into())
 }
 #[tauri::command]
+async fn open_source(state: State<'_, DesktopState>, id: String) -> Result<(), String> {
+    let expected = {
+        let snapshot = state.demo.lock().map_err(|_| "Estado indisponível")?;
+        if snapshot.scenario != "real" {
+            return Err("A demonstração não abre sessões reais.".into());
+        }
+        snapshot
+            .sessions
+            .iter()
+            .find(|s| s.id == id)
+            .cloned()
+            .ok_or("Sessão não encontrada. Atualize a lista.")?
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        let current = discovery::scan(&discovery::Sources::local());
+        source_access::open(&expected, true, &current)
+    })
+    .await
+    .map_err(|_| "Não foi possível verificar a sessão de origem.")?
+}
+#[tauri::command]
 fn ui_ready(window: WebviewWindow, state: State<'_, DesktopState>) -> Result<(), String> {
     state
         .ready
@@ -349,6 +371,7 @@ fn main() {
             move_pet,
             demo_snapshot,
             demo_action,
+            open_source,
             ui_ready,
             ui_error
         ])

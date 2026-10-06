@@ -5,6 +5,7 @@ import { escape, sessionRow, quotaRows } from './presentation';
 const sessions = document.getElementById('sessions')!;
 const notice = document.getElementById('notice')!;
 let realMode = false;
+const opening = new Set<string>();
 function render(data: Snapshot) {
   if (realMode !== (data.scenario === 'real')) notice.textContent = '';
   realMode = data.scenario === 'real';
@@ -14,6 +15,12 @@ function render(data: Snapshot) {
   sessions.innerHTML = visible.length ? visible.map(s => sessionRow(s, realMode)).join('') : realMode
     ? '<div class="empty"><h2>Nenhuma sessão visível.</h2><p>Abra uma sessão de Claude Code ou Codex. A lista é atualizada automaticamente a cada 5 segundos; sessões ocultas podem ser restauradas abaixo.</p></div>'
     : '<div class="empty"><h2>Tudo tranquilo por aqui.</h2><p>Restaure as sessões ocultas ou escolha outro cenário no painel completo.</p></div>';
+  for (const row of sessions.querySelectorAll<HTMLElement>('[data-id]')) {
+    if (opening.has(row.dataset.id!)) {
+      const button = row.querySelector<HTMLButtonElement>('[data-action="open-source"]');
+      if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
+    }
+  }
   document.querySelector<HTMLElement>('.simulation')!.textContent = realMode ? 'Sessões reais · descoberta local experimental' : 'Demonstração · sessões, respostas e cotas simuladas';
   document.getElementById('quotaRows')!.innerHTML = quotaRows(realMode);
   document.querySelector<HTMLElement>('#quotaTitle span')!.textContent = realMode ? 'Não conectadas' : 'Simulação';
@@ -34,6 +41,19 @@ sessions.addEventListener('click', event => {
   const button = (event.target as Element).closest<HTMLButtonElement>('[data-action]');
   if (!button) return;
   const id = button.closest<HTMLElement>('[data-id]')!.dataset.id!;
+  if (button.dataset.action === 'open-source') {
+    if (opening.has(id) || button.disabled) return;
+    opening.add(id);
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    void desktopCommand('open_source', { id }).then(() => {
+      notice.textContent = 'Abertura solicitada ao Codex.';
+    }).catch(showError).finally(() => {
+      opening.delete(id);
+      void snapshot().then(render).catch(showError);
+    });
+    return;
+  }
   if (button.dataset.action === 'terminal') { notice.textContent = 'Terminal simulado. Esta versão não abre terminais reais.'; return; }
   const kind = button.dataset.action!;
   void action(kind, id, button.dataset.answer ?? '').then(() => {

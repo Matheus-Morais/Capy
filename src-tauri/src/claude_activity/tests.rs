@@ -60,6 +60,7 @@ impl Fixture {
                 message: "old".into(),
                 command: Some("old".into()),
                 hidden: false,
+                source_action: None,
             }],
             integrations: vec![],
         }

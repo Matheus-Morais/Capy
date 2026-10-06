@@ -102,6 +102,7 @@ pub(crate) fn session(agent: &str, kind: &str, id: &str, cwd: &str) -> Session {
         message: "Sessão aberta. Atividade e pedidos ainda não são observados.".into(),
         command: None,
         hidden: false,
+        source_action: None,
     }
 }
 
@@ -183,7 +184,9 @@ fn diagnostic(agent: &str, count: usize, problems: usize, present: bool) -> Inte
 }
 
 pub fn scan(sources: &Sources) -> Report {
-    scan_with(sources, process_birth)
+    let mut report = scan_with(sources, process_birth);
+    crate::source_access::enrich(&mut report);
+    report
 }
 
 fn scan_with(sources: &Sources, birth: impl Fn(u32) -> Option<u64>) -> Report {

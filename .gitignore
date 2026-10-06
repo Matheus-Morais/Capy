@@ -6,5 +6,6 @@
 /.impeccable/*.log
 /.impeccable/*.pid
 /scratch/
+/releases/**/*.exe
 /.checks/discovery-local.json
 /.checks/activity-local.json
