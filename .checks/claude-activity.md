@@ -32,6 +32,7 @@ Validação/falha/identidade: C1/C2/C4. Ordenação/concurrency: bloqueio, insta
 | Longa ausência de eventos | TTL 30 s e unknown | manter espera antiga indefinidamente |
 | Arquivo da sessão | lock exclusivo para leitura/escrita, truncate sob lock | JSON parcialmente legível |
 | Hooks suportados | CLI Claude nativa Windows com ancestral claude.exe | aceitar qualquer emissor pelo ID da sessão |
+| Remoção durante sessão aberta | marcador `capy-activity/disabled`; coletor e monitor recusam eventos até Enable | hooks já carregados recriarem estado após Disable |
 
 ## Handoff
 

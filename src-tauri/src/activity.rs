@@ -70,6 +70,7 @@ pub fn enrich(sources: &Sources, report: &mut Report) {
         Err(())
     };
     apply(report, observations);
+    crate::claude_activity::enrich(sources, report);
 }
 
 fn apply(report: &mut Report, observations: Result<Vec<Observation>, ()>) {

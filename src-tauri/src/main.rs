@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod activity;
+mod claude_activity;
 mod demo;
 mod discovery;
 mod geometry;
@@ -286,6 +287,10 @@ fn tray_action(app: &tauri::AppHandle, id: &str) -> Result<(), String> {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--claude-hook") {
+        claude_activity::collect();
+        return;
+    }
     if let Some(path) = args
         .iter()
         .position(|a| a == "--discover-report" || a == "--activity-report")
