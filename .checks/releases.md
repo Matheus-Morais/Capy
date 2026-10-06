@@ -1,8 +1,8 @@
 # Entregas da Capy
 
-Objetivo autorizado: executar todas as seis frentes, gerar uma nova versão por etapa e publicar uma release no repositório remoto indicado pelo usuário.
+Objetivo autorizado: executar todas as seis frentes e gerar uma nova versão por etapa. Publicação remota foi solicitada e depois dispensada pelo usuário; entregar executáveis locais aqui na conversa.
 
-Base: 6f3bac3; versão inicial 0.1.0. O checkout não possui remoto. URL solicitada ao usuário em 2026-10-06; publicação aguarda resposta, implementação pode avançar.
+Base: 6f3bac3; versão inicial 0.1.0. O checkout não possui remoto. Em 2026-10-06, à pergunta sobre a URL, o usuário respondeu “Vdd, esquece”. Interpretado como dispensa da publicação remota (assunto da pergunta), mantendo as seis etapas; informado ao usuário que as versões serão locais.
 
 ## Versões
 
@@ -15,7 +15,7 @@ Base: 6f3bac3; versão inicial 0.1.0. O checkout não possui remoto. URL solicit
 | 0.6.0 | Claude completo | perguntas, esperas longas e subagentes, sem atribuir evento à sessão errada | pendente |
 | 0.7.0 | Desktop validado | cards/badge reais, ocultação/restauração, abertura/fechamento e várias sessões; provas visuais nativas | pendente |
 
-Cada etapa terá checklist, provas, verificador independente, bump coerente npm/Cargo/Tauri, executável e notas de release com limitações reais. Release só é concluída após publicação e conferência dos artefatos remotos.
+Cada etapa terá checklist, provas, verificador independente, bump coerente npm/Cargo/Tauri, executável e notas de release com limitações reais. A versão só é concluída após conferência dos artefatos locais e entrega do link na conversa.
 
 ## Evidências e decisões
 

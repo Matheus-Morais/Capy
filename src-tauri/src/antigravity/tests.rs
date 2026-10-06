@@ -98,6 +98,12 @@ fn invalid_metadata_is_diagnostic() {
             .contains("1 registros incompatíveis"));
     }
     assert!(workspace(&"x".repeat(65_537)).is_err());
+    let db = Connection::open(fixture.0.join("antigravity-cli/conversation_summaries.db")).unwrap();
+    db.execute_batch("DROP TABLE conversation_summaries; CREATE TABLE conversation_summaries (conversation_id TEXT);").unwrap();
+    assert!(fixture.scan().sessions.is_empty());
+    assert!(fixture.scan().integrations[0]
+        .message
+        .contains("1 registros incompatíveis"));
     drop(owner);
 }
 
@@ -119,6 +125,31 @@ fn hook_presence_requires_live_identity() {
     assert!(valid_observation(&o, 100_000, |_| Some(100)));
     assert!(!valid_observation(&o, 100_000, |_| None));
     assert!(!valid_observation(&o, 100_000, |_| Some(101)));
+    let fixture = Fixture::new();
+    let mut h = Hook {
+        conversation_id: ID.into(),
+        workspace_paths: vec![o.cwd],
+        transcript_path: String::new(),
+    };
+    for name in ["transcript.jsonl", "transcript_full.jsonl"] {
+        h.transcript_path = fixture
+            .0
+            .join(format!(
+                "antigravity-cli/brain/{ID}/.system_generated/logs/{name}"
+            ))
+            .to_string_lossy()
+            .replace('\\', "/");
+        assert_eq!(
+            hook_variant(&fixture.sources(), &h),
+            Some("antigravity-cli")
+        );
+    }
+    h.transcript_path = fixture
+        .0
+        .join("antigravity-cli/brain/other/.system_generated/logs/transcript_full.jsonl")
+        .to_string_lossy()
+        .into();
+    assert_eq!(hook_variant(&fixture.sources(), &h), None);
 }
 #[test]
 fn activity_is_bounded_and_never_done() {

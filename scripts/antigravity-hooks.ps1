@@ -7,6 +7,7 @@ $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath($GeminiHome)
 $exe = [IO.Path]::GetFullPath($CapyExe)
 if ($exe.IndexOfAny([char[]]'"$`&|<>^%') -ge 0) { throw 'Unsupported hook executable path' }
+if ($exe -match '\s') { throw 'Antigravity CLI 1.3.0 does not remove command argument quotes; use an executable path without spaces' }
 if ($Action -eq 'Enable' -and -not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'Build Capy first' }
 $configDir = Join-Path $root 'config'
 $settingsPath = Join-Path $configDir 'hooks.json'
@@ -19,7 +20,7 @@ if ($config.PSObject.Properties[$key]) {
     foreach ($event in @('PreInvocation','PostToolUse','Stop')) {
         if (-not $current.PSObject.Properties[$event]) { throw 'Existing capy-observer group is incompatible; refusing overwrite' }
         $handlers = @(if ($event -eq 'PostToolUse') { $current.$event | ForEach-Object { $_.hooks } } else { $current.$event })
-        $expectedCommand = '"' + $exe.Replace('\','/') + '" --antigravity-hook ' + $event
+        $expectedCommand = $exe.Replace('\','/') + ' --antigravity-hook ' + $event
         if ($handlers.Count -ne 1 -or $handlers[0].type -ne 'command' -or $handlers[0].command -cne $expectedCommand) { throw 'Existing capy-observer group belongs to another configuration; refusing overwrite' }
     }
 }
@@ -27,7 +28,7 @@ $config.PSObject.Properties.Remove($key)
 if ($Action -eq 'Enable') {
     $group = [pscustomobject]@{}
     foreach ($event in @('PreInvocation','PostToolUse','Stop')) {
-        $handler = [pscustomobject]@{ type='command'; command=('"' + $exe.Replace('\','/') + '" --antigravity-hook ' + $event); timeout=2 }
+        $handler = [pscustomobject]@{ type='command'; command=($exe.Replace('\','/') + ' --antigravity-hook ' + $event); timeout=2 }
         $value = @(if ($event -eq 'PostToolUse') { [pscustomobject]@{ matcher='*'; hooks=@($handler) } } else { $handler })
         $group | Add-Member $event $value
     }

@@ -11,6 +11,7 @@ Reutiliza descoberta, Session, monitor e preferências. Nova integração isolad
 | Metadados CLI | rusqlite bundled, open read-only, SELECT workspace_uris e parent_conversation_id pelo ID bloqueado | histórico textual/protobuf mistura conteúdo privado e dados antigos |
 | Atividade | hooks opt-in PreInvocation/PostToolUse/Stop, evidência TTL30s | inferir trabalho de timestamp/status persistido não demonstra atividade atual |
 | Configuração | grupo capy-observer em config/hooks.json, preservando grupos alheios | sobrescrever hooks impediria regras existentes |
+| Compatibilidade CLI 1.3.0 | aceitar somente transcript.jsonl ou transcript_full.jsonl dentro do diretório esperado da conversa; normalizar separadores Windows | aceitar qualquer caminho de transcript permitiria atribuição a outra fonte |
 
 ## Checks
 
@@ -56,3 +57,5 @@ Etapa inteira no agente principal. Verificador após tarefas concluídas. C7 ain
 - Slice 2: coletor de hooks e configuração reversível (C3–C5), pendente.
   Implementado: 29 testes Rust passaram; C3/C4 por contrato e script C5 passou no Windows PowerShell 5.1. Prova real ainda pendente. IDE sem bloqueio tem presença conservadora apenas enquanto há evento com PID/criação válidos e até 30s; não comprova todas as conversas abertas sem hooks.
 - Slice 3: provas próprias CLI/IDE (C6/C7), verificador, versão e publicação, pendente.
+  Prova CLI em 2026-10-06: `cli_working` passou com presença mantida, projeto correto, hook real e ação de sleep que terminou com exit 0. O runner completo falhou porque a resposta final do agente recebeu RESOURCE_EXHAUSTED/429 (exit 3); C6 continua pendente, sem alterar a exigência de exit 0. A instalação CLI 1.3.0 fornece `transcript_full.jsonl` e preserva aspas nos argumentos de hooks; compatibilidade corrigida e 29 testes Rust + prova C5 passaram. Configuração global do usuário não foi habilitada.
+  C7 e QA visual: Windows Computer Use retornou `native pipe unavailable` em list_apps/list_windows. Não há prova de IDE; não declarar versão 0.2.0 concluída.

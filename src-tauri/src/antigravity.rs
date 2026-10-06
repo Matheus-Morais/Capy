@@ -47,6 +47,19 @@ fn event_state(event: &str) -> &'static str {
         _ => "unknown",
     }
 }
+fn hook_variant(sources: &Sources, h: &Hook) -> Option<&'static str> {
+    VARIANTS.into_iter().find(|v| {
+        let logs = sources
+            .antigravity
+            .join(v)
+            .join("brain")
+            .join(&h.conversation_id)
+            .join(".system_generated/logs");
+        ["transcript.jsonl", "transcript_full.jsonl"]
+            .iter()
+            .any(|name| Path::new(&h.transcript_path) == logs.join(name))
+    })
+}
 fn read_observation(path: &Path) -> Result<Observation, ()> {
     if !fs::symlink_metadata(path)
         .map_err(|_| ())?
@@ -105,18 +118,7 @@ pub fn collect(event: &str) {
         if dir.join("disabled").exists() {
             return Ok(());
         }
-        let variant = VARIANTS
-            .iter()
-            .find(|v| {
-                Path::new(&h.transcript_path)
-                    == sources
-                        .antigravity
-                        .join(v)
-                        .join("brain")
-                        .join(&h.conversation_id)
-                        .join(".system_generated/logs/transcript.jsonl")
-            })
-            .ok_or(())?;
+        let variant = hook_variant(&sources, &h).ok_or(())?;
         #[cfg(windows)]
         let (pid, birth) = crate::claude_activity::process::ancestor_named(&[
             "agy.exe",
@@ -154,8 +156,8 @@ pub fn collect(event: &str) {
         let o = Observation {
             version: 1,
             id: h.conversation_id,
-            cwd: cwd.to_string_lossy().into(),
-            variant: (*variant).into(),
+            cwd: cwd.to_string_lossy().replace('/', "\\"),
+            variant: variant.into(),
             pid,
             birth,
             at_ms: now_ms(),
