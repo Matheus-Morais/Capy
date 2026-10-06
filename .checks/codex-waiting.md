@@ -21,6 +21,7 @@ Reutiliza o release, descoberta e monitor de atividade. Acrescenta um verificado
 | --- | --- | --- |
 | Transporte do verificador | WebSocket nativo do Node por ponte TCP loopback efêmera para stdio do proxy | implementação manual de frames duplicaria um protocolo já disponível |
 | Aprovação de teste | negar a única solicitação; nunca aceitar execução ou alteração de política | aceitar comandos exigiria uma superfície de efeitos desnecessária |
+| Encerramento da prova | arquivar somente a conversa criada pelo runner | unsubscribe tem graça de 30 minutos; não prova remoção imediata |
 
 ## Checks
 

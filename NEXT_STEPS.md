@@ -1,6 +1,6 @@
 # Retomada do Capy
 
-Atualizado em 2026-10-06: integração de atividade Claude implementada e verificada independentemente.
+Atualizado em 2026-10-06: esperas reais do Codex comprovadas pelo release; verificação independente desta etapa pendente.
 
 ## Onde paramos
 
@@ -12,6 +12,13 @@ Atualizado em 2026-10-06: integração de atividade Claude implementada e verifi
 - Release compilado e reaberto: `src-tauri/target/release/capy.exe`. Hooks habilitados na configuração local; sessões Claude já abertas precisam ser reiniciadas pelo usuário para carregar a habilitação.
 - Commits desta etapa: `8626c8a` (contrato e prova), `9d0e5ff` (integração).
 - Validação: 7 testes JS, 22 Rust e 20 verificações nativas passaram; prova release própria demonstrou working → waiting → working → unknown com continuação e remoção da sessão encerrada. Verificação independente C1–C6 PASS; evidências em `.checks/claude-activity.verified.md`.
+- Codex: runner próprio comprovou approval e user input reais → waiting no release → working após resposta na origem. Um novo proxy observou a espera e o arquivamento removeu a sessão do relatório. Escrita negada não criou arquivo. 25 testes Rust passaram, incluindo recuperação após falha, exatamente 64 leituras para 65 IDs e fronteira de 1 MiB. Sem mudanças no comportamento de produção.
+
+## Espera Codex entregue
+
+Prova opt-in: `node scripts/verify-codex-waiting.mjs`. Requer daemon aberto e release compilado; usa a conta conectada para dois turnos em uma conversa própria. Cria projeto exclusivo em `scratch`, nega a escrita, responde à pergunta na origem e arquiva somente a conversa criada. Evidências locais permanecem em `scratch`; checklist em `.checks/codex-waiting.md`.
+
+Limites: prova via cliente App Server, não diálogo visual; falha e recuperação do daemon são comprovadas por contrato, sem encerrar o daemon compartilhado. Reabertura de proxy foi comprovada de verdade. `thread/unsubscribe` mantém conversas carregadas por até 30 minutos; remoção imediata foi provada via arquivamento, não desconexão. Fonte: https://learn.chatgpt.com/docs/app-server.
 
 ## Atividade Claude entregue
 
@@ -25,7 +32,7 @@ Não declarar respostas pelo Capy disponíveis com base apenas na observação d
 
 ## Próximo trabalho, em ordem proposta
 
-1. **Codex em espera real:** validar ambas as flags de intervenção e a remoção do pedido em sessão de teste própria. Hoje essas transições têm testes de contrato; o spike real demonstrou active/idle, e o release confirmou working. Testar também desconexão/reabertura e revisar limites de 64 sessões/1 MiB, hoje verificados estruturalmente.
+1. **Codex em espera real — comprovado:** ambas as flags e a remoção da espera passaram no release em sessão própria; reabertura de proxy e fronteiras de 64 sessões/1 MiB também. Interrupção/reinício real do daemon compartilhado permanece sem prova; recuperação após falha tem teste de contrato. Verificação independente pendente.
 2. **Antigravity:** provar presença e projeto na CLI/IDE. Diretórios de histórico não comprovam sessão aberta; evitar interpretar conversas protobuf para inferir atividade.
 3. **Intervenção e terminal:** investigar como abrir a origem correta e, quando suportado, responder ao pedido exato. Provar identidade, pedido expirado e entrega real antes de habilitar controles.
 4. **Cotas por conta/provedor:** encontrar fonte confiável, associar à conta correta e tratar informação antiga/indisponível. Sem porcentagens inventadas.

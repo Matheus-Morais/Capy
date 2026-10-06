@@ -121,6 +121,133 @@ fn waiting_is_replaced_on_every_observation() {
 }
 
 #[test]
+fn waiting_recovers_after_connection_failure() {
+    let mut report = crate::discovery::Report {
+        sessions: vec![sample("live")],
+        integrations: vec![],
+    };
+    let waiting = || {
+        Ok(vec![observation(
+            "live",
+            json!({"type":"active","activeFlags":["waitingOnUserInput"]}),
+        )])
+    };
+    apply(&mut report, waiting());
+    assert_eq!(report.sessions[0].state, "waiting");
+    apply(&mut report, Err(()));
+    assert_eq!(report.sessions[0].state, "unknown");
+    assert!(report.sessions[0].request.is_none());
+    assert!(report.sessions[0].command.is_none());
+    apply(&mut report, waiting());
+    assert_eq!(report.sessions[0].state, "waiting");
+    apply(
+        &mut report,
+        Ok(vec![observation("live", json!({"type":"idle"}))]),
+    );
+    assert_eq!(report.sessions[0].state, "idle");
+    assert!(report.sessions[0].request.is_none());
+    assert!(report.sessions[0].command.is_none());
+}
+
+#[test]
+fn session_limit_bounds_reads() {
+    use std::net::{TcpListener, TcpStream};
+    use std::time::Duration;
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    let ids: Vec<String> = (0..65).map(|i| format!("session-{i}")).collect();
+    let loaded_ids = ids.clone();
+    let server = std::thread::spawn(move || {
+        let (stream, _) = listener.accept().unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(3)))
+            .unwrap();
+        let mut socket = tungstenite::accept(stream).unwrap();
+        let mut reads = Vec::new();
+        for _ in 0..67 {
+            let request: serde_json::Value =
+                serde_json::from_str(socket.read().unwrap().to_text().unwrap()).unwrap();
+            let result = match request["method"].as_str().unwrap() {
+                "initialize" => json!({}),
+                "initialized" => continue,
+                "thread/loaded/list" => json!({"data":loaded_ids}),
+                "thread/read" => {
+                    let id = request["params"]["threadId"].as_str().unwrap();
+                    assert_eq!(request["params"]["includeTurns"], false);
+                    reads.push(id.to_owned());
+                    json!({"thread":{"id":id,"cwd":"C:\\work\\Capy","status":{"type":"idle"}}})
+                }
+                other => panic!("unexpected method {other}"),
+            };
+            socket
+                .send(tungstenite::Message::Text(
+                    json!({"id":request["id"],"result":result})
+                        .to_string()
+                        .into(),
+                ))
+                .unwrap();
+        }
+        assert_eq!(reads, loaded_ids[..64]);
+        assert!(socket.read().is_err(), "A 65th read must not be sent");
+    });
+    let stream = TcpStream::connect(address).unwrap();
+    stream
+        .set_read_timeout(Some(Duration::from_secs(3)))
+        .unwrap();
+    let found = protocol::observe(stream, &ids).unwrap();
+    assert_eq!(found.len(), 64);
+    assert_eq!(found.last().unwrap().id, "session-63");
+    server.join().unwrap();
+}
+
+#[test]
+fn oversized_websocket_message_is_rejected() {
+    use std::net::{TcpListener, TcpStream};
+    use std::time::Duration;
+    for size in [1_048_576, 1_048_577] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(3)))
+                .unwrap();
+            let mut socket = tungstenite::accept(stream).unwrap();
+            let request: serde_json::Value =
+                serde_json::from_str(socket.read().unwrap().to_text().unwrap()).unwrap();
+            let mut response = json!({"id":request["id"],"result":{},"padding":""});
+            let overhead = response.to_string().len();
+            response["padding"] = json!("x".repeat(size - overhead));
+            let payload = response.to_string();
+            assert_eq!(payload.len(), size);
+            let _ = socket.send(tungstenite::Message::Text(payload.into()));
+            if size == 1_048_576 {
+                let initialized: serde_json::Value =
+                    serde_json::from_str(socket.read().unwrap().to_text().unwrap()).unwrap();
+                assert_eq!(initialized["method"], "initialized");
+                let loaded: serde_json::Value =
+                    serde_json::from_str(socket.read().unwrap().to_text().unwrap()).unwrap();
+                assert_eq!(loaded["method"], "thread/loaded/list");
+                socket
+                    .send(tungstenite::Message::Text(
+                        json!({"id":loaded["id"],"result":{"data":[]}})
+                            .to_string()
+                            .into(),
+                    ))
+                    .unwrap();
+            }
+        });
+        let stream = TcpStream::connect(address).unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(3)))
+            .unwrap();
+        let result = protocol::observe(stream, &[]);
+        assert_eq!(result.is_ok(), size == 1_048_576, "message size {size}");
+        server.join().unwrap();
+    }
+}
+
+#[test]
 fn websocket_probe_is_read_only() {
     use std::net::{TcpListener, TcpStream};
     use std::time::Duration;

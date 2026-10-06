@@ -32,6 +32,12 @@ O painel permite voltar aos cenários **Demo**. Pedidos, respostas e cotas nesse
 
 Diagnóstico sem abrir janelas: `capy.exe --discover-report "caminho-do-relatorio.json"` (presença) ou `capy.exe --activity-report "caminho-do-relatorio.json"` (presença e atividade Claude/Codex). O relatório contém os identificadores e projetos locais descobertos; não o publique como fixture. Provas isoladas: `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-claude-settings.ps1` e `node scripts/verify-claude-hooks.mjs` (inicia sua própria sessão Claude, com limite de US$ 1).
 
+## Prova de espera Codex
+
+`node scripts/verify-codex-waiting.mjs` usa o daemon existente e o release já compilado. Cria uma conversa de teste em um projeto exclusivo de `scratch`, nega uma tentativa de escrita e responde a uma pergunta de teste na origem. Compara as duas flags reais de espera com o relatório da Capy e verifica a remoção da espera. Ao terminar, arquiva somente a conversa criada pelo runner; não altera conversas externas nem a configuração global. A prova consome inferência da conta conectada e tem prazos finitos. Relatórios locais permanecem em `scratch`, ignorado pelo Git.
+
+Desconectar um cliente não encerra imediatamente a conversa: o daemon pode manter a sessão carregada durante a graça de 30 minutos. A prova de remoção imediata usa o arquivamento explícito da conversa de teste. Fonte: [App Server](https://learn.chatgpt.com/docs/app-server).
+
 ## Protótipo HTML preservado
 
 Abra `prototypes/preview.html` diretamente no navegador. Os arquivos CSS e JavaScript devem permanecer na mesma pasta.
