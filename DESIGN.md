@@ -100,7 +100,7 @@ components:
 
 Capy places a warm, front-facing animated capivara over a quiet synthetic Windows desktop. The approved front-facing SVG in `prototypes/front-pet.svg` is the standard artwork and is loaded unchanged by the TypeScript interface. A compact oat-colored summary carries the useful session detail; the wider panel gives the demonstration controls room without changing the product's calm, companion-like world.
 
-The Rust and Tauri shell provides three native surfaces: a transparent 200×180 pet window, a 380×620 summary, and a 760×680 panel. The summary favors compact, readable rows, soft dividers, and clear labels. All displayed sessions, replies, scenarios, and quota values are explicitly synthetic demo data; the interface does not imply live agent integrations.
+The Rust and Tauri shell provides three native surfaces: a transparent 200×180 pet window, a 380×620 summary, and a 760×680 panel. The summary favors compact, readable rows, soft dividers, and clear labels. Demo sessions, replies, scenarios, and quota values are synthetic. Real integrations appear only in the experimental real-session view, and actions that can send a response require an explicit connection and per-request choice.
 
 **Key Characteristics:**
 - The approved front-facing capivara is the persistent companion and remains movable.

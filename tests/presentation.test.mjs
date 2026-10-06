@@ -46,6 +46,16 @@ test('real interventions preserve exact request identity and discard stale contr
   assert.match(malicious, /&lt;img src=x&gt;/);
   assert.match(html, /data-question-answer="q"/);
   assert.match(html, /data-request="n-1"/);
+  const secret = sessionRow(session, true, [{...request, nonce:'secret', body:{kind:'question',questions:[{id:'token',header:'Secret',question:'Enter value',isOther:true,isSecret:true,options:[]}]}}]);
+  assert.match(secret, /type="password" data-free-answer="token"/);
+  assert.match(secret, /autocomplete="new-password"/);
+  assert.doesNotMatch(secret, /type="text" data-free-answer="token"/);
+  const subscribed = sessionRow(session, true, [], {sessionId:session.id,status:'connected',message:'Conectado'});
+  assert.match(subscribed, /data-action="connect-interventions" data-enabled="false"/);
+  assert.match(subscribed, /Desconectar respostas/);
+  assert.match(html, /data-action="connect-interventions" data-enabled="true"/);
+  assert.match(html, /Conexão local explícita · este cartão Codex/);
+  assert.doesNotMatch(sessionRow({...session,kind:'claude'},true), /connect-interventions/);
 });
 test('intervention submission resolves only the current visible pending Codex identity', () => {
   const request = { nonce:'fresh',generation:'run:2',sessionId:session.id,threadId:session.id.slice(6),turnId:'turn-7',itemId:'item-3',status:'pending',body:{kind:'question'},decisions:[] };
