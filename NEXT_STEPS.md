@@ -1,15 +1,15 @@
 # Retomada do Capy
 
-Atualizado em 2026-10-06: prévia local 0.4.0-alpha.1 inclui respostas a perguntas e aprovações do Codex; provas C1–C7 passaram no release de prova. Revisão independente da nova feature e QA visual nativo dos cards continuam pendentes.
+Atualizado em 2026-10-06: prévia local 0.4.0-alpha.2 inclui respostas a perguntas/aprovações do Codex e animação expressiva do estado de espera. QA visual nativo dos cards reais continua pendente.
 
-Prévia local atual: [0.4.0-alpha.1](releases/0.4.0-alpha.1/NOTES.md), com respostas Codex por pedido exato. Executável em `releases/0.4.0-alpha.1/Capy.exe`. A anterior [0.2.0-alpha.2](releases/0.2.0-alpha.2/NOTES.md) mantém as cotas reais da conta Codex conectada. O estado das seis entregas finais fica em `.checks/releases.md`; a 0.4.0 final e as demais etapas continuam abertas. Publicação remota foi dispensada pelo usuário. Os registros abaixo descrevem as entregas anteriores e seus limites.
+Prévia local atual: [0.4.0-alpha.2](releases/0.4.0-alpha.2/NOTES.md), com respostas Codex por pedido exato e sinais animados por estado. Executável em `releases/0.4.0-alpha.2/Capy.exe`. A anterior [0.2.0-alpha.2](releases/0.2.0-alpha.2/NOTES.md) mantém as cotas reais da conta Codex conectada. O estado das seis entregas finais fica em `.checks/releases.md`; a 0.4.0 final e as demais etapas continuam abertas. Publicação remota foi dispensada pelo usuário. Os registros abaixo descrevem as entregas anteriores e seus limites.
 
 ## Onde paramos
 
 - Desktop Windows em Rust/Tauri 2 com capivara frontal, arraste, resumo, painel e bandeja. O usuário confirmou o arraste.
 - Descoberta real de Claude Code e Codex, com validação de presença, projeto, identidade e ocultação persistente.
 - Codex: leitura do daemon já aberto, sem iniciar ou retomar conversas. Estados working/waiting/idle/unknown; falhas descartam o estado anterior. Idle não significa conclusão.
-- Capy 0.4.0-alpha.1 permite responder a perguntas e aprovações suportadas do Codex pelo pedido exato; Claude/Antigravity seguem sem esses controles e nenhum terminal real é aberto.
+- Capy 0.4.0-alpha.2 permite responder a perguntas e aprovações suportadas do Codex pelo pedido exato; animação de espera sinaliza pedidos pendentes. Claude/Antigravity seguem sem esses controles e nenhum terminal real é aberto.
 - Claude: hooks silenciosos opcionais, identidade por sessão/PID/criação/projeto e ancestral Claude nativo. Evidência expira em 30 s; Stop é unknown porque pode continuar. Sessões sem hooks ou sem evidência recente permanecem unknown. Antigravity e cotas reais seguem pendentes.
 - Release compilado e reaberto: `src-tauri/target/release/capy.exe`. Hooks habilitados na configuração local; sessões Claude já abertas precisam ser reiniciadas pelo usuário para carregar a habilitação.
 - Commits desta etapa: `8626c8a` (contrato e prova), `9d0e5ff` (integração).

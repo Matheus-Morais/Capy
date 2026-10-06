@@ -9,4 +9,15 @@
 #pet.s-working #faceAnim { animation: front-nod 1.6s ease-in-out infinite; }
 #pet.s-sleeping #faceAnim { transform: translateY(4px); }
 #pet.s-sleeping #ear { animation: none; }
+#pet .attention-mark { display: none; transform-box: fill-box; transform-origin: center; }
+#pet.s-waiting .attention-mark { display: inline; animation: attention-beat 3.4s cubic-bezier(.16,1,.3,1) 3 both; }
+@keyframes attention-beat {
+  0% { opacity: 0; transform: translateY(7px) scale(.55); }
+  14%,100% { opacity: 1; transform: translateY(0) scale(1); }
+  24% { transform: translateY(-2px) scale(1.12); }
+  34% { transform: translateY(0) scale(1); }
+  72% { opacity: 1; transform: translateY(0) scale(1); }
+  82% { transform: translateY(-1px) scale(1.08); }
+  92% { transform: translateY(0) scale(1); }
+}
 @keyframes front-nod { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }

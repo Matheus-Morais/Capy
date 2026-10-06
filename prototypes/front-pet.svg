@@ -42,5 +42,9 @@
     <g id="orange"><g class="orange"><circle cx="135" cy="17" r="10" fill="#ffa21f" stroke="var(--line)" stroke-width="2"/><path d="M135 7 q4 -7 11 -5 q-3 6 -11 5z" fill="#6aa84f" stroke="var(--line)" stroke-width="1.4"/><circle cx="131" cy="14" r="2.2" fill="#fff" opacity=".45"/></g></g>
   </g>
   <g class="sparkles"><g><path d="M47 42 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#ffc933"/></g><g><path d="M135 -9 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#ff8fb5"/></g><g><path d="M223 42 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#6cc9f0"/></g></g>
+  <g class="attention-mark" aria-hidden="true">
+    <path d="M197 13 Q197 8 202 8 H223 Q228 8 228 13 V29 Q228 34 223 34 H215 L208 41 V34 H202 Q197 34 197 29 Z" fill="#f7f0df" stroke="#8a5b18" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M212.5 14 V23 M212.5 28 V28.5" fill="none" stroke="#8a5b18" stroke-width="2.8" stroke-linecap="round"/>
+  </g>
   <g class="zzz" fill="#7d8fd6" font-family="Segoe UI, sans-serif" font-weight="700"><text x="206" y="98" font-size="18">z</text><text x="219" y="83" font-size="22">z</text><text x="233" y="67" font-size="26">Z</text></g>
 </svg>
