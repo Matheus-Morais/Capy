@@ -1,6 +1,6 @@
 # Retomada do Capy
 
-Atualizado em 2026-10-06: esperas reais do Codex comprovadas pelo release; verificação independente desta etapa pendente.
+Atualizado em 2026-10-06: esperas reais do Codex comprovadas pelo release e verificadas independentemente (C1–C7 PASS).
 
 ## Onde paramos
 
@@ -16,7 +16,7 @@ Atualizado em 2026-10-06: esperas reais do Codex comprovadas pelo release; verif
 
 ## Espera Codex entregue
 
-Prova opt-in: `node scripts/verify-codex-waiting.mjs`. Requer daemon aberto e release compilado; usa a conta conectada para dois turnos em uma conversa própria. Cria projeto exclusivo em `scratch`, nega a escrita, responde à pergunta na origem e arquiva somente a conversa criada. Evidências locais permanecem em `scratch`; checklist em `.checks/codex-waiting.md`.
+Prova opt-in: `node scripts/verify-codex-waiting.mjs`. Requer daemon aberto e release compilado; usa a conta conectada para dois turnos em uma conversa própria. Cria projeto exclusivo em `scratch`, nega a escrita, responde à pergunta na origem e arquiva somente a conversa criada. Evidências locais permanecem em `scratch`; checklist em `.checks/codex-waiting.md` e verificação independente em `.checks/codex-waiting.verified.md` (C1–C7 PASS; runner real, 25 Rust, 7 JS e build repetidos pelo verificador).
 
 Limites: prova via cliente App Server, não diálogo visual; falha e recuperação do daemon são comprovadas por contrato, sem encerrar o daemon compartilhado. Reabertura de proxy foi comprovada de verdade. `thread/unsubscribe` mantém conversas carregadas por até 30 minutos; remoção imediata foi provada via arquivamento, não desconexão. Fonte: https://learn.chatgpt.com/docs/app-server.
 
@@ -32,7 +32,7 @@ Não declarar respostas pelo Capy disponíveis com base apenas na observação d
 
 ## Próximo trabalho, em ordem proposta
 
-1. **Codex em espera real — comprovado:** ambas as flags e a remoção da espera passaram no release em sessão própria; reabertura de proxy e fronteiras de 64 sessões/1 MiB também. Interrupção/reinício real do daemon compartilhado permanece sem prova; recuperação após falha tem teste de contrato. Verificação independente pendente.
+1. **Codex em espera real — entregue e verificado:** ambas as flags e a remoção da espera passaram no release em sessão própria; reabertura de proxy e fronteiras de 64 sessões/1 MiB também. Interrupção/reinício real do daemon compartilhado permanece sem prova; recuperação após falha tem teste de contrato. Verificação independente C1–C7 PASS.
 2. **Antigravity:** provar presença e projeto na CLI/IDE. Diretórios de histórico não comprovam sessão aberta; evitar interpretar conversas protobuf para inferir atividade.
 3. **Intervenção e terminal:** investigar como abrir a origem correta e, quando suportado, responder ao pedido exato. Provar identidade, pedido expirado e entrega real antes de habilitar controles.
 4. **Cotas por conta/provedor:** encontrar fonte confiável, associar à conta correta e tratar informação antiga/indisponível. Sem porcentagens inventadas.
