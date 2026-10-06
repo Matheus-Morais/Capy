@@ -253,3 +253,7 @@ impl Callback {
 
 #[cfg(test)]
 mod tests;
+
+pub(crate) mod protocol;
+pub(crate) mod registry;
+pub(crate) mod service;

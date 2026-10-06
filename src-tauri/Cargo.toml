@@ -1,8 +1,11 @@
 [package]
 name = "capy"
-version = "0.2.0-alpha.2"
+version = "0.4.0-alpha.1"
 edition = "2021"
 description = "Capy — companion for AI coding sessions"
+
+[features]
+intervention-proof = []
 
 [build-dependencies]
 tauri-build = { version = "2.7.1", features = [] }

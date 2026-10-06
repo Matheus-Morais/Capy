@@ -120,7 +120,7 @@ pub(crate) fn quota(home: &Path) -> Result<crate::quotas::RawSample, ()> {
     let mut child = spawn_proxy(home)?;
     query_task(&mut child, Duration::from_secs(8), protocol::quota)
 }
-fn spawn_proxy(home: &Path) -> Result<Child, ()> {
+pub(crate) fn spawn_proxy(home: &Path) -> Result<Child, ()> {
     let exe = executable(home)?;
     Command::new(exe)
         .args(["app-server", "proxy", "--sock"])

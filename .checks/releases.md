@@ -15,6 +15,8 @@ Base: 6f3bac3; versão inicial 0.1.0. O checkout não possui remoto. Em 2026-10-
 | 0.6.0 | Claude completo | perguntas, esperas longas e subagentes, sem atribuir evento à sessão errada | pendente |
 | 0.7.0 | Desktop validado | cards/badge reais, ocultação/restauração, abertura/fechamento e várias sessões; provas visuais nativas | pendente |
 
+Prévia intermediária preparada dentro da etapa 0.4.0: `0.4.0-alpha.1` implementa perguntas e aprovações Codex, com provas C1–C7 locais. Ela não fecha a etapa: a revisão independente fresh e o QA visual nativo dos cards reais ainda faltam.
+
 Cada etapa terá checklist, provas, verificador independente, bump coerente npm/Cargo/Tauri, executável e notas de release com limitações reais. A versão só é concluída após conferência dos artefatos locais e entrega do link na conversa.
 
 ## Evidências e decisões

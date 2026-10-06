@@ -5,9 +5,12 @@ import fixture from '../assets/demo.json';
 export interface Session { id: string; project: string; agent: string; symbol: string; kind: string; origin: string; state: string; request: string | null; message: string; command: string | null; hidden: boolean; source_action?: { label: string; available: boolean; reason: string | null } }
 export interface Integration { agent: string; message: string }
 export interface QuotaRow { provider: string; account: string | null; bucket: string | null; period: string | null; window: { usedPercent: number; windowDurationMins: number; resetsAt: number } | null; observedAt: number | null; state: string; message: string }
-export interface Snapshot { sessions: Session[]; scenario: string; reduceMotion: boolean; integrations: Integration[]; quotas?: QuotaRow[] }
+export interface InterventionQuestion { id: string; header: string; question: string; options: Array<{ label: string; description: string }>; isOther: boolean; isSecret: boolean }
+export interface Intervention { nonce: string; generation: string; sessionId: string; threadId: string; turnId: string; itemId: string; status: string; body: { kind: string; questions?: InterventionQuestion[]; command?: string; cwd?: string; reason?: string; changes?: unknown }; decisions: string[] }
+export interface Subscription { sessionId: string; status: string; message: string }
+export interface Snapshot { sessions: Session[]; scenario: string; reduceMotion: boolean; integrations: Integration[]; quotas?: QuotaRow[]; interventions: Intervention[]; subscriptions: Subscription[] }
 export const native = isTauri();
-let browserSnapshot: Snapshot = { sessions: structuredClone(fixture), scenario: 'waiting', reduceMotion: false, integrations: [] };
+let browserSnapshot: Snapshot = { sessions: structuredClone(fixture), scenario: 'waiting', reduceMotion: false, integrations: [], interventions: [], subscriptions: [] };
 const listeners: Array<(value: Snapshot) => void> = [];
 
 export async function snapshot(): Promise<Snapshot> {
@@ -26,6 +29,8 @@ export async function action(action: string, id = '', answer = ''): Promise<void
     if (answer === 'real') throw new Error('A descoberta real está disponível no aplicativo desktop.');
     browserSnapshot.scenario = answer;
     browserSnapshot.sessions = answer === 'sleeping' ? [] : structuredClone(fixture);
+    browserSnapshot.interventions = [];
+    browserSnapshot.subscriptions = [];
     if (answer !== 'waiting') browserSnapshot.sessions.forEach(s => { s.state = answer; s.message = answer === 'working' ? 'O agente está executando sua tarefa.' : 'A tarefa foi concluída. Confira o resultado no terminal.'; });
   } else if (action === 'motion') browserSnapshot.reduceMotion = answer === 'true';
   else if (action === 'restore') browserSnapshot.sessions.forEach(s => s.hidden = false);
@@ -42,6 +47,12 @@ export async function desktopCommand(command: string, args?: Record<string, unkn
   if (command === 'toggle_summary') window.location.assign('./summary.html');
   else if (command === 'show_panel') window.location.assign('./panel.html');
   else if (command === 'hide_window') window.location.assign('./index.html');
+}
+export async function respondIntervention(context: Omit<Intervention, 'status' | 'body' | 'decisions'>, response: Record<string, unknown>): Promise<void> {
+  if (native) await invoke('respond_intervention', { context, response });
+}
+export async function setInterventionSubscription(id: string, enabled: boolean): Promise<void> {
+  if (native) await invoke('connect_interventions', { id, enabled });
 }
 export function showError(error: unknown): void {
   const element = document.getElementById('error');

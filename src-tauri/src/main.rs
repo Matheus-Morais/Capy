@@ -17,7 +17,7 @@ use geometry::{Area, Point};
 use std::{
     collections::HashSet,
     path::PathBuf,
-    sync::{Mutex, OnceLock},
+    sync::{Arc, Mutex, OnceLock},
 };
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -215,6 +215,56 @@ fn demo_snapshot(state: State<'_, DesktopState>) -> Result<demo::Snapshot, Strin
         .map(|s| s.clone())
         .map_err(|_| "Estado indisponível".into())
 }
+fn intervention_source(
+    app: &tauri::AppHandle,
+    id: &str,
+) -> Result<interventions::registry::Source, String> {
+    let state = app.state::<DesktopState>();
+    let data = state.demo.lock().map_err(|_| "Estado indisponível.")?;
+    let session = data
+        .sessions
+        .iter()
+        .find(|s| s.id == id)
+        .ok_or("Sessão não encontrada. Atualize a lista.")?;
+    interventions::registry::Source::from_session(session, data.scenario == "real")
+        .map_err(|_| "Esta sessão não está disponível para respostas reais.".into())
+}
+#[tauri::command]
+async fn connect_interventions(
+    app: tauri::AppHandle,
+    id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    let source = intervention_source(&app, &id)?;
+    let service = app
+        .state::<Arc<interventions::service::Service>>()
+        .inner()
+        .clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if enabled {
+            service.connect(source)
+        } else {
+            service.disconnect(source.thread_id)
+        }
+    })
+    .await
+    .map_err(|_| "Serviço de respostas indisponível.".to_owned())?
+}
+#[tauri::command]
+async fn respond_intervention(
+    app: tauri::AppHandle,
+    context: interventions::registry::Context,
+    response: serde_json::Value,
+) -> Result<(), String> {
+    let source = intervention_source(&app, &context.session_id)?;
+    let service = app
+        .state::<Arc<interventions::service::Service>>()
+        .inner()
+        .clone();
+    tauri::async_runtime::spawn_blocking(move || service.respond(context, source, response))
+        .await
+        .map_err(|_| "A entrega não foi confirmada. Confira na origem.".to_owned())?
+}
 #[tauri::command]
 async fn open_source(state: State<'_, DesktopState>, id: String) -> Result<(), String> {
     let expected = {
@@ -285,6 +335,9 @@ fn demo_action(
             *preferences = updated;
         }
         data.apply(&action, &id, &answer)?;
+        if action == "scenario" && answer != "real" {
+            app.state::<Arc<interventions::service::Service>>().reset();
+        }
         data.clone()
     };
     app.emit("demo-updated", snapshot)
@@ -312,6 +365,24 @@ fn tray_action(app: &tauri::AppHandle, id: &str) -> Result<(), String> {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if let Some(session_id) = args
+        .iter()
+        .position(|a| a == "--intervention-probe")
+        .and_then(|i| args.get(i + 1))
+    {
+        #[cfg(feature = "intervention-proof")]
+        if let Err(error) = intervention_probe(session_id) {
+            eprintln!("Intervention probe: {error}");
+            std::process::exit(1);
+        }
+        #[cfg(not(feature = "intervention-proof"))]
+        {
+            let _ = session_id;
+            eprintln!("Intervention probe is only available in the isolated proof build.");
+            std::process::exit(1);
+        }
+        return;
+    }
     if let Some(event) = args
         .iter()
         .position(|a| a == "--antigravity-hook")
@@ -389,6 +460,8 @@ fn main() {
             demo_snapshot,
             demo_action,
             open_source,
+            connect_interventions,
+            respond_intervention,
             ui_ready,
             ui_error
         ])
@@ -409,6 +482,28 @@ fn main() {
                 .lock()
                 .map_err(|_| "Preferências indisponíveis")? =
                 discovery::Preferences::load(position_path.with_file_name("hidden-sessions.json"));
+            let guard_app = app.handle().clone();
+            let service = interventions::service::Service::new(
+                discovery::Sources::local().codex,
+                move |expected| {
+                    let state = guard_app.state::<DesktopState>();
+                    if !state.demo.lock().is_ok_and(|data| data.scenario == "real") {
+                        return false;
+                    }
+                    let mut report = discovery::scan(&discovery::Sources::local());
+                    let Ok(preferences) = state.preferences.lock() else {
+                        return false;
+                    };
+                    preferences.apply(&mut report.sessions);
+                    drop(preferences);
+                    let valid = report.sessions.iter().any(|session| {
+                        interventions::registry::Source::from_session(session, true).as_ref()
+                            == Ok(expected)
+                    });
+                    valid && state.demo.lock().is_ok_and(|data| data.scenario == "real")
+                },
+            );
+            app.manage(Arc::new(service));
             monitor::schedule(app.handle().clone());
             let menu = Menu::with_items(
                 app,
@@ -479,9 +574,105 @@ fn main() {
         .expect("Não foi possível iniciar o Capy")
         .run(|app, event| {
             if matches!(event, tauri::RunEvent::ExitRequested { .. }) {
+                app.state::<Arc<interventions::service::Service>>().stop();
                 if let Err(e) = persist_pet(app) {
                     eprintln!("Position save: {e}");
                 }
             }
         });
+}
+
+#[cfg(feature = "intervention-proof")]
+fn intervention_probe(session_id: &str) -> Result<(), String> {
+    use std::io::{BufRead, Write};
+    let sources = discovery::Sources::local();
+    let proof_root = std::env::var_os("CAPY_INTERVENTION_PROBE_ROOT")
+        .map(PathBuf::from)
+        .ok_or("A origem de teste isolada não foi informada.")?
+        .canonicalize()
+        .map_err(|_| "A origem de teste não existe.")?;
+    let scratch = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .ok_or("Diretório do repositório indisponível.")?
+        .join("scratch")
+        .canonicalize()
+        .map_err(|_| "Diretório de prova indisponível.")?;
+    if !proof_root.starts_with(&scratch)
+        || !proof_root
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with("codex-capy-"))
+        || !proof_root.join("AGENTS.md").is_file()
+    {
+        return Err(
+            "A prova aceita somente uma pasta própria dentro de scratch/codex-capy-*".into(),
+        );
+    }
+    let thread_id = session_id
+        .strip_prefix("codex:")
+        .filter(|thread| discovery::uuid(thread))
+        .ok_or("ID de conversa de prova inválido.")?;
+    let source = interventions::registry::Source {
+        session_id: session_id.to_owned(),
+        thread_id: thread_id.to_owned(),
+        origin: "isolated-proof".into(),
+    };
+    let expected = source.clone();
+    let thread_to_close = expected.thread_id.clone();
+    let valid_source = expected.clone();
+    let validate = move |actual: &interventions::registry::Source| *actual == valid_source;
+    let service = interventions::service::Service::new(sources.codex, validate);
+    service.connect(source.clone())?;
+    let (input, receiver) = std::sync::mpsc::sync_channel::<String>(8);
+    std::thread::spawn(move || {
+        for line in std::io::stdin().lock().lines() {
+            let Ok(line) = line else { break };
+            if input.send(line).is_err() {
+                break;
+            }
+        }
+    });
+    let mut emitted = HashSet::new();
+    let start = std::time::Instant::now();
+    println!(
+        "{{\"event\":\"connected\",\"sessionId\":{}}}",
+        serde_json::to_string(session_id).unwrap_or_default()
+    );
+    let _ = std::io::stdout().flush();
+    loop {
+        if start.elapsed() >= std::time::Duration::from_secs(300) {
+            return Err("Tempo de prova excedido.".into());
+        }
+        let (requests, _) = service.snapshot();
+        for request in requests {
+            if request.status == "pending" && emitted.insert(request.context.nonce.clone()) {
+                println!(
+                    "{{\"event\":\"request\",\"request\":{}}}",
+                    serde_json::to_string(&request).map_err(|e| e.to_string())?
+                );
+                let _ = std::io::stdout().flush();
+            }
+        }
+        match receiver.recv_timeout(std::time::Duration::from_millis(200)) {
+            Ok(line) => {
+                let command: serde_json::Value =
+                    serde_json::from_str(&line).map_err(|_| "Comando de prova inválido.")?;
+                let context: interventions::registry::Context =
+                    serde_json::from_value(command["context"].clone())
+                        .map_err(|_| "Contexto de prova inválido.")?;
+                match service.respond(context, expected.clone(), command["response"].clone()) {
+                    Ok(()) => println!("{{\"event\":\"resolved\"}}"),
+                    Err(error) => println!(
+                        "{{\"event\":\"rejected\",\"message\":{}}}",
+                        serde_json::to_string(&error).map_err(|e| e.to_string())?
+                    ),
+                }
+                let _ = std::io::stdout().flush();
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+        }
+    }
+    let _ = service.disconnect(thread_to_close);
+    Ok(())
 }

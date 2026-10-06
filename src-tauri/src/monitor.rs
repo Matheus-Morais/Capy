@@ -44,21 +44,40 @@ pub fn schedule(app: tauri::AppHandle) {
                 .lock()
                 .map(|rows| rows.clone())
                 .unwrap_or_default();
+            let (mut interventions, mut subscriptions) = app
+                .state::<Arc<crate::interventions::service::Service>>()
+                .snapshot();
             let snapshot = (|| {
                 let mut data = state.demo.lock().ok()?;
                 if data.scenario != "real" {
                     return None;
                 }
                 state.preferences.lock().ok()?.apply(&mut report.sessions);
+                interventions.retain(|v| {
+                    report
+                        .sessions
+                        .iter()
+                        .any(|s| s.id == v.context.session_id && !s.hidden)
+                });
+                subscriptions.retain(|v| {
+                    report
+                        .sessions
+                        .iter()
+                        .any(|s| s.id == v.session_id && !s.hidden)
+                });
                 if data.sessions == report.sessions
                     && data.integrations == report.integrations
                     && data.quotas == quotas
+                    && data.interventions == interventions
+                    && data.subscriptions == subscriptions
                 {
                     return None;
                 }
                 data.sessions = report.sessions;
                 data.integrations = report.integrations;
                 data.quotas = quotas;
+                data.interventions = interventions;
+                data.subscriptions = subscriptions;
                 Some(data.clone())
             })();
             if let Some(snapshot) = snapshot {

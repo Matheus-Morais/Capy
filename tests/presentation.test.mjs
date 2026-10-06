@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sessionRow, petState, quotaRows, renderQuotas } from '../src/presentation.ts';
+import { pendingIntervention, interventionContext } from '../src/interventions-ui.ts';
 
 const session = { id:'codex:11111111-1111-1111-1111-111111111111', project:'Project <script>', agent:'Codex', kind:'codex', symbol:'O', origin:'C:\\work\\Project', state:'unknown', request:null, command:null, message:'Sessão aberta.', hidden:false };
 test('source access is driven by backend availability and escapes its reason', () => {
@@ -30,6 +31,31 @@ test('real activity labels never expose demo actions', () => {
     assert.match(html, new RegExp(label));
     assert.doesNotMatch(html, /data-action="(?:allow|deny|answer|terminal)"|dangerous|Concluída/);
   }
+});
+test('real interventions preserve exact request identity and discard stale controls', () => {
+  const request = { nonce:'n-1', generation:'g', sessionId:session.id, threadId:session.id.slice(6), turnId:'turn', itemId:'item', status:'pending', decisions:[], body:{kind:'question',questions:[{id:'q',header:'Header <x>',question:'Choose & continue',isOther:false,isSecret:false,options:[{label:'Safe <option>',description:'Description'}]}]} };
+  const html = sessionRow(session, true, [request]);
+  assert.match(html, /data-action="connect-interventions"/);
+  assert.match(html, /Header &lt;x&gt;/);
+  assert.match(html, /Safe &lt;option&gt;/);
+  assert.match(html, /data-action="submit-intervention"/);
+  assert.doesNotMatch(html, /<x>|<option>/);
+  assert.doesNotMatch(sessionRow({...session,kind:'claude'},true), /connect-interventions/);
+  const malicious = sessionRow(session,true,[{...request,body:{kind:'command',command:'<img src=x>',cwd:'C:\\<x>',reason:'& please'}}]);
+  assert.doesNotMatch(malicious, /<img|<x>/);
+  assert.match(malicious, /&lt;img src=x&gt;/);
+  assert.match(html, /data-question-answer="q"/);
+  assert.match(html, /data-request="n-1"/);
+});
+test('intervention submission resolves only the current visible pending Codex identity', () => {
+  const request = { nonce:'fresh',generation:'run:2',sessionId:session.id,threadId:session.id.slice(6),turnId:'turn-7',itemId:'item-3',status:'pending',body:{kind:'question'},decisions:[] };
+  const data = { scenario:'real',sessions:[session],interventions:[request],subscriptions:[],integrations:[],reduceMotion:false };
+  assert.equal(pendingIntervention(data,'fresh'),request);
+  assert.deepEqual(interventionContext(request),{nonce:'fresh',generation:'run:2',sessionId:session.id,threadId:request.threadId,turnId:'turn-7',itemId:'item-3'});
+  assert.equal(pendingIntervention({...data,scenario:'waiting'},'fresh'),undefined);
+  assert.equal(pendingIntervention({...data,interventions:[{...request,status:'submitting'}]},'fresh'),undefined);
+  assert.equal(pendingIntervention({...data,sessions:[{...session,hidden:true}]},'fresh'),undefined);
+  assert.equal(pendingIntervention({...data,interventions:[{...request,generation:''}]},'fresh'),undefined);
 });
 test('idle sessions never imply completion', () => {
   const idle = {...session, state:'idle'};

@@ -24,6 +24,8 @@ pub struct Snapshot {
     pub reduce_motion: bool,
     pub integrations: Vec<crate::discovery::Integration>,
     pub quotas: Vec<crate::quotas::Row>,
+    pub interventions: Vec<crate::interventions::registry::View>,
+    pub subscriptions: Vec<crate::interventions::service::Subscription>,
 }
 impl Default for Snapshot {
     fn default() -> Self {
@@ -34,6 +36,8 @@ impl Default for Snapshot {
             reduce_motion: false,
             integrations: vec![],
             quotas: vec![],
+            interventions: vec![],
+            subscriptions: vec![],
         }
     }
 }
@@ -45,6 +49,8 @@ impl Snapshot {
             reduce_motion: false,
             integrations: vec![],
             quotas: vec![],
+            interventions: vec![],
+            subscriptions: vec![],
         }
     }
     pub fn apply(&mut self, action: &str, id: &str, answer: &str) -> Result<(), String> {
@@ -58,6 +64,8 @@ impl Snapshot {
                 }
                 self.scenario = answer.into();
                 self.integrations.clear();
+                self.interventions.clear();
+                self.subscriptions.clear();
                 self.quotas.clear();
                 self.sessions = if answer == "sleeping" || answer == "real" {
                     vec![]

@@ -1,17 +1,27 @@
-import type { Session, Snapshot, QuotaRow } from './bridge';
+import type { Session, Snapshot, QuotaRow, Intervention, Subscription } from './bridge';
 
 export const escape = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const eye = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10 5c5-1 9 3 11 7-1 2-2 3-4 4M7 7c-2 1-3 3-4 5 3 6 8 8 13 5m-7-7a3 3 0 0 0 4 4"/></svg>';
 
-export function sessionRow(s: Session, real: boolean): string {
+function interventionMarkup(request: Intervention): string {
+  const b = request.body;
+  const details = b.kind === 'question' ? (b.questions ?? []).map(q => `<fieldset class="intervention-question" data-question="${escape(q.id)}"><legend>${escape(q.header)} · ${escape(q.question)}</legend>${q.isOther
+    ? `<label class="intervention-option"><input type="${q.isSecret ? 'password' : 'text'}" data-free-answer="${escape(q.id)}" maxlength="4096"${q.isSecret ? ' autocomplete="new-password"' : ''} aria-label="Sua resposta">${q.isSecret ? '<span class="sr-only">Resposta privada</span>' : ''}</label>`
+    : q.options.map((o, i) => `<label class="intervention-option"><input type="radio" name="answer-${escape(request.nonce)}-${escape(q.id)}" value="${escape(o.label)}" data-question-answer="${escape(q.id)}"${i === 0 ? ' required' : ''}><span><strong>${escape(o.label)}</strong>${o.description ? `<small>${escape(o.description)}</small>` : ''}</span></label>`).join('')}</fieldset>`).join('')
+    : `<p class="intervention-detail">${b.kind === 'command' ? `<strong>Comando</strong><code>${escape(b.command ?? '')}</code><strong>Diretório</strong><code>${escape(b.cwd ?? '')}</code>${b.reason ? `<span>${escape(b.reason)}</span>` : ''}` : `<strong>Alterações solicitadas</strong><pre>${escape(JSON.stringify(b.changes ?? [], null, 2))}</pre>${b.reason ? `<span>${escape(b.reason)}</span>` : ''}`}</p>`;
+  const question = b.kind === 'question';
+  return `<section class="intervention" data-request="${escape(request.nonce)}"><h3>${question ? 'Pergunta do Codex' : b.kind === 'command' ? 'Permissão para comando' : 'Permissão para alterações'}</h3>${details}${question ? '<button class="primary" data-action="submit-intervention">Enviar resposta</button>' : request.decisions.map((d, i) => `<button class="${i === 0 ? 'primary' : ''}" data-action="decide-intervention" data-decision="${escape(d)}">${escape(d === 'accept' ? 'Permitir' : d === 'decline' ? 'Negar' : d === 'cancel' ? 'Cancelar' : d)}</button>`).join('')}</section>`;
+}
+
+export function sessionRow(s: Session, real: boolean, requests: Intervention[] = [], subscription?: Subscription): string {
   const source = s.source_action;
-  const buttons = real ? source ? `<button data-action="open-source"${source.available ? '' : ' disabled'}>${escape(source.label)}</button>${source.reason ? `<p class="source-reason">${escape(source.reason)}</p>` : ''}` : '' : s.state === 'waiting' ? s.request === 'permission'
+  const buttons = real ? `${s.kind === 'codex' ? `<button data-action="connect-interventions" data-enabled="${subscription?.status === 'connected' ? 'false' : 'true'}"${subscription?.status === 'connecting' ? ' disabled aria-busy="true"' : ''}>${subscription?.status === 'connected' ? 'Desconectar respostas' : subscription?.status === 'connecting' ? 'Conectando…' : 'Conectar respostas'}</button>${subscription ? `<p class="source-reason">${escape(subscription.message)}</p>` : '<p class="source-reason">Conexão local explícita · este cartão Codex</p>'}` : ''}${source ? `<button data-action="open-source"${source.available ? '' : ' disabled'}>${escape(source.label)}</button>${source.reason ? `<p class="source-reason">${escape(source.reason)}</p>` : ''}` : ''}` : s.state === 'waiting' ? s.request === 'permission'
     ? '<button class="primary" data-action="allow">Permitir uma vez</button><button data-action="deny">Negar</button>'
     : '<button class="primary" data-action="answer" data-answer="Só balão">Só balão</button><button data-action="answer" data-answer="Balão e som">Balão e som</button>'
     : '<button data-action="terminal">Ver terminal simulado</button>';
   const states: Record<string, string> = { waiting: 'Precisa de você', working: 'Trabalhando', idle: 'Ociosa', done: 'Concluída' };
   const state = real && !['waiting', 'working', 'idle', 'unknown'].includes(s.state) ? 'unknown' : s.state;
-  return `<article class="session ${escape(state)}" data-id="${escape(s.id)}"><div class="session-top"><span class="agent-mark ${escape(s.kind)}" aria-hidden="true">${escape(s.symbol)}</span><h2>${escape(s.project)}</h2><button class="icon-button" data-action="hide" aria-label="Ocultar sessão ${escape(s.project)}">${eye}</button></div><p class="session-meta">${escape(s.agent)} · ${escape(s.origin)}</p>${real ? `<p class="session-id">Sessão ${escape(s.id.split(':').slice(1).join(':') || s.id)}</p>` : ''}<p class="session-message">${escape(s.message)}</p>${!real && s.state === 'waiting' && s.command ? `<code class="request-command">${escape(s.command)}</code>` : ''}${buttons ? `<div class="actions">${buttons}</div>` : ''}<p class="state-line"><span aria-hidden="true"></span>${states[state] ?? 'Estado desconhecido'}</p></article>`;
+  return `<article class="session ${escape(state)}" data-id="${escape(s.id)}"><div class="session-top"><span class="agent-mark ${escape(s.kind)}" aria-hidden="true">${escape(s.symbol)}</span><h2>${escape(s.project)}</h2><button class="icon-button" data-action="hide" aria-label="Ocultar sessão ${escape(s.project)}">${eye}</button></div><p class="session-meta">${escape(s.agent)} · ${escape(s.origin)}</p>${real ? `<p class="session-id">Sessão ${escape(s.id.split(':').slice(1).join(':') || s.id)}</p>` : ''}<p class="session-message">${escape(s.message)}</p>${!real && s.state === 'waiting' && s.command ? `<code class="request-command">${escape(s.command)}</code>` : ''}${buttons ? `<div class="actions">${buttons}</div>` : ''}${real ? requests.map(interventionMarkup).join('') : ''}<p class="state-line"><span aria-hidden="true"></span>${states[state] ?? 'Estado desconhecido'}</p></article>`;
 }
 
 export function petState(data: Snapshot): string {

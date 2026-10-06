@@ -1,26 +1,44 @@
 import './style.css';
-import { action, desktopCommand, native, showError, snapshot, subscribe, type Snapshot } from './bridge';
+import { action, desktopCommand, native, showError, snapshot, subscribe, respondIntervention, setInterventionSubscription, type Snapshot } from './bridge';
 import { escape, sessionRow, renderQuotas } from './presentation';
+import { pendingIntervention, interventionContext } from './interventions-ui';
 
 const sessions = document.getElementById('sessions')!;
 const notice = document.getElementById('notice')!;
 let realMode = false;
 const opening = new Set<string>();
+const submitting = new Set<string>();
+let latestSnapshot: Snapshot | undefined;
 let cancelQuotaExpiry: (() => void) | undefined;
 function render(data: Snapshot) {
+  latestSnapshot = data;
+  const retained = new Map<string, { value: string; checked: boolean; focused: boolean }>();
+  for (const input of sessions.querySelectorAll<HTMLInputElement>('[data-question-answer],[data-free-answer]')) {
+    const requestNonce = input.closest<HTMLElement>('[data-request]')?.dataset.request;
+    const key = input.dataset.freeAnswer ? `free:${input.dataset.freeAnswer}` : `choice:${input.dataset.questionAnswer}:${input.name}`;
+    if (requestNonce) retained.set(`${requestNonce}\0${key}`, { value: input.value, checked: input.checked, focused: document.activeElement === input });
+  }
   if (realMode !== (data.scenario === 'real')) notice.textContent = '';
   realMode = data.scenario === 'real';
   const visible = data.sessions.filter(s => !s.hidden).sort((a,b) => Number(b.state === 'waiting') - Number(a.state === 'waiting'));
   const waiting = visible.filter(s => s.state === 'waiting').length;
   document.getElementById('subtitle')!.textContent = waiting ? `${waiting} sessões precisam de você` : `${visible.length} sessões acompanhadas`;
-  sessions.innerHTML = visible.length ? visible.map(s => sessionRow(s, realMode)).join('') : realMode
+  sessions.innerHTML = visible.length ? visible.map(s => sessionRow(s, realMode, data.interventions.filter(r => r.sessionId === s.id), data.subscriptions.find(sub => sub.sessionId === s.id))).join('') : realMode
     ? '<div class="empty"><h2>Nenhuma sessão visível.</h2><p>Abra uma sessão de Claude Code ou Codex. A lista é atualizada automaticamente a cada 5 segundos; sessões ocultas podem ser restauradas abaixo.</p></div>'
     : '<div class="empty"><h2>Tudo tranquilo por aqui.</h2><p>Restaure as sessões ocultas ou escolha outro cenário no painel completo.</p></div>';
+  for (const input of sessions.querySelectorAll<HTMLInputElement>('[data-question-answer],[data-free-answer]')) {
+    const requestNonce = input.closest<HTMLElement>('[data-request]')?.dataset.request;
+    const key = input.dataset.freeAnswer ? `free:${input.dataset.freeAnswer}` : `choice:${input.dataset.questionAnswer}:${input.name}`;
+    const saved = requestNonce ? retained.get(`${requestNonce}\0${key}`) : undefined;
+    if (saved) { input.value = saved.value; input.checked = saved.checked; if (saved.focused) input.focus({ preventScroll:true }); }
+  }
   for (const row of sessions.querySelectorAll<HTMLElement>('[data-id]')) {
     if (opening.has(row.dataset.id!)) {
       const button = row.querySelector<HTMLButtonElement>('[data-action="open-source"]');
       if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
     }
+    const requestElement = row.querySelector<HTMLElement>('[data-request]');
+    if (requestElement && submitting.has(requestElement.dataset.request!)) requestElement.querySelectorAll<HTMLButtonElement>('button').forEach(b => { b.disabled = true; b.setAttribute('aria-busy', 'true'); });
   }
   document.querySelector<HTMLElement>('.simulation')!.textContent = realMode ? 'Sessões reais · descoberta local experimental' : 'Demonstração · sessões, respostas e cotas simuladas';
   cancelQuotaExpiry?.();
@@ -52,6 +70,47 @@ sessions.addEventListener('click', event => {
       notice.textContent = 'Abertura solicitada ao Codex.';
     }).catch(showError).finally(() => {
       opening.delete(id);
+      void snapshot().then(render).catch(showError);
+    });
+    return;
+  }
+  if (button.dataset.action === 'connect-interventions') {
+    const enabled = button.dataset.enabled === 'true';
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    void setInterventionSubscription(id, enabled).then(() => {
+      notice.textContent = enabled ? 'Conexão de respostas iniciada para este cartão Codex.' : 'Conexão de respostas encerrada.';
+    }).catch(showError).finally(() => void snapshot().then(render).catch(showError));
+    return;
+  }
+  if (button.dataset.action === 'submit-intervention' || button.dataset.action === 'decide-intervention') {
+    const requestElement = button.closest<HTMLElement>('[data-request]');
+    const nonce = requestElement?.dataset.request;
+    const request = nonce && pendingIntervention(latestSnapshot, nonce);
+    if (!request || request.status !== 'pending' || !requestElement || submitting.has(nonce!)) {
+      notice.textContent = 'Este pedido expirou. Confira o estado atualizado do Codex.';
+      return;
+    }
+    let response: Record<string, unknown>;
+    if (button.dataset.action === 'decide-intervention') response = { decision: button.dataset.decision };
+    else {
+      const answers: Record<string, string> = {};
+      for (const q of request.body.questions ?? []) {
+        const free = requestElement.querySelector<HTMLInputElement>(`[data-free-answer="${CSS.escape(q.id)}"]`);
+        const choice = requestElement.querySelector<HTMLInputElement>(`[data-question-answer="${CSS.escape(q.id)}"]:checked`);
+        const value = free?.value.trim() ?? choice?.value;
+        if (!value) { notice.textContent = `Responda à pergunta “${q.header}” antes de enviar.`; (free ?? requestElement.querySelector<HTMLInputElement>(`[data-question-answer="${CSS.escape(q.id)}"]`))?.focus(); return; }
+        answers[q.id] = value;
+      }
+      response = { answers };
+    }
+    submitting.add(nonce!);
+    requestElement.querySelectorAll<HTMLButtonElement>('button').forEach(b => b.disabled = true);
+    const requestNonce = request.nonce;
+    void respondIntervention(interventionContext(request), response).then(() => {
+      notice.textContent = 'Pedido resolvido no Codex.';
+    }).catch(showError).finally(() => {
+      submitting.delete(requestNonce);
       void snapshot().then(render).catch(showError);
     });
     return;
