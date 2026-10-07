@@ -120,5 +120,6 @@ export async function initializeTasks():Promise<void>{
   });
   await listen<string>('exit-review-error',event=>showError(event.payload));
   new ResizeObserver(resize).observe(document.getElementById('terminalViewport')!);
-  updateProfiles(await listProfiles());await refresh();setInterval(()=>void refresh().catch(showError),5000);
+  try{updateProfiles(await listProfiles());}catch(error){showError(error);}
+  await refresh();setInterval(()=>void refresh().catch(showError),5000);
 }

@@ -13,6 +13,12 @@ const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
 const exe=join(workspace,'src-tauri','target','release','capy.exe');
 await stat(exe);await mkdir(root,{recursive:true});
 let exitFixture;
+const corruptProfiles=process.argv.includes('--profiles-corrupt');
+const incompatibleProfiles='[{"futureProfileVersion":2,"opaque":"preserve exact bytes"}]\r\n';
+if(corruptProfiles){
+  assert.ok(!process.argv.some(arg=>['--live-task','--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)),'Incompatible profiles proof must run without provider calls');
+  await writeFile(join(root,'profiles.json'),incompatibleProfiles);
+}
 let liveTask,liveTaskProfile,liveTaskProcess,liveTaskPanel;
 if(process.argv.includes('--live-task'))assert.ok(!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)),'Interactive task proof must run separately');
 if(process.argv.includes('--exit-review')){
@@ -122,6 +128,19 @@ try{
   await panel.evaluate(`document.querySelector('.chat-workbench > details').open=true;document.querySelector('#chatCreateForm').closest('details').open=true;document.querySelector('.chat-workbench').scrollIntoView({block:'start'})`);
   check('native_chat_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
   await panel.screenshot('chat');
+  if(corruptProfiles){
+    await waitFor(()=>panel.evaluate(`document.querySelector('#accountList').textContent.includes('preservado')`),'Erro de perfis visível');
+    check('native_profiles_incompatible_bytes_preserved',await readFile(join(root,'profiles.json'),'utf8')===incompatibleProfiles);
+    check('native_profiles_add_controls_disabled',await panel.evaluate(`Array.from(document.querySelectorAll('#addAccount input,#addAccount button,#addAccount select')).every(control=>control.disabled)`));
+    const rejected=await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('add_profile',{label:'Own blocked fixture',existing:null,billing:'subscription'}).then(()=>false,error=>String(error).includes('preservado'))`);
+    check('native_profiles_backend_rejects_add_without_overwrite',rejected&&await readFile(join(root,'profiles.json'),'utf8')===incompatibleProfiles);
+    check('native_profiles_failed_add_creates_no_login_directory',!(await readdir(root)).includes('accounts'));
+    check('native_profiles_api_controls_remain_available',await panel.evaluate(`!document.querySelector('#chatApiForm button').disabled && !document.querySelector('#chatApiForm input[name="key"]').disabled`));
+    check('native_profiles_chat_source_warning_visible',await panel.evaluate(`Array.from(document.querySelectorAll('.chat-workbench [role="status"]')).some(node=>node.textContent.includes('preservado'))`));
+    check('native_profiles_tasks_and_history_remain_readable',(await panel.invoke('list_tasks')).length===0&&(await panel.invoke('list_chats')).length===0);
+    check('native_profiles_exit_review_remains_available',(await panel.invoke('prepare_exit_review')).resources.length===0);
+    await panel.screenshot('profiles-corrupt');
+  }
   if(process.argv.includes('--live-task')){
     liveTaskPanel=panel;
     const project=join(root,'own-task-project');await mkdir(project);
@@ -371,6 +390,12 @@ try{
     await panel.call('Page.handleJavaScriptDialog',{accept:true});
     const start=Date.now();while(!childExited&&Date.now()-start<10_000)await delay(100);
     check('native_exit_fresh_approval_closes_own_application',childExited);
+  }
+  if(corruptProfiles){
+    await panel.invoke('request_exit');
+    const started=Date.now();while(!childExited&&Date.now()-started<10_000)await delay(100);
+    check('native_profiles_exit_event_closes_own_application',childExited);
+    check('native_profiles_incompatible_bytes_preserved_after_exit',await readFile(join(root,'profiles.json'),'utf8')===incompatibleProfiles);
   }
 }catch(error){failure=error;}
 finally{

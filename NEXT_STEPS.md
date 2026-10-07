@@ -1,6 +1,6 @@
 # Retomada do Capy
 
-Atualizado em 2026-10-06: prévia local 0.4.0-alpha.2 inclui respostas a perguntas/aprovações do Codex e animação expressiva do estado de espera. QA visual nativo dos cards reais continua pendente.
+Atualizado em 2026-10-07: retomada concluiu a preservação de perfis incompatíveis na build local, com prova nativa isolada sem chamadas de IA. Prévia empacotada 0.4.0-alpha.2 permanece anterior a este trecho. QA visual nativo dos cards reais continua pendente.
 
 ## Plano multifuncional em implementação
 
@@ -17,6 +17,8 @@ Chat próprio: `credential_vault.rs` e `api_accounts.rs` guardam somente metadad
 Prévia local atual: [0.4.0-alpha.2](releases/0.4.0-alpha.2/NOTES.md), com respostas Codex por pedido exato e sinais animados por estado. Executável em `releases/0.4.0-alpha.2/Capy.exe`. A anterior [0.2.0-alpha.2](releases/0.2.0-alpha.2/NOTES.md) mantém as cotas reais da conta Codex conectada. O estado das seis entregas finais fica em `.checks/releases.md`; a 0.4.0 final e as demais etapas continuam abertas. Publicação remota foi dispensada pelo usuário. Os registros abaixo descrevem as entregas anteriores e seus limites.
 
 ## Onde paramos
+
+Preservação de perfis: leitura inválida/incompatível, campos desconhecidos, duplicatas e excesso de tamanho bloqueiam operações sem sobrescrever `profiles.json`. Alteração externa observada exige reinício; pasta nova não reutiliza diretório existente nem segue o diretório de contas para fora da raiz própria. Falha de perfis não impede os controles API, leitura de histórico/tarefas nem saída. `node scripts/verify-pet-native.mjs --profiles-corrupt` passou em 26 checks, sem IA, em `scratch/capy-visual-49fb7bce-4322-4a8f-b429-ef1839a027ba/report.json`; captura inspecionada. 105 Rust e 31 JS passaram, um Rust live opt-in ignorado, build frontend/desktop passou. Verificador independente repetiu os cinco testes de perfis e 26 checks nativos; relatório em `.checks/profiles-preservation.verified.md`. A prova usa histórico vazio e controles API, sem login/envio real; a comparação de bytes não prova uma edição simultânea entre conferência e gravação. C10 completo e revisão final do plano continuam pendentes.
 
 Recuperação de chat: revisão persistida por versão/nonce e identidade/cobrança revalidadas, sem reenvio na confirmação. Uma anotação ligada à mensagem preserva a incerteza depois de novos sucessos. Claude retoma somente histórico do UUID/pasta conferidos, sem processo ativo; sem histórico, o envio fica bloqueado e o caminho é transferência revisada. CLI antigo sem proteção comprovada não é presumido encerrado. `--live-recovery --live-transfer` passou em 38 checks com contexto real Claude por assinatura após simular perda no registro próprio, retomada em Haiku e transferência posterior. Captura inspecionada após corrigir layout de consentimento. Suíte: 91 Rust aprovados (um opt-in ignorado), 29 JS, frontend/desktop e smoke de 20 checks aprovados. Ainda faltam API real, demais provas e revisão final; a simulação não comprova falha de rede durante geração.
 

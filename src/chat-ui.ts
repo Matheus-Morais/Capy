@@ -39,9 +39,14 @@ export async function initializeChat():Promise<void>{
     return {chat,request:verified&&verifiedTarget===target.value?{title:chat?.title??'',kind:target.value.slice(0,split) as CreateChat['kind'],profileId:target.value.slice(split+1),model:field<HTMLInputElement>(newForm,'model').value.trim(),...verified}:null};
   },destination=>{update(destination);selection.value=destination.id;render();});
   const fail=(error:unknown)=>{notice.textContent=String(error);};
+  const sourceWarning=document.createElement('p');sourceWarning.setAttribute('role','status');host.append(sourceWarning);
   const reset=()=>{verified=null;createButton.disabled=true;find('chatBilling').textContent='Verifique a conta antes de criar a conversa.';transfers.refresh();};
   async function choices(){
-    const previous=target.value;const profiles=await listProfiles();apis=await listApiAccounts();
+    const previous=target.value;
+    const [profileResult,apiResult]=await Promise.allSettled([listProfiles(),listApiAccounts()]);
+    const profiles=profileResult.status==='fulfilled'?profileResult.value:[];
+    apis=apiResult.status==='fulfilled'?apiResult.value:[];
+    sourceWarning.textContent=[profileResult,apiResult].filter(result=>result.status==='rejected').map(result=>String(result.reason)).join(' ');
     target.innerHTML=profiles.map(p=>`<option value="claudeCli:${escape(p.id)}">CLI Claude · ${escape(p.label)}</option>`).join('')
       +apis.filter(a=>a.configured).map(a=>`<option value="api:${escape(a.account.id)}">API ${escape(a.account.provider)} · ${escape(a.account.label)}</option>`).join('');
     if([...target.options].some(o=>o.value===previous))target.value=previous;reset();

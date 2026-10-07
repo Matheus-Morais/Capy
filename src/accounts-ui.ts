@@ -52,5 +52,9 @@ export async function initializeAccounts(): Promise<void> {
       form.reset(); document.getElementById('existingConfig')!.hidden=true;
     }).catch(showError).finally(()=>button.disabled=false);
   });
-  await refresh();
+  try{await refresh();}catch(error){
+    document.getElementById('accountList')!.textContent=String(error);
+    form.querySelectorAll<HTMLInputElement|HTMLButtonElement|HTMLSelectElement>('input,button,select').forEach(control=>control.disabled=true);
+    showError(error);
+  }
 }

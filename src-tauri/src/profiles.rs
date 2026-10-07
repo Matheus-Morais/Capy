@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{path::{Path,PathBuf}, process::Command, sync::Mutex, time::{Duration, Instant},collections::HashMap};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
 pub struct Profile {
     pub id:String,
     pub label:String,
@@ -19,19 +19,50 @@ pub struct Identity {
     pub billing:String,
     pub message:String,
 }
-pub struct Store { pub root:PathBuf, value:Mutex<Vec<Profile>>, identities:Mutex<HashMap<String,(u64,Identity)>> }
+struct ProfileState { profiles:Vec<Profile>, persisted:Option<Vec<u8>> }
+pub struct Store { pub root:PathBuf, value:Mutex<ProfileState>, load_error:bool, identities:Mutex<HashMap<String,(u64,Identity)>> }
+const PRESERVED:&str="Perfis incompatíveis ou indisponíveis. O arquivo profiles.json foi preservado; restaure o arquivo e reinicie a Capy.";
+fn profile_bytes(path:&Path)->Result<Option<Vec<u8>>,String>{
+    use std::io::Read;
+    let file=match std::fs::File::open(path){Ok(file)=>file,Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Ok(None),Err(_)=>return Err(PRESERVED.into())};
+    let mut bytes=Vec::new();file.take(1_048_577).read_to_end(&mut bytes).map_err(|_|PRESERVED)?;
+    if bytes.len()>1_048_576{return Err(PRESERVED.into());}Ok(Some(bytes))
+}
+fn validate_profiles(profiles:&[Profile])->Result<(),String>{
+    let mut ids=std::collections::HashSet::new();let mut paths=std::collections::HashSet::new();
+    if profiles.len()>64{return Err(PRESERVED.into());}
+    for profile in profiles{validate_profile(profile).map_err(|_|PRESERVED)?;
+        if !ids.insert(&profile.id)||!paths.insert(profile.config_dir.canonicalize().unwrap_or_else(|_|profile.config_dir.clone())){return Err(PRESERVED.into());}
+    }Ok(())
+}
+fn new_config_dir(root:&Path,id:&str)->Result<PathBuf,String>{
+    std::fs::create_dir_all(root).map_err(|e|e.to_string())?;
+    let parent=root.join("accounts");std::fs::create_dir_all(&parent).map_err(|e|e.to_string())?;
+    let parent=parent.canonicalize().map_err(|e|e.to_string())?;
+    if !parent.starts_with(root.canonicalize().map_err(|e|e.to_string())?){return Err("A pasta de contas aponta para fora do diretório da Capy.".into());}
+    let path=parent.join(id);std::fs::create_dir(&path).map_err(|e|e.to_string())?;
+    path.canonicalize().map_err(|e|e.to_string())
+}
 impl Store {
     pub fn load(root:PathBuf) -> Self {
-        let mut profiles:Vec<Profile>=settings::read_json(&root.join("profiles.json")).unwrap_or_default();
-        profiles.retain(|p| validate_profile(p).is_ok());
-        if profiles.is_empty() {
-            profiles.push(Profile{id:"claude-default".into(),label:"Claude existente".into(),provider:"Claude".into(),config_dir:crate::discovery::Sources::local().claude,billing:"subscription".into()});
+        let loaded=profile_bytes(&root.join("profiles.json")).and_then(|bytes|{
+            let profiles=match &bytes{Some(value)=>serde_json::from_slice::<Vec<Profile>>(value).map_err(|_|PRESERVED)?,None=>vec![]};
+            validate_profiles(&profiles)?;Ok(ProfileState{profiles,persisted:bytes})
+        });
+        let load_error=loaded.is_err();let mut value=loaded.unwrap_or(ProfileState{profiles:vec![],persisted:None});
+        if !load_error && value.profiles.is_empty() {
+            value.profiles.push(Profile{id:"claude-default".into(),label:"Claude existente".into(),provider:"Claude".into(),config_dir:crate::discovery::Sources::local().claude,billing:"subscription".into()});
         }
-        Self{root,value:Mutex::new(profiles),identities:Mutex::new(HashMap::new())}
+        Self{root,value:Mutex::new(value),load_error,identities:Mutex::new(HashMap::new())}
     }
-    pub fn list(&self)->Result<Vec<Profile>,String>{self.value.lock().map(|v|v.clone()).map_err(|_|"Perfis indisponíveis.".into())}
+    fn unchanged(&self,value:&ProfileState)->Result<(),String>{
+        if self.load_error{return Err(PRESERVED.into());}
+        if profile_bytes(&self.root.join("profiles.json"))?!=value.persisted{return Err("Perfis alterados fora da Capy. Arquivo preservado; reinicie para carregar a alteração.".into());}Ok(())
+    }
+    pub fn list(&self)->Result<Vec<Profile>,String>{let value=self.value.lock().map_err(|_|"Perfis indisponíveis.")?;self.unchanged(&value)?;Ok(value.profiles.clone())}
     pub fn get(&self,id:&str)->Result<Profile,String>{self.list()?.into_iter().find(|p|p.id==id).ok_or("Perfil não encontrado.".into())}
     pub fn probe(&self,profile:&Profile,cwd:Option<&Path>)->Result<Identity,String>{
+        if self.get(&profile.id)?!=*profile{return Err("Perfil alterado; verifique novamente.".into());}
         let identity=identity(profile,cwd)?;
         self.identities.lock().map_err(|_|"Identidades indisponíveis.")?.insert(profile.id.clone(),(crate::quotas::now_ms(),identity.clone()));Ok(identity)
     }
@@ -44,19 +75,22 @@ impl Store {
     }
     pub fn add(&self,label:String,existing:Option<PathBuf>,billing:String)->Result<Profile,String>{
         if !settings::valid_text(&label,80) || !["subscription","api"].contains(&billing.as_str()) {return Err("Nome ou tipo de cobrança inválido.".into());}
-        let mut list=self.value.lock().map_err(|_|"Perfis indisponíveis.")?;
+        let mut value=self.value.lock().map_err(|_|"Perfis indisponíveis.")?;self.unchanged(&value)?;
+        let list=&value.profiles;
         if list.len()>=64 {return Err("Limite de 64 perfis.".into());}
         let id=format!("claude-{}",std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(|e|e.to_string())?.as_nanos());
         let config_dir=match existing {
             Some(path)=> {if !path.is_absolute() || !path.is_dir(){return Err("Escolha uma pasta de configuração existente e absoluta.".into());} path.canonicalize().map_err(|e|e.to_string())?},
-            None=>{let path=self.root.join("accounts").join(&id);std::fs::create_dir_all(&path).map_err(|e|e.to_string())?;path.canonicalize().map_err(|e|e.to_string())?}
+            None=>new_config_dir(&self.root,&id)?
         };
         if list.iter().any(|p|p.config_dir.canonicalize().ok().as_ref()==Some(&config_dir)) {return Err("Esta pasta já está cadastrada.".into());}
         let profile=Profile{id,label,provider:"Claude".into(),config_dir,billing};
         validate_profile(&profile)?;
         let mut updated=list.clone();updated.push(profile.clone());
+        validate_profiles(&updated)?;self.unchanged(&value)?;
+        let persisted=serde_json::to_vec_pretty(&updated).map_err(|e|e.to_string())?;
         settings::write_json(&self.root.join("profiles.json"),&updated)?;
-        *list=updated;Ok(profile)
+        value.profiles=updated;value.persisted=Some(persisted);Ok(profile)
     }
 }
 fn validate_profile(profile:&Profile)->Result<(),String>{
@@ -164,6 +198,58 @@ pub fn enrich_sessions(store:&Store,sources:&crate::discovery::Sources,report:&m
 #[cfg(test)]
 mod tests{
     use super::*;
+    fn fixture()->PathBuf{let root=std::env::temp_dir().join(format!("capy-profiles-{}",uuid::Uuid::new_v4()));std::fs::create_dir_all(&root).unwrap();root}
+    fn sample(root:&Path)->Profile{Profile{id:"fixture".into(),label:"Conta".into(),provider:"Claude".into(),config_dir:root.join("config"),billing:"subscription".into()}}
+    #[test]
+    fn profiles_invalid_metadata_blocks_operations_without_overwriting(){
+        let root=fixture();let path=root.join("profiles.json");let profile=sample(&root);
+        let mut unknown=serde_json::to_value(&profile).unwrap();unknown["futureField"]=true.into();
+        let mut invalid=profile.clone();invalid.provider="Unknown".into();
+        for bytes in [b"broken".to_vec(),serde_json::to_vec(&vec![unknown]).unwrap(),serde_json::to_vec(&vec![invalid]).unwrap(),vec![b' ';1_048_577]]{
+            std::fs::write(&path,&bytes).unwrap();let store=Store::load(root.clone());
+            assert!(store.list().is_err());assert!(store.get("fixture").is_err());assert!(store.probe(&profile,None).is_err());
+            assert!(store.add("Nova".into(),None,"subscription".into()).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(),bytes);assert!(!root.join("accounts").exists());
+        }std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn profiles_duplicate_metadata_is_preserved(){
+        let root=fixture();let profile=sample(&root);let mut same_path=profile.clone();same_path.id="other".into();
+        let mut same_id=profile.clone();same_id.config_dir=root.join("different");
+        let many=(0..65).map(|i|Profile{id:format!("p-{i}"),config_dir:root.join(format!("config-{i}")),..profile.clone()}).collect();
+        for profiles in [vec![profile.clone(),same_path],vec![profile,same_id],many]{
+            let bytes=serde_json::to_vec(&profiles).unwrap();std::fs::write(root.join("profiles.json"),&bytes).unwrap();
+            let store=Store::load(root.clone());assert!(store.list().is_err());assert!(store.add("Nova".into(),None,"subscription".into()).is_err());
+            assert_eq!(std::fs::read(root.join("profiles.json")).unwrap(),bytes);
+        }std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn profiles_disk_changes_block_operations_before_login_directory_creation(){
+        let root=fixture();let path=root.join("profiles.json");
+        for original in [None,Some(b"[]".to_vec())]{
+            if let Some(bytes)=original{std::fs::write(&path,bytes).unwrap();}else{let _=std::fs::remove_file(&path);}
+            let store=Store::load(root.clone());assert!(store.list().is_ok());
+            let edited=serde_json::to_vec(&vec![sample(&root)]).unwrap();std::fs::write(&path,&edited).unwrap();
+            assert!(store.list().is_err());assert!(store.add("Nova".into(),None,"subscription".into()).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(),edited);assert!(!root.join("accounts").exists());
+            let reloaded=Store::load(root.clone());assert_eq!(reloaded.list().unwrap().len(),1);
+            std::fs::remove_file(&path).unwrap();assert!(reloaded.list().is_err());assert!(reloaded.add("Nova".into(),None,"subscription".into()).is_err());
+        }std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn profiles_new_directory_rejects_outside_accounts_parent(){
+        let base=fixture();let root=base.join("app");let outside=base.join("outside");std::fs::create_dir_all(&root).unwrap();std::fs::create_dir(&outside).unwrap();
+        #[cfg(windows)] {
+            use std::os::windows::process::CommandExt;
+            let status=Command::new("powershell.exe").args(["-NoProfile","-NonInteractive","-Command","$ErrorActionPreference='Stop'; New-Item -ItemType Junction -Path $env:CAPY_TEST_LINK -Target $env:CAPY_TEST_TARGET | Out-Null"])
+                .env("CAPY_TEST_LINK",root.join("accounts")).env("CAPY_TEST_TARGET",&outside).creation_flags(0x08000000).status().unwrap();assert!(status.success());
+        }
+        #[cfg(unix)] std::os::unix::fs::symlink(&outside,root.join("accounts")).unwrap();
+        assert!(new_config_dir(&root,"fixture").is_err());assert!(!outside.join("fixture").exists());
+        #[cfg(windows)] std::fs::remove_dir(root.join("accounts")).unwrap();
+        #[cfg(unix)] std::fs::remove_file(root.join("accounts")).unwrap();
+        std::fs::remove_dir_all(base).unwrap();
+    }
     #[test]
     fn profiles_isolate_new_login_and_preserve_existing(){
         let root=std::env::temp_dir().join(format!("capy-profile-test-{}",std::process::id()));

@@ -137,5 +137,13 @@ document.addEventListener('keydown', event => {
     dialog:!!target?.closest('dialog,[role="dialog"]'),
   }))void desktopCommand('hide_window', { label: document.body.dataset.surface }).catch(showError);
 });
-async function start() { await subscribe(render); render(await snapshot()); if(document.body.dataset.surface==='panel'){await (await import('./tasks-ui')).initializeTasks();await (await import('./chat-ui')).initializeChat();} await initializeAccounts(); await desktopCommand('ui_ready'); }
+async function start() {
+  await subscribe(render);render(await snapshot());
+  if(document.body.dataset.surface==='panel'){
+    try{await (await import('./tasks-ui')).initializeTasks();}catch(error){showError(error);}
+    try{await (await import('./chat-ui')).initializeChat();}catch(error){showError(error);}
+  }
+  try{await initializeAccounts();}catch(error){showError(error);}
+  await desktopCommand('ui_ready');
+}
 void start().catch(showError);

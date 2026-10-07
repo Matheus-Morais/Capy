@@ -86,6 +86,8 @@ Saída normal em 2026-10-06: `exit_review_requires_exact_fresh_single_approval`,
 **C10** — Contas Claude existentes e login em perfil isolado não sobrescrevem credenciais de outra conta.
 Proof: teste nomeado de perfis e login oficial em perfil próprio.
 
+Preservação de perfis — decisão antes da implementação: validar a lista inteira (até 64 entradas, IDs/pastas únicos, campos conhecidos), sem descartar entradas inválidas nem substituir leitura malsucedida pelo perfil padrão. Conservar os bytes carregados e rejeitar operações se profiles.json mudou; não criar pasta de login antes dessa conferência. Pasta nova deve ser criada exclusivamente, sob o diretório próprio, sem reutilizar diretório existente. Erros de perfis não impedem inicialização de chat/API, histórico ou eventos de saída. Alternativa rejeitada: filtrar entradas, sobrescrever uma edição externa ou abortar toda a inicialização do painel. Provas: `profiles_invalid_metadata_blocks_operations_without_overwriting`, `profiles_duplicate_metadata_is_preserved`, `profiles_disk_changes_block_operations_before_login_directory_creation`, `profiles_new_directory_rejects_outside_accounts_parent`; runner nativo `--profiles-corrupt`, sem chamadas de IA, preserva fixture incompatível, mostra erro, mantém controles de chat/histórico e saída disponíveis.
+
 **C11** — Quotas 5h/semanal associadas à conta, com indisponibilidade/TTL explícitos.
 Proof: teste nomeado de amostras Claude e consulta real da conta isolada.
 

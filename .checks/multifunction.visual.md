@@ -1,5 +1,11 @@
 # Prova nativa parcial da Capy multifuncional
 
+## Retomada de 2026-10-07 — perfis incompatíveis
+
+Build frontend/desktop passou; suíte do autor: 105 Rust aprovados e um live opt-in ignorado, 31 JS aprovados. `node scripts/verify-pet-native.mjs --profiles-corrupt` passou em 26 checks, usando somente fixture própria, sem chamadas de IA. Artefatos em `scratch/capy-visual-49fb7bce-4322-4a8f-b429-ef1839a027ba/report.json` e `profiles-corrupt.png`. A captura foi aberta e inspecionada: aviso legível no chat, sem overflow horizontal. Os bytes incompatíveis permaneceram intactos antes/depois de operação rejeitada e saída; cadastro de perfis bloqueado, controles API disponíveis, leituras vazias de histórico/tarefas e preparação de saída aprovadas. A saída normal encerrou somente a instância de teste. Smoke final passou em 20 checks, sem erros de frontend.
+
+Verificador independente repetiu os cinco testes `profiles_` e 26 checks nativos em `scratch/capy-visual-57512f59-c2b4-48ce-afb9-b0468189f5aa/report.json`; relatório limitado em `.checks/profiles-preservation.verified.md`. Não prova login/envio real, histórico populado neste modo ou edição simultânea entre conferência de bytes e gravação. C10 completo e revisão final C1–C19 permanecem abertos.
+
 Executável local compilado em 2026-10-06. Esta prova não encerra C1–C19 nem substitui o verificador independente final.
 
 `node scripts/verify-pet-native.mjs` passou em 12 checks no WebView2 do executável, em processo próprio com preferências e cache isolados. Artefatos privados: `scratch/capy-visual-1e858f7d-bcc2-4038-ba44-f6a9b98b9b02/report.json` e PNGs.
