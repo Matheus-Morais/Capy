@@ -26,10 +26,31 @@ fn bash()->Option<PathBuf>{
     }
     None
 }
+fn configuration_bytes(path:&Path)->Result<Option<Vec<u8>>,String>{
+    let file=match std::fs::File::open(path){
+        Ok(file)=>file,
+        Err(error) if error.kind()==std::io::ErrorKind::NotFound=>return Ok(None),
+        Err(error)=>return Err(format!("Não foi possível ler settings.json; configuração preservada: {error}")),
+    };
+    let mut bytes=Vec::new();file.take(1_048_577).read_to_end(&mut bytes).map_err(|e|format!("Não foi possível ler settings.json; configuração preservada: {e}"))?;
+    if bytes.len()>1_048_576{return Err("settings.json excede 1 MiB; configuração preservada.".into());}
+    Ok(Some(bytes))
+}
+fn valid_original(value:&Option<Value>)->bool{
+    value.as_ref().is_none_or(|v|v["type"]=="command"&&v["command"].as_str().is_some())
+}
+fn read_bridge(profile:&Profile,path:&Path)->Result<Bridge,String>{
+    let invalid="Backup da statusline indisponível ou inválido; configuração preservada.";
+    let value=settings::read_json::<Value>(path).map_err(|_|invalid)?;
+    if value.get("original").is_none(){return Err(invalid.into());}
+    let bridge:Bridge=serde_json::from_value(value).map_err(|_|invalid)?;
+    if bridge.config_dir!=profile.config_dir||!valid_original(&bridge.original){return Err("Backup da statusline incompatível; configuração preservada.".into());}
+    Ok(bridge)
+}
 pub fn configure(profile:&Profile,enabled:bool)->Result<(),String>{
-    let folder=root(profile);std::fs::create_dir_all(&folder).map_err(|e|e.to_string())?;
+    let folder=root(profile);
     let path=profile.config_dir.join("settings.json");
-    let original_bytes=std::fs::read(&path).ok();
+    let original_bytes=configuration_bytes(&path)?;
     let mut config=match original_bytes.as_ref(){Some(bytes)=>serde_json::from_slice::<Value>(bytes).map_err(|_|"settings.json contém JSON inválido.")?,None=>json!({})};
     let object=config.as_object_mut().ok_or("settings.json deve conter um objeto JSON.")?;
     let command=wrapper_command(profile)?;
@@ -37,9 +58,9 @@ pub fn configure(profile:&Profile,enabled:bool)->Result<(),String>{
     if enabled {
         let current=object.get("statusLine").cloned();
         let previous=if current.as_ref().is_some_and(|v|v["command"]==command){
-            settings::read_json::<Bridge>(&bridge_path)?.original
+            read_bridge(profile,&bridge_path)?.original
         }else{current};
-        if previous.as_ref().is_some_and(|v|v["type"]!="command"||v["command"].as_str().is_none()) {return Err("A statusline existente não é um comando compatível.".into());}
+        if !valid_original(&previous) {return Err("A statusline existente não é um comando compatível.".into());}
         let bridge=Bridge{executable:std::env::current_exe().map_err(|e|e.to_string())?,config_dir:profile.config_dir.clone(),original:previous,bash:bash()};
         settings::write_json(&bridge_path,&bridge)?;
         std::fs::write(folder.join("statusline.ps1"),include_str!("../scripts/claude-statusline.ps1")).map_err(|e|e.to_string())?;
@@ -48,12 +69,11 @@ pub fn configure(profile:&Profile,enabled:bool)->Result<(),String>{
         status.as_object_mut().unwrap().remove("refreshInterval");
         object.insert("statusLine".into(),status);
     }else{
-        if object.get("statusLine").is_some_and(|v|v["command"]!=command){return Err("A statusline mudou na origem. A Capy preservou a configuração atual.".into());}
-        if let Ok(bridge)=settings::read_json::<Bridge>(&bridge_path){
-            match bridge.original{Some(value)=>{object.insert("statusLine".into(),value);},None=>{object.remove("statusLine");}}
-        }else {object.remove("statusLine");}
+        if !object.get("statusLine").is_some_and(|v|v["command"]==command){return Err("A statusline mudou na origem. A Capy preservou a configuração atual.".into());}
+        let bridge=read_bridge(profile,&bridge_path)?;
+        match bridge.original{Some(value)=>{object.insert("statusLine".into(),value);},None=>{object.remove("statusLine");}}
     }
-    if std::fs::read(&path).ok()!=original_bytes{return Err("Configuração alterada durante a edição; tente novamente.".into());}
+    if configuration_bytes(&path)?!=original_bytes{return Err("Configuração alterada durante a edição; tente novamente.".into());}
     settings::write_json(&path,&config)?;
     let disabled=folder.join("disabled");
     if enabled{if disabled.exists(){std::fs::remove_file(disabled).map_err(|e|e.to_string())?;}}
@@ -115,6 +135,52 @@ pub fn poll(profile:&Profile)->Vec<Row>{
 #[cfg(test)]
 mod tests{
     use super::*;
+    fn fixture()->Profile{
+        let dir=std::env::temp_dir().join(format!("capy-statusline-test-{}",uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        Profile{id:"test".into(),label:"Test".into(),provider:"Claude".into(),config_dir:dir,billing:"subscription".into()}
+    }
+    #[test]
+    fn claude_quota_configuration_rejects_unreadable_invalid_and_oversized_settings(){
+        let profile=fixture();let path=profile.config_dir.join("settings.json");
+        std::fs::create_dir(&path).unwrap();
+        assert!(configure(&profile,true).is_err());assert!(!root(&profile).exists());
+        std::fs::remove_dir(&path).unwrap();
+        for bytes in [b"not json".to_vec(),vec![b' ';1_048_577]]{
+            std::fs::write(&path,&bytes).unwrap();
+            assert!(configure(&profile,true).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(),bytes);assert!(!root(&profile).exists());
+        }
+        std::fs::remove_dir_all(profile.config_dir).unwrap();
+    }
+    #[test]
+    fn claude_quota_disconnect_preserves_active_wrapper_without_valid_bridge(){
+        let profile=fixture();let path=profile.config_dir.join("settings.json");
+        let original=json!({"statusLine":{"type":"command","command":"echo original"}});
+        settings::write_json(&path,&original).unwrap();configure(&profile,true).unwrap();
+        let active=std::fs::read(&path).unwrap();let bridge=root(&profile).join("bridge.json");
+        let valid=std::fs::read(&bridge).unwrap();
+        std::fs::remove_file(&bridge).unwrap();
+        assert!(configure(&profile,false).is_err());assert_eq!(std::fs::read(&path).unwrap(),active);
+        for value in [json!({"invalid":true}),json!({"executable":"capy.exe","configDir":profile.config_dir,"bash":null}),json!({"executable":"capy.exe","configDir":"other-folder","original":original["statusLine"],"bash":null}),json!({"executable":"capy.exe","configDir":profile.config_dir,"original":{"type":"other"},"bash":null})]{
+            settings::write_json(&bridge,&value).unwrap();
+            assert!(configure(&profile,false).is_err());assert_eq!(std::fs::read(&path).unwrap(),active);
+        }
+        std::fs::write(&bridge,valid).unwrap();configure(&profile,false).unwrap();
+        assert_eq!(settings::read_json::<Value>(&path).unwrap(),original);
+        std::fs::remove_dir_all(profile.config_dir).unwrap();
+    }
+    #[test]
+    fn claude_quota_disconnect_does_not_restore_over_origin_change(){
+        let profile=fixture();let path=profile.config_dir.join("settings.json");
+        settings::write_json(&path,&json!({"statusLine":{"type":"command","command":"echo original"}})).unwrap();
+        configure(&profile,true).unwrap();
+        for value in [json!({"model":"haiku"}),json!({"statusLine":{"type":"command","command":"echo changed"}})]{
+            settings::write_json(&path,&value).unwrap();let bytes=std::fs::read(&path).unwrap();
+            assert!(configure(&profile,false).is_err());assert_eq!(std::fs::read(&path).unwrap(),bytes);
+        }
+        std::fs::remove_dir_all(profile.config_dir).unwrap();
+    }
     #[test]
     fn claude_quota_identity_start_windows_and_ttl(){
         let session="11111111-1111-1111-1111-111111111111";

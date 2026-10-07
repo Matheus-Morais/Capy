@@ -95,6 +95,10 @@ Preservação de perfis — decisão antes da implementação: validar a lista i
 **C11** — Quotas 5h/semanal associadas à conta, com indisponibilidade/TTL explícitos.
 Proof: teste nomeado de amostras Claude e consulta real da conta isolada.
 
+Preservação da statusline — decisão antes da implementação em 2026-10-07: somente NotFound equivale a settings.json ausente; leitura limitada a 1 MiB, demais erros bloqueiam alteração. Desconectar o wrapper ativo exige bridge íntegra da mesma pasta, com statusline original compatível; bridge ausente/corrompida não autoriza apagar a configuração. Se a origem retirou/trocou a statusline, não restaurar silenciosamente a antiga. Validar antes de criar artefatos e conferir os bytes de settings.json novamente antes de gravar. Alternativa rejeitada: `.ok()` na leitura e remoção em fallback, que confundem erro com ausência e podem apagar a configuração original. Provas: `claude_quota_configuration_rejects_unreadable_invalid_and_oversized_settings`, `claude_quota_disconnect_preserves_active_wrapper_without_valid_bridge`, `claude_quota_disconnect_does_not_restore_over_origin_change`.
+
+Prova nativa desta preservação: `--quota-settings` usa perfil e settings.json exclusivos em scratch, sem login/envio a provedor. Exercitar conectar/desconectar pelo comando Tauri, corrupção/ausência do bridge, mudança externa e restauração íntegra. Não altera a statusline do usuário nem prova quotas reais; C11 real continua aberto.
+
 **C12** — Limiares 50/60/70/80/90 editáveis/desativáveis e novos limiares; aviso único por conta/janela, saltos agrupados.
 Proof: `cargo test --manifest-path src-tauri/Cargo.toml quota_policy`
 

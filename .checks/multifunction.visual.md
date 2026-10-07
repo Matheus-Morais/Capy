@@ -1,5 +1,11 @@
 # Prova nativa parcial da Capy multifuncional
 
+## Preservação de configuração das quotas — 2026-10-07
+
+Três testes novos falharam antes da correção: leitura malsucedida criava artefatos, desconexão removia wrapper sem backup válido e statusline retirada na origem era restaurada silenciosamente. A leitura agora distingue NotFound dos demais erros e limita settings.json a 1 MiB. Restauração exige bridge com campo original explícito, mesma pasta e comando compatível. Backup incompleto também foi demonstrado em vermelho e corrigido. Os seis testes `claude_quota_` passaram; suíte completa antes da última guarda adicional: 108 Rust aprovados, um opt-in ignorado. 32 JS e builds frontend/desktop passaram.
+
+`node scripts/verify-pet-native.mjs --quota-settings` passou em 26 checks na build final deste trecho: `scratch/capy-visual-ab72f917-45f2-4585-8866-5598fee9d1e6/report.json`. Perfil/settings/backup foram criados somente na raiz própria. Comandos Tauri conectaram e restauraram a configuração original, preservaram campos alheios/Unicode e rejeitaram backup corrompido/incompleto/ausente e alteração na origem, mantendo os bytes de settings.json intactos. Nenhum login/envio a provedor; não altera a statusline do usuário. A prova anterior de 24 checks antecede a guarda de backup incompleto e não é a final. Não prova percentuais reais, login de outra conta, statusline em execução ou C11 completo. Revisão independente deste trecho pendente.
+
 Verificação independente desta rodada: `.checks/live-task-model.round2.verified.md` aprovou 36 checks nativos/32 JS, com renderer totalmente dentro do frame; `.checks/live-task-external.verified.md` aprovou 25 checks nativos, argumento literal e sobrevivência dos processos externos após saída. Ambos os runners encerraram seus processos próprios. Smoke posterior passou em 20 checks sem erros de frontend. Esses relatórios não encerram o checklist multifuncional completo.
 
 ## Revisão do layout e launcher externo — 2026-10-07

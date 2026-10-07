@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {spawn,execFile} from 'node:child_process';
-import {promisify} from 'node:util';
+import {promisify,isDeepStrictEqual} from 'node:util';
 import {randomUUID} from 'node:crypto';
 import {mkdir, writeFile, readFile, stat,readdir} from 'node:fs/promises';
 import {createServer} from 'node:net';
@@ -24,6 +24,16 @@ const liveTaskExternal=process.argv.includes('--live-task-external');
 assert.ok(!(liveTaskExternal&&(liveTaskMode||process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review','--profiles-corrupt'].includes(arg)))),'External task proof runs separately');
 let externalProof;
 const corruptProfiles=process.argv.includes('--profiles-corrupt');
+const quotaSettings=process.argv.includes('--quota-settings');
+assert.ok(!(quotaSettings&&(liveTaskMode||liveTaskExternal||corruptProfiles||process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)))),'Quota settings proof runs without provider calls');
+let quotaProfile,quotaOriginal;
+if(quotaSettings){
+  const configDir=join(root,'own-claude-config');await mkdir(configDir);
+  quotaProfile={id:'own-quota-settings',label:'Own quota settings fixture',provider:'Claude',configDir,billing:'subscription'};
+  quotaOriginal={model:'haiku',statusLine:{type:'command',command:'echo own-original',padding:2,refreshInterval:10},hooks:{Stop:[]},ownFutureValue:{preserve:'ação_日本語'}};
+  await writeFile(join(configDir,'settings.json'),JSON.stringify(quotaOriginal));
+  await writeFile(join(root,'profiles.json'),JSON.stringify([quotaProfile]));
+}
 const incompatibleProfiles='[{"futureProfileVersion":2,"opaque":"preserve exact bytes"}]\r\n';
 if(corruptProfiles){
   assert.ok(!liveTaskMode&&!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)),'Incompatible profiles proof must run without provider calls');
@@ -417,6 +427,29 @@ try{
   if(liveTaskExternal){
     externalProof=externalTaskProof({panel,root,check,waitFor,taskHistory,sameFolder,appExited:()=>childExited});
     await externalProof.verify();
+  }
+  if(quotaSettings){
+    const path=join(quotaProfile.configDir,'settings.json');const bridgePath=join(quotaProfile.configDir,'capy-quotas','bridge.json');
+    await panel.invoke('connect_claude_quotas',{id:quotaProfile.id,enabled:true});
+    const enabled=JSON.parse(await readFile(path,'utf8'));const active=await readFile(path);const backup=await readFile(bridgePath);
+    check('native_quota_settings_connect_preserves_other_fields',enabled.model===quotaOriginal.model&&JSON.stringify(enabled.hooks)===JSON.stringify(quotaOriginal.hooks)&&JSON.stringify(enabled.ownFutureValue)===JSON.stringify(quotaOriginal.ownFutureValue)&&enabled.statusLine.command.includes('capy-quotas/statusline.ps1'));
+    const rejects=()=>panel.invoke('connect_claude_quotas',{id:quotaProfile.id,enabled:false}).then(()=>false,()=>true);
+    await writeFile(bridgePath,'{"invalid":true}');
+    check('native_quota_settings_corrupt_bridge_blocks_disconnect',await rejects());
+    check('native_quota_settings_corrupt_bridge_preserves_exact_settings',(await readFile(path)).equals(active));
+    const incomplete=JSON.parse(backup);delete incomplete.original;await writeFile(bridgePath,JSON.stringify(incomplete));
+    check('native_quota_settings_incomplete_bridge_blocks_disconnect',await rejects());
+    check('native_quota_settings_incomplete_bridge_preserves_exact_settings',(await readFile(path)).equals(active));
+    const {unlink}=await import('node:fs/promises');await unlink(bridgePath);
+    check('native_quota_settings_missing_bridge_blocks_disconnect',await rejects());
+    check('native_quota_settings_missing_bridge_preserves_exact_settings',(await readFile(path)).equals(active));
+    await writeFile(bridgePath,backup);
+    const changed=JSON.stringify({model:'opus',statusLine:{type:'command',command:'echo changed-at-origin'}});
+    await writeFile(path,changed);check('native_quota_settings_origin_change_blocks_restore',await rejects());
+    check('native_quota_settings_origin_change_preserves_exact_bytes',(await readFile(path,'utf8'))===changed);
+    await writeFile(path,active);await panel.invoke('connect_claude_quotas',{id:quotaProfile.id,enabled:false});
+    check('native_quota_settings_restores_original_configuration',isDeepStrictEqual(JSON.parse(await readFile(path,'utf8')),quotaOriginal)&&isDeepStrictEqual(JSON.parse(backup).original,quotaOriginal.statusLine));
+    await panel.screenshot('quota-settings');
   }
 }catch(error){failure=error;}
 finally{
