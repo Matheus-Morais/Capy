@@ -161,7 +161,7 @@ select:focus-visible,textarea:focus-visible,summary:focus-visible { outline:3px 
 .handoff-reviews form + form { margin-top:24px; padding-top:24px; border-top:1px solid var(--rule); }
 .handoff-reviews label { display:grid; gap:6px; margin-top:14px; font-size:12px; font-weight:600; }
 .handoff-reviews textarea,.handoff-reviews select { font:13px/1.5 'Segoe UI',sans-serif; padding:9px; width:100%; min-width:0; resize:vertical; background:var(--paper); color:inherit; border:1px solid #b9b09b; border-radius:5px; }
-.handoff-reviews .billing-confirm { display:flex; align-items:flex-start; font-weight:400; line-height:1.6; }
+.handoff-reviews .billing-confirm,.workbench .billing-confirm { display:flex; align-items:flex-start; font-weight:400; line-height:1.6; }
 .workbench .billing-confirm input[type=checkbox] { width:auto; padding:0; margin:3px 0 0; flex:0 0 auto; }
 @media(max-width:620px) { .panel-grid { grid-template-columns:1fr; } .panel-grid aside { border-left:0; border-top:1px solid var(--rule); } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }

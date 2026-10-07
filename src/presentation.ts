@@ -1,9 +1,18 @@
-import type { Session, Snapshot, QuotaRow, Intervention, Subscription, AccountProfile, AccountIdentity, QuotaRule, ChatTransferReview, HandoffSummary } from './bridge';
+import type { Session, Snapshot, QuotaRow, Intervention, Subscription, AccountProfile, AccountIdentity, QuotaRule, ChatTransferReview, HandoffSummary, ChatConversation } from './bridge';
 
 export const escape = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 export const defaultThresholds = () => [50,60,70,80,90].map(percent => ({percent,enabled:true}));
 export const billingLabel = (billing: string) => billing === 'subscription' ? 'Assinatura Claude' : billing === 'api' ? 'API · cobrança por uso' : 'Cobrança não confirmada';
 export const summaryLabels:Record<keyof HandoffSummary,string>={objective:'Objetivo',decisions:'Decisões e regras',state:'Estado atual',files:'Arquivos alterados',tests:'Testes e resultados',nextSteps:'Próximos passos',guides:'Planos e arquivos .md usados'};
+export function chatRecoveryForm(chat:ChatConversation):string{
+  if(chat.state!=='unknown')return '';
+  const review=chat.recoveryReview;
+  return `<h2>Revisar envio interrompido</h2><p>${escape(chat.target.provider)} · ${escape(chat.target.account)} · ${escape(billingLabel(chat.target.billing))}.</p>
+    <p>O consumo pode ter ocorrido, mas a resposta não foi confirmada. Confira a última mensagem acima antes de continuar.</p>
+    ${review?`<form data-chat-recovery="${escape(review.nonce)}"><p>${chat.target.kind==='api'?'Depois da revisão, você poderá escrever uma nova mensagem.':review.resumeCli?'O histórico da sessão exata foi encontrado. Uma nova mensagem retomará esse UUID.':'O histórico CLI não foi confirmado. Depois da revisão, prepare uma transferência com resumo para uma nova conversa.'}</p>
+    <label class="billing-confirm"><input type="checkbox" name="reviewed" required>Revisei o envio interrompido e entendo que o consumo pode ter ocorrido. Esta confirmação não reenvia mensagens.</label>
+    <button type="submit">Confirmar revisão sem reenviar</button></form>`:'<button type="button" data-prepare-chat-recovery>Conferir conta e preparar revisão</button>'}`;
+}
 export function chatTransferForm(review:ChatTransferReview):string{
   return `<form data-chat-review="${escape(review.nonce)}"><h2>Revisar transferência</h2>
     <p>Origem: ${escape(review.sourceTarget.provider)} · ${escape(review.sourceTarget.account)} · ${escape(billingLabel(review.sourceTarget.billing))}.</p>

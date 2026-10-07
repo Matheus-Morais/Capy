@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
-import {mkdir, writeFile, stat} from 'node:fs/promises';
+import {mkdir, writeFile, readFile, stat} from 'node:fs/promises';
 import {createServer} from 'node:net';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -12,8 +12,8 @@ const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
 const exe=join(workspace,'src-tauri','target','release','capy.exe');
 await stat(exe);await mkdir(root,{recursive:true});
 const server=createServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-const port=server.address().port;await new Promise(resolve=>server.close(resolve));
-const child=spawn(exe,['--visual-test',root],{
+let port=server.address().port;await new Promise(resolve=>server.close(resolve));
+let child=spawn(exe,['--visual-test',root],{
   windowsHide:true,stdio:'ignore',env:{...process.env,
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:`--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1`,
     WEBVIEW2_USER_DATA_FOLDER:join(root,'webview'),
@@ -70,10 +70,10 @@ const ownTarget=(values,path)=>values.find(target=>target.type==='page'
 let failure;
 try{
   const petTarget=await waitFor(async()=>ownTarget(await targets(),'/index.html')??ownTarget(await targets(),'/'),'Mascote nativa/CDP');
-  const pet=await connect(petTarget);
+  let pet=await connect(petTarget);
   await waitFor(()=>pet.evaluate(`document.querySelector('#pet') instanceof SVGSVGElement && !!window.__TAURI_INTERNALS__`),'SVG carregado');
   const panelTarget=await waitFor(async()=>ownTarget(await targets(),'/panel.html'),'Painel nativo/CDP');
-  const panel=await connect(panelTarget);
+  let panel=await connect(panelTarget);
   await waitFor(()=>panel.evaluate(`!!document.querySelector('#startTask') && !!document.querySelector('#accountList')`),'Controles do painel');
   await pet.invoke('show_panel');
   check('native_panel_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
@@ -85,23 +85,71 @@ try{
   await panel.evaluate(`document.querySelector('.chat-workbench > details').open=true;document.querySelector('#chatCreateForm').closest('details').open=true;document.querySelector('.chat-workbench').scrollIntoView({block:'start'})`);
   check('native_chat_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
   await panel.screenshot('chat');
-  if(process.argv.includes('--live-chat')||process.argv.includes('--live-transfer')){
+  if(process.argv.includes('--live-chat')||process.argv.includes('--live-transfer')||process.argv.includes('--live-recovery')){
     await panel.invoke('demo_action',{action:'scenario',id:'',answer:'real'});
     const identity=await panel.invoke('profile_identity',{id:'claude-default',cwd:null});
     check('native_live_chat_pins_subscription_before_any_send',identity.loggedIn&&identity.billing==='subscription'&&!!identity.account);
     const chat=await panel.invoke('create_chat',{request:{title:'Own native chat proof',kind:'claudeCli',profileId:'claude-default',model:'sonnet',expectedAccount:identity.account,expectedBilling:'subscription',credentialRevision:null}});
-    await panel.evaluate(`window.__capyChatProof=window.__TAURI_INTERNALS__.invoke('send_chat',{request:${JSON.stringify({id:chat.id,revision:chat.revision,nonce:randomUUID(),model:'sonnet',text:'Responda apenas CAPY_NATIVE_CHAT_PROOF. Não use ferramentas.'})}}); window.__capyChatProof.then(result=>{window.__capyChatProofResult=result;},error=>{window.__capyChatProofError=String(error);}); true`);
+    const firstMarker=process.argv.includes('--live-recovery')?`CAPY_RECOVERY_${randomUUID()}`:'CAPY_NATIVE_CHAT_PROOF';
+    await panel.evaluate(`window.__capyChatProof=window.__TAURI_INTERNALS__.invoke('send_chat',{request:${JSON.stringify({id:chat.id,revision:chat.revision,nonce:randomUUID(),model:'sonnet',text:`Memorize este marcador para a próxima mensagem: ${firstMarker}. Responda apenas esse marcador. Não use ferramentas.`})}}); window.__capyChatProof.then(result=>{window.__capyChatProofResult=result;},error=>{window.__capyChatProofError=String(error);}); true`);
     await waitFor(()=>pet.evaluate(`document.querySelector('#pet').classList.contains('s-working')`),'Chat real mostra trabalho',30_000);
     check('native_live_chat_immediately_drives_working_pet',true);
     await waitFor(()=>pet.evaluate(`document.querySelector('#pet').classList.contains('g-celebrate')`),'Resultado real confirma comemoração',30_000);
     const result=await waitFor(()=>panel.evaluate('window.__capyChatProofResult'),'Resultado do chat real',30_000);
-    check('native_live_chat_provider_result_matches_exact_conversation',result.id===chat.id&&result.state==='completed'&&result.messages.at(-1)?.text.includes('CAPY_NATIVE_CHAT_PROOF'));
+    check('native_live_chat_provider_result_matches_exact_conversation',result.id===chat.id&&result.state==='completed'&&result.messages.at(-1)?.text.includes(firstMarker));
     await panel.invoke('open_source',{id:`chat:${chat.id}`});
     await waitFor(()=>panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(chat.id)}`),'Card abre a conversa exata');
     check('native_live_chat_source_selects_exact_uuid',true);
     await waitFor(()=>pet.evaluate(`!document.querySelector('#pet').classList.contains('g-celebrate')`),'Comemoração termina no ciclo da mascote',5_000);
     await delay(1000);
     check('native_live_chat_completion_does_not_loop',await pet.evaluate(`!document.querySelector('#pet').classList.contains('g-celebrate')`));
+    if(process.argv.includes('--live-recovery')){
+      // Simulate loss at the persistence boundary using only this fixture's record.
+      // The provider turn above completed; this is not proof of a network crash.
+      child.kill();await Promise.race([new Promise(resolve=>child.once('exit',resolve)),delay(5000)]);
+      assert.ok(childExited,'Own fixture must stop before editing its record');
+      const path=join(root,'chat',`${chat.id}.json`),saved=JSON.parse(await readFile(path,'utf8'));
+      assert.equal(saved.id,chat.id);assert.equal(saved.state,'completed');assert.equal(saved.messages.length,2);
+      saved.messages.pop();saved.state='working';saved.activeNonce=saved.usedNonces.at(-1);saved.revision++;saved.cliStarted=false;saved.recoveryReview=null;saved.lastError=null;
+      await writeFile(path,JSON.stringify(saved));
+      for(const connection of connections)connection.close();
+      const recoveryServer=createServer();await new Promise(resolve=>recoveryServer.listen(0,'127.0.0.1',resolve));
+      port=recoveryServer.address().port;await new Promise(resolve=>recoveryServer.close(resolve));
+      childExited=false;launchError=undefined;
+      child=spawn(exe,['--visual-test',root],{windowsHide:true,stdio:'ignore',env:{...process.env,
+        WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:`--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1`,WEBVIEW2_USER_DATA_FOLDER:join(root,'webview-recovery')}});
+      child.on('exit',()=>childExited=true);child.on('error',error=>{launchError=error;childExited=true;});
+      pet=await connect(await waitFor(async()=>ownTarget(await targets(),'/index.html')??ownTarget(await targets(),'/'),'Mascote após recuperação'));
+      panel=await connect(await waitFor(async()=>ownTarget(await targets(),'/panel.html'),'Painel após recuperação'));
+      await waitFor(()=>panel.evaluate(`!!document.querySelector('#chatRecovery')`),'Interface de recuperação');
+      const uncertain=(await panel.invoke('list_chats')).find(value=>value.id===chat.id);
+      check('native_recovery_restart_never_resends_or_claims_completion',uncertain.state==='unknown'&&uncertain.messages.length===1&&uncertain.activeNonce===null&&uncertain.usedNonces.includes(saved.activeNonce));
+      await panel.invoke('demo_action',{action:'scenario',id:'',answer:'real'});
+      await waitFor(()=>pet.evaluate(`document.querySelector('#pet').classList.contains('s-waiting') && !document.querySelector('#petBadge').hidden`),'Envio incerto pede revisão');
+      check('native_recovery_attention_never_celebrates_lost_result',await pet.evaluate(`!document.querySelector('#pet').classList.contains('g-celebrate')`));
+      await panel.invoke('open_source',{id:`chat:${chat.id}`});
+      await waitFor(()=>panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(chat.id)} && !!document.querySelector('[data-prepare-chat-recovery]')`),'Conversa incerta exata');
+      await panel.evaluate(`document.querySelector('[data-prepare-chat-recovery]').click()`);
+      await waitFor(()=>panel.evaluate(`!!document.querySelector('[data-chat-recovery]')`),'Revisão persistida da interrupção',20_000);
+      const prepared=(await panel.invoke('list_chats')).find(value=>value.id===chat.id),review=prepared.recoveryReview;
+      check('native_recovery_pins_exact_cli_history_and_fresh_consent',review.id===chat.id&&review.resumeCli&&await panel.evaluate(`(()=>{const input=document.querySelector('#chatRecovery input[name="reviewed"]');return input.required&&!input.checked;})()`));
+      await panel.evaluate(`document.querySelector('#chatRecovery').scrollIntoView({block:'start'})`);
+      await panel.screenshot('chat-recovery');
+      const recoveryLayout=await panel.evaluate(`({scrollWidth:document.documentElement.scrollWidth,width:innerWidth,checkboxWidth:document.querySelector('#chatRecovery input').getBoundingClientRect().width,overflow:[...document.querySelectorAll('body *')].filter(element=>element.getBoundingClientRect().right>innerWidth).map(element=>({tag:element.tagName,id:element.id,className:element.className,right:element.getBoundingClientRect().right})).slice(0,20)})`);
+      await writeFile(join(root,'recovery-layout.json'),JSON.stringify(recoveryLayout,null,2));
+      check('native_recovery_form_no_horizontal_overflow_and_compact_checkbox',recoveryLayout.scrollWidth<=recoveryLayout.width&&recoveryLayout.checkboxWidth<30);
+      const approval={id:chat.id,revision:prepared.revision,nonce:review.nonce,reviewed:false};
+      check('native_recovery_backend_requires_explicit_review',await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('approve_chat_recovery',${JSON.stringify(approval)}).then(()=>false,()=>true)`));
+      await panel.evaluate(`(()=>{const form=document.querySelector('[data-chat-recovery]');form.elements.namedItem('reviewed').checked=true;form.requestSubmit();})()`);
+      const acknowledged=await waitFor(async()=>{const value=(await panel.invoke('list_chats')).find(value=>value.id===chat.id);return value.state==='failed'?value:null;},'Confirmação sem envio',20_000);
+      check('native_recovery_approval_preserves_history_and_consumed_nonce_without_send',acknowledged.messages.length===1&&acknowledged.cliStarted&&acknowledged.interruptions[0]?.sendNonce===saved.activeNonce&&acknowledged.usedNonces.includes(review.nonce));
+      check('native_recovery_replay_is_rejected',await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('approve_chat_recovery',${JSON.stringify({...approval,reviewed:true})}).then(()=>false,()=>true)`));
+      await waitFor(()=>panel.evaluate(`!document.querySelector('#chatSendForm button').disabled`),'Nova mensagem disponível após revisão');
+      await panel.evaluate(`(()=>{const form=document.querySelector('#chatSendForm');form.elements.namedItem('model').value='haiku';form.elements.namedItem('text').value='Qual foi o marcador enviado na primeira mensagem? Responda apenas ele, sem ferramentas.';form.requestSubmit();})()`);
+      const continued=await waitFor(async()=>{const value=(await panel.invoke('list_chats')).find(value=>value.id===chat.id);if(value.state==='failed'&&value.revision>acknowledged.revision)throw new Error(value.lastError);return value.state==='completed'?value:null;},'Retomada oficial após revisão',40_000);
+      check('native_recovery_resumes_original_uuid_and_context_with_new_message',continued.id===chat.id&&continued.model==='haiku'&&continued.messages.length===3&&continued.messages.at(-1).text.includes(firstMarker));
+      check('native_recovery_uncertainty_remains_visible_after_new_success',continued.interruptions.length===1&&await panel.evaluate(`document.querySelector('#chatMessages').textContent.includes('Resposta deste envio indisponível')`));
+    }
     if(process.argv.includes('--live-transfer')){
       await panel.evaluate(`document.querySelector('#chatCreateForm input[name="model"]').value='haiku';document.querySelector('#chatVerify').click();`);
       await waitFor(()=>panel.evaluate(`!document.querySelector('#chatPrepareTransfer').disabled`),'Destino verificado para transferência',15_000);

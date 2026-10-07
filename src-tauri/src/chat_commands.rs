@@ -85,6 +85,30 @@ pub async fn add_api_account(app:tauri::AppHandle,label:String,provider:String,k
 }
 #[tauri::command]
 pub fn list_chats(store:State<'_,Arc<chat_history::Store>>)->Result<Vec<Conversation>,String>{store.list()}
+fn recovery_probe(app:&tauri::AppHandle,store:&chat_history::Store,chat:&Conversation)->Result<bool,String>{
+    let cwd=store.workspace(&chat.id)?;
+    let transport=verify_target(app,&chat.target,Some(&cwd))?;
+    if let Some(profile)=transport.profile {crate::chat_recovery::cli_resume_available(&profile,chat,&cwd)}else{Ok(false)}
+}
+#[tauri::command]
+pub async fn prepare_chat_recovery(app:tauri::AppHandle,id:String,revision:u64)->Result<Conversation,String>{
+    tauri::async_runtime::spawn_blocking(move||{
+        let store=app.state::<Arc<chat_history::Store>>();let chat=store.get(&id)?;
+        if chat.revision!=revision{return Err("A conversa mudou. Atualize antes de revisar.".into());}
+        let resume=recovery_probe(&app,&store,&chat)?;
+        let reviewed=store.prepare_recovery(&id,revision,resume)?;
+        crate::chat_presence::publish(&app,&reviewed);Ok(reviewed)
+    }).await.map_err(|_|"Não foi possível preparar a revisão do envio incerto.".to_owned())?
+}
+#[tauri::command]
+pub async fn approve_chat_recovery(app:tauri::AppHandle,id:String,revision:u64,nonce:String,reviewed:bool)->Result<Conversation,String>{
+    tauri::async_runtime::spawn_blocking(move||{
+        let store=app.state::<Arc<chat_history::Store>>();let chat=store.get(&id)?;
+        let resume=recovery_probe(&app,&store,&chat)?;
+        let recovered=store.approve_recovery(&id,revision,&nonce,reviewed,&chat.target,resume)?;
+        crate::chat_presence::publish(&app,&recovered);Ok(recovered)
+    }).await.map_err(|_|"A revisão foi interrompida; nenhuma mensagem será reenviada.".to_owned())?
+}
 #[tauri::command]
 pub async fn create_chat(app:tauri::AppHandle,request:Create)->Result<Conversation,String>{
     tauri::async_runtime::spawn_blocking(move||{

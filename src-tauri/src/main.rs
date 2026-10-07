@@ -7,6 +7,7 @@ mod chat_api;
 mod chat_history;
 mod chat_cli;
 mod chat_process;
+mod chat_recovery;
 mod chat_commands;
 mod chat_presence;
 mod chat_transfer;
@@ -626,6 +627,8 @@ fn main() {
             chat_commands::list_api_accounts,
             chat_commands::add_api_account,
             chat_commands::list_chats,
+            chat_commands::prepare_chat_recovery,
+            chat_commands::approve_chat_recovery,
             chat_commands::create_chat,
             chat_commands::send_chat,
             chat_commands::chat_transfer_review,

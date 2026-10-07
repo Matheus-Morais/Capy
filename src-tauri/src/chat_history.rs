@@ -29,6 +29,12 @@ pub struct Conversation {
     pub cli_started: bool,
     #[serde(default)]
     pub cli_attempted: bool,
+    #[serde(default)]
+    pub process_policy: Option<String>,
+    #[serde(default)]
+    pub recovery_review: Option<crate::chat_recovery::Review>,
+    #[serde(default)]
+    pub interruptions: Vec<crate::chat_recovery::Interruption>,
     pub transferred_to: Option<String>,
 }
 
@@ -62,6 +68,11 @@ pub(crate) fn valid(record: &Conversation) -> bool {
         }
         && record.transferred_to.as_deref().is_none_or(discovery::uuid)
         && record.last_error.as_ref().is_none_or(|s|s.len()<=4096)
+        && record.process_policy.as_deref().is_none_or(|s|s=="windows-job-v1")
+        && record.recovery_review.as_ref().is_none_or(|review|crate::chat_recovery::valid_review(record,review))
+        && record.interruptions.len()<=200 && record.interruptions.iter().all(|entry|
+            record.messages.get(entry.message_index).is_some_and(|message|message.role=="user")
+            &&record.used_nonces.contains(&entry.send_nonce)&&record.used_nonces.contains(&entry.approval_nonce))
 }
 
 impl Store {
@@ -121,8 +132,9 @@ impl Store {
         let mut ids=self.ids.lock().map_err(|_|"Conversas indisponíveis.")?;
         self.consistent()?;
         if ids.len()>=500{return Err("Limite de 500 conversas. Exporte ou remova uma conversa antes de criar outra.".into());}
-        let record=Conversation{id:uuid::Uuid::new_v4().to_string(),title,target,model,messages:vec![],revision:0,state:"idle".into(),
-            active_nonce:None,used_nonces:vec![],last_error:None,cli_started:false,cli_attempted:false,transferred_to:None};
+        let process_policy=(target.kind=="claudeCli").then(||"windows-job-v1".into());
+        let record=Conversation{id:uuid::Uuid::new_v4().to_string(),title,target,model,messages:vec![],revision:0,state:"idle".into(),process_policy,
+            active_nonce:None,used_nonces:vec![],last_error:None,cli_started:false,cli_attempted:false,recovery_review:None,interruptions:vec![],transferred_to:None};
         self.write(&record)?;
         let mut updated=ids.clone();updated.push(record.id.clone());
         if let Err(error)=settings::write_json(&self.root.join("index.json"),&updated){
@@ -141,6 +153,9 @@ impl Store {
             return Err("A conversa mudou, está ocupada ou este envio já foi usado. Atualize antes de enviar.".into());
         }
         if record.state=="unknown" {return Err("O envio anterior foi interrompido. Revise o histórico antes de continuar; ele não será reenviado.".into());}
+        if record.target.kind=="claudeCli"&&record.cli_attempted&&!record.cli_started {
+            return Err("O histórico CLI não foi confirmado. Prepare uma transferência revisada para uma nova conversa.".into());
+        }
         if text.trim().is_empty() || text.len()>196_608 || record.messages.iter().map(|m|m.text.len()).sum::<usize>()+text.len()>196_608
             || record.messages.len()>198 || record.used_nonces.len()>=200 {
             return Err("Histórico cheio. Prepare uma transferência revisada antes de continuar.".into());

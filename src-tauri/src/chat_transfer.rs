@@ -126,7 +126,8 @@ impl Store {
         if !eligible(&source)||source.revision!=review.source_revision||source.target!=review.source_target||source.used_nonces.iter().any(|n|n==nonce){return Err("A conversa mudou ou esta aprovação já foi usada.".into());}
         if ids.len()>=500{return Err("Limite de 500 conversas; nenhuma aprovação foi consumida.".into());}
         let send_nonce=uuid::Uuid::new_v4().to_string();
-        let destination=Conversation{id:uuid::Uuid::new_v4().to_string(),title:source.title.clone(),target:review.destination,model:review.model,
+        let policy=(review.destination.kind=="claudeCli").then(||"windows-job-v1".into());
+        let destination=Conversation{id:uuid::Uuid::new_v4().to_string(),title:source.title.clone(),target:review.destination,model:review.model,process_policy:policy,recovery_review:None,interruptions:vec![],
             messages:vec![crate::chat_api::Message{role:"user".into(),text:prompt}],revision:1,state:"working".into(),active_nonce:Some(send_nonce.clone()),
             used_nonces:vec![send_nonce],last_error:None,cli_started:false,cli_attempted:false,transferred_to:None};
         source.used_nonces.push(nonce.into());source.transferred_to=Some(destination.id.clone());source.state="transferred".into();

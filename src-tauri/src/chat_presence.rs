@@ -22,7 +22,8 @@ impl Service {
         }).map(|chat|Session{
             id:format!("chat:{}",chat.id),project:chat.title.clone(),agent:chat.target.provider.clone(),symbol:"C".into(),kind:"chat".into(),
             origin:format!("{} · {}",chat.target.account,if chat.target.billing=="subscription"{"assinatura"}else{"API por uso"}),
-            state:match chat.state.as_str(){"working"=>"working","unknown"|"failed"=>"unknown",_=>"idle"}.into(),request:None,
+            state:match chat.state.as_str(){"working"=>"working","unknown"=>"waiting","failed"=>"unknown",_=>"idle"}.into(),
+            request:(chat.state=="unknown").then(||"Revisar envio interrompido no chat".into()),
             message:match chat.state.as_str(){
                 "working"=>"Aguardando resposta no chat da Capy.","completed"=>"Resposta concluída. Abra o chat para conferir.",
                 "partial"=>"Resposta parcial. Confira o aviso no chat.","failed"|"unknown"=>"O envio precisa de revisão. Confira o histórico antes de continuar.",
@@ -57,6 +58,21 @@ pub fn refresh(app:&tauri::AppHandle){
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn chat_presence_interruption_requests_review_and_never_celebrates_acknowledgement(){
+        let root=std::env::temp_dir().join(format!("capy-presence-interrupted-{}",uuid::Uuid::new_v4()));
+        let store=crate::chat_history::Store::load(root.clone());
+        let target=crate::chat_history::Target{kind:"api".into(),profile_id:uuid::Uuid::new_v4().to_string(),provider:"OpenAI".into(),account:"Fixture".into(),billing:"api".into(),credential_revision:Some(uuid::Uuid::new_v4().to_string())};
+        let chat=store.create("Own interruption".into(),target,"model".into()).unwrap();
+        store.begin(&chat.id,0,uuid::Uuid::new_v4().to_string(),"model".into(),"Uncertain".into()).unwrap();store.recover_interrupted().unwrap();
+        let unknown=store.get(&chat.id).unwrap();let service=Service::default();service.observe(&unknown,100);
+        let rows=service.rows(&[unknown.clone()],100);assert_eq!(rows[0].state,"waiting");assert!(rows[0].request.is_some());assert!(rows[0].completion.is_none());
+        let prepared=store.prepare_recovery(&chat.id,unknown.revision,false).unwrap();
+        let nonce=prepared.recovery_review.as_ref().unwrap().nonce.clone();
+        let acknowledged=store.approve_recovery(&chat.id,prepared.revision,&nonce,true,&chat.target,false).unwrap();service.observe(&acknowledged,200);
+        let rows=service.rows(&[acknowledged],200);assert_eq!(rows[0].state,"unknown");assert!(rows[0].request.is_none());assert!(rows[0].completion.is_none());
+        std::fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn chat_presence_completion_is_ephemeral_exact_and_never_inferred_from_history(){
         let root=std::env::temp_dir().join(format!("capy-presence-{}",uuid::Uuid::new_v4()));

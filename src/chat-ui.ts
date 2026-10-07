@@ -3,6 +3,7 @@ import { native,listProfiles,profileIdentity,listApiAccounts,addApiAccount,listC
   type ApiAccount,type ChatConversation,type CreateChat } from './bridge';
 import { escape,billingLabel } from './presentation';
 import { initializeChatTransfers } from './chat-transfer-ui';
+import { initializeChatRecovery } from './chat-recovery-ui';
 
 export async function initializeChat():Promise<void>{
   if(!native)return;
@@ -19,7 +20,7 @@ export async function initializeChat():Promise<void>{
       <p id="chatBilling" role="status">Verifique a conta antes de criar a conversa.</p>
       <div class="actions"><button type="button" id="chatVerify">Verificar conta e cobrança</button><button type="submit" disabled>Criar conversa</button><button type="button" id="chatPrepareTransfer" disabled>Preparar transferência da conversa selecionada</button></div></form></details>
     <label>Conversa<select id="chatSelection"></select></label><section id="chatBody" hidden aria-label="Conversa selecionada">
-      <p id="chatIdentity"></p><div id="chatMessages" class="chat-messages"></div><form id="chatSendForm">
+      <p id="chatIdentity"></p><div id="chatMessages" class="chat-messages"></div><section id="chatRecovery" hidden></section><form id="chatSendForm">
       <label>Modelo para a próxima mensagem<input name="model" required maxlength="128"></label>
       <label>Mensagem<textarea name="text" required rows="4" maxlength="32768"></textarea></label><button>Enviar mensagem</button></form></section>
     <section id="chatReview" class="handoff-reviews" hidden></section><p id="chatNotice" role="status" aria-live="polite"></p></details>`;
@@ -32,6 +33,7 @@ export async function initializeChat():Promise<void>{
   let apis:ApiAccount[]=[],chats:ChatConversation[]=[],selected='',sending=false,verifiedTarget='',openEpoch=0;
   let verified:Pick<CreateChat,'expectedAccount'|'expectedBilling'|'credentialRevision'>|null=null;
   const drafts=new Map<string,{text:string;model:string}>();
+  const recovery=initializeChatRecovery(host,()=>chats.find(c=>c.id===selection.value),update);
   const transfers=initializeChatTransfers(host,()=>{
     const chat=chats.find(c=>c.id===selection.value),split=target.value.indexOf(':');
     return {chat,request:verified&&verifiedTarget===target.value?{title:chat?.title??'',kind:target.value.slice(0,split) as CreateChat['kind'],profileId:target.value.slice(split+1),model:field<HTMLInputElement>(newForm,'model').value.trim(),...verified}:null};
@@ -49,15 +51,23 @@ export async function initializeChat():Promise<void>{
     selection.innerHTML='<option value="">Escolha uma conversa</option>'+chats.map(c=>`<option value="${escape(c.id)}">${escape(c.title)} · ${escape(c.target.provider)}</option>`).join('');
     if(chats.some(c=>c.id===id))selection.value=id;
     const chat=chats.find(c=>c.id===selection.value);find('chatBody').hidden=!chat;
-    if(!chat){selected='';transfers.refresh();return;}
+    if(!chat){selected='';recovery.refresh();transfers.refresh();return;}
     if(selected!==chat.id){const draft=drafts.get(chat.id);field<HTMLInputElement>(sendForm,'model').value=draft?.model??chat.model;field<HTMLTextAreaElement>(sendForm,'text').value=draft?.text??'';selected=chat.id;}
     find('chatIdentity').textContent=`${chat.target.provider} · ${chat.target.account} · ${billingLabel(chat.target.billing)}${chat.target.kind==='api'?' · nome local da chave':''}`;
     const messages=find('chatMessages');messages.replaceChildren();
     if(!chat.messages.length){const p=document.createElement('p');p.textContent='Conversa criada. Envie a primeira mensagem quando estiver pronto.';messages.append(p);}
-    for(const message of chat.messages){const article=document.createElement('article');article.className=`chat-message ${message.role}`;const h=document.createElement('h3');h.textContent=message.role==='user'?'Você':chat.target.provider;const content=document.createElement('div');content.textContent=message.text;article.append(h,content);messages.append(article);}
-    sendForm.querySelector<HTMLButtonElement>('button')!.disabled=sending||['working','unknown','transferred'].includes(chat.state);
+    for(const [index,message] of chat.messages.entries()){
+      const article=document.createElement('article');article.className=`chat-message ${message.role}`;
+      const h=document.createElement('h3');h.textContent=message.role==='user'?'Você':chat.target.provider;
+      const content=document.createElement('div');content.textContent=message.text;article.append(h,content);
+      if(chat.interruptions.some(entry=>entry.messageIndex===index)){
+        const warning=document.createElement('p');warning.textContent='Resposta deste envio indisponível. Revisado sem reenvio; o consumo pode ter ocorrido.';article.append(warning);
+      }
+      messages.append(article);
+    }
+    sendForm.querySelector<HTMLButtonElement>('button')!.disabled=sending||['working','unknown','transferred'].includes(chat.state)||(chat.target.kind==='claudeCli'&&chat.cliAttempted&&!chat.cliStarted);
     notice.textContent=chat.state==='working'?'Aguardando resposta…':chat.lastError??(chat.state==='completed'?'Resposta concluída.':'');
-    transfers.refresh();
+    recovery.refresh();transfers.refresh();
   }
   function update(chat:ChatConversation){const index=chats.findIndex(c=>c.id===chat.id);if(index>=0&&chats[index].revision>chat.revision)return;if(index>=0)chats[index]=chat;else chats.push(chat);render();}
   target.addEventListener('change',reset);selection.addEventListener('change',render);
@@ -91,7 +101,7 @@ export async function initializeChat():Promise<void>{
   });
   sendForm.addEventListener('submit',event=>{
     event.preventDefault();const chat=chats.find(c=>c.id===selection.value);
-    if(!chat||sending||['working','unknown','transferred'].includes(chat.state)||!sendForm.reportValidity())return;
+    if(!chat||sending||['working','unknown','transferred'].includes(chat.state)||(chat.target.kind==='claudeCli'&&chat.cliAttempted&&!chat.cliStarted)||!sendForm.reportValidity())return;
     const text=field<HTMLTextAreaElement>(sendForm,'text'),submitted=text.value;sending=true;render();notice.textContent='Verificando a conta e enviando…';
     void sendChat({id:chat.id,revision:chat.revision,nonce:crypto.randomUUID(),model:field<HTMLInputElement>(sendForm,'model').value.trim(),text:submitted})
       .then(result=>{const draft=drafts.get(chat.id);if(!draft||draft.text===submitted)drafts.delete(chat.id);if(selection.value===chat.id&&text.value===submitted)text.value='';update(result);})

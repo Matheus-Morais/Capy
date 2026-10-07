@@ -87,6 +87,17 @@ export interface ChatConversation {
   revision: number; state: 'idle' | 'working' | 'completed' | 'partial' | 'failed' | 'unknown' | 'transferred';
   activeNonce: string | null; usedNonces: string[]; lastError: string | null;
   cliStarted: boolean; cliAttempted: boolean; transferredTo: string | null;
+  processPolicy: string | null;
+  recoveryReview: {id:string;nonce:string;revision:number;target:ChatTarget;resumeCli:boolean} | null;
+  interruptions: {messageIndex:number;sendNonce:string;approvalNonce:string}[];
+}
+export async function prepareChatRecovery(id:string,revision:number):Promise<ChatConversation>{
+  if(!native)throw new Error('Recuperação disponível no aplicativo desktop.');
+  return invoke('prepare_chat_recovery',{id,revision});
+}
+export async function approveChatRecovery(id:string,revision:number,nonce:string,reviewed:boolean):Promise<ChatConversation>{
+  if(!native)throw new Error('Recuperação disponível no aplicativo desktop.');
+  return invoke('approve_chat_recovery',{id,revision,nonce,reviewed});
 }
 export interface CreateChat {
   title: string; kind: ChatTarget['kind']; profileId: string; model: string;
