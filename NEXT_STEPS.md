@@ -18,6 +18,8 @@ Prévia local atual: [0.4.0-alpha.2](releases/0.4.0-alpha.2/NOTES.md), com respo
 
 ## Onde paramos
 
+Repetição final aprovada: 27 checks nativos de quotas/configuração/Unicode pelo verificador, 33 JS, 108 Rust/um opt-in ignorado e smoke posterior de 20 checks sem erros. Relatório `.checks/quota-settings.verified.md`. A build local foi reaberta. Escopo completo permanece ativo; percentuais reais e login em outra conta não foram exercitados. Os registros abaixo preservam o histórico, incluindo as antigas pendências de revisão deste trecho.
+
 Preservação de quotas aprovada independentemente em `.checks/quota-settings.verified.md`: 108 Rust/um opt-in ignorado, 26 nativos. Wrapper UTF-8 corrigido após teste local em vermelho; 33 JS passaram independentemente. Build atual e prova do autor de 27 nativos executam o wrapper embutido e preservam stdout Unicode da statusline original, mesmo sem amostra válida para o coletor. Repetição independente deste novo check pendente. Quotas reais/conta extra continuam sem prova; próximo trecho preservará referências de instruções carregadas automaticamente, sem encerrar C11/C1–C19.
 
 Preservação das quotas: settings.json com erro de leitura/JSON inválido/excesso de tamanho fica intacto; desconectar exige backup íntegro da mesma pasta e não restaura sobre alteração na origem. Seis testes `claude_quota_` passaram; suíte completa 108 Rust aprovados/um opt-in ignorado antes da guarda final de backup incompleto. 32 JS, builds frontend/desktop e 26 checks nativos `--quota-settings` passaram em `scratch/capy-visual-ab72f917-45f2-4585-8866-5598fee9d1e6`. Perfil/configuração exclusivos, sem login/envio a provedor e sem alterar statusline do usuário. Revisão independente pendente; quotas reais e C11 continuam abertos.
