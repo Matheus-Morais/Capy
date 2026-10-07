@@ -222,6 +222,27 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
+    fn chat_transfer_summary_renders_captured_instructions_and_collection_warning(){
+        let root=std::env::temp_dir().join(format!("capy-transfer-captured-guides-{}",uuid::Uuid::new_v4()));
+        let store=Store::load(root.join("chat"));let config=root.join("claude");let workspace=root.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();let guide=workspace.join("CLAUDE.md");
+        std::fs::write(&guide,"Keep the validated local marker").unwrap();
+        let source=store.create("Captured guide proof".into(),cli(),"haiku".into()).unwrap();
+        crate::loaded_instructions::record(&config,&source.id,&workspace,crate::loaded_instructions::Instruction{
+            file_path:guide.to_string_lossy().into_owned(),memory_type:"Project".into(),load_reason:"session_start".into(),parent_file_path:None},100).unwrap();
+        let rendered=crate::loaded_instructions::render(&config,&source.id,&workspace).unwrap().unwrap();
+        let review=store.prepare_transfer_with_guides(&source.id,api(),"model".into(),Some(&rendered)).unwrap();
+        assert!(review.summary.guides.contains(&guide.to_string_lossy().to_string()));
+        assert!(review.summary.guides.contains("Keep the validated local marker"));
+
+        let failed=store.create("Missing guide proof".into(),cli(),"haiku".into()).unwrap();
+        crate::loaded_instructions::status(&config,&failed.id,"presence-unavailable").unwrap();
+        let warning=crate::loaded_instructions::render(&config,&failed.id,&workspace).unwrap().unwrap();
+        let review=store.prepare_transfer_with_guides(&failed.id,api(),"model".into(),Some(&warning)).unwrap();
+        assert!(review.summary.guides.contains("Coleta incompleta"));
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
     fn chat_transfer_journal_rejects_changes_outside_transfer_and_preserves_files(){
         let root=std::env::temp_dir().join(format!("capy-journal-metadata-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
         let base=store.create("Original title".into(),cli(),"sonnet".into()).unwrap();
