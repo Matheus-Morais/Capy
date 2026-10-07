@@ -119,6 +119,8 @@ fn transcript(profile:&Profile,id:&str)->Option<PathBuf>{
 pub fn build_summary(task:&Task,profile:&Profile)->Result<Summary,String>{
     let path=transcript(profile,&task.id).ok_or("O histórico da sessão exata não foi encontrado. Abra a conversa original antes de tentar preparar a continuação.")?;
     let mut context=handoff_context::load(&path)?;
+    let collection_warning=crate::loaded_instructions::collection_warning(&profile.config_dir,&task.id);
+    context.partial|=collection_warning.is_some();
     let automatic=match crate::loaded_instructions::load(&profile.config_dir,&task.id,&task.cwd){
         Ok(Some(evidence))=>{
             context.partial|=evidence.partial;
@@ -129,6 +131,7 @@ pub fn build_summary(task:&Task,profile:&Profile)->Result<Summary,String>{
         Ok(None)=>{context.partial=true;"Sem registro InstructionsLoaded desta sessão; complete as referências carregadas automaticamente antes de aprovar.".into()},
         Err(error)=>{context.partial=true;format!("Referências automáticas indisponíveis: {error} Confira a origem antes de aprovar.")},
     };
+    let automatic=match collection_warning{Some(warning)=>format!("{warning}\n\n{automatic}"),None=>automatic};
     if context.answers.is_empty() && context.instructions.is_empty() {
         return Err("O histórico não contém mensagens recuperáveis. Não foi possível preparar um resumo comprovável.".into());
     }
@@ -338,6 +341,8 @@ mod tests{
         let instruction=crate::loaded_instructions::Instruction{file_path:guide.to_string_lossy().into(),memory_type:"Project".into(),load_reason:"include".into(),parent_file_path:Some(cwd.join("CLAUDE.md").to_string_lossy().into())};
         crate::loaded_instructions::record(&config,&task.id,&cwd,instruction,100).unwrap();std::fs::write(&guide,"changed after load").unwrap();
         let summary=build_summary(&task,&profile).unwrap();assert!(summary.guides.contains("plan.md"));assert!(summary.guides.contains("CLAUDE.md"));assert!(summary.guides.contains("Preserve public fields"));assert!(summary.guides.contains("include"));assert!(!summary.guides.contains("changed after load"));
+        crate::loaded_instructions::status(&config,&task.id,"record-failed").unwrap();crate::loaded_instructions::status(&config,&task.id,"recorded").unwrap();
+        let summary=build_summary(&task,&profile).unwrap();assert!(summary.guides.contains("Coleta incompleta"));assert!(summary.guides.contains("Preserve public fields"));assert!(summary.state.contains("contexto parcial"));
         assert_eq!(root.parent(),Some(std::env::temp_dir().as_path()));assert!(root.file_name().unwrap().to_string_lossy().starts_with("capy-auto-summary-"));std::fs::remove_dir_all(root).unwrap();
     }
     #[test]

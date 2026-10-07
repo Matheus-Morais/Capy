@@ -19,12 +19,53 @@ pub struct Guide {pub instruction:Instruction,pub text:Option<String>,pub observ
 pub struct Evidence {version:u8,session_id:String,cwd:PathBuf,pub guides:Vec<Guide>,pub partial:bool}
 
 fn path(config:&Path,session:&str)->PathBuf{config.join("capy-guides").join(format!("{session}.json"))}
+#[derive(Deserialize,Serialize)]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
+struct Status{version:u8,session_id:String,stage:String,#[serde(default)]failed:bool}
+fn stage_valid(stage:&str)->bool{matches!(stage,"recorded"|"record-failed"|"presence-unavailable"|"presence-mismatch")}
+fn check_directory(config:&Path)->Result<(),String>{
+    match std::fs::symlink_metadata(config.join("capy-guides")){
+        Ok(m) if m.file_type().is_dir()=>Ok(()),
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound=>Ok(()),
+        _=>Err("Diretório de referências incompatível.".into()),
+    }
+}
+fn status_bytes(config:&Path,session:&str)->Result<Option<Vec<u8>>,String>{
+    check_directory(config)?;let file=path(config,session).with_extension("status.json");
+    match std::fs::symlink_metadata(&file){
+        Ok(m) if m.file_type().is_file()&&m.len()<=8192=>{
+            let bytes=stored_bytes(&file)?;
+            if bytes.as_ref().is_some_and(|b|b.len()>8192){return Err("Diagnóstico de instruções excede 8 KiB; registro preservado.".into());}Ok(bytes)
+        },
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound=>Ok(None),
+        _=>Err("Diagnóstico de instruções incompatível; registro preservado.".into()),
+    }
+}
+fn parse_status(bytes:&[u8],session:&str)->Result<Status,String>{
+    let value:Status=serde_json::from_slice(bytes).map_err(|_|"Diagnóstico de instruções inválido; registro preservado.")?;
+    if value.version!=1||value.session_id!=session||!stage_valid(&value.stage){return Err("Diagnóstico de instruções incompatível; registro preservado.".into());}Ok(value)
+}
 pub fn status(config:&Path,session:&str,stage:&str)->Result<(),String>{
-    if !crate::discovery::uuid(session){return Err("Sessão inválida.".into());}
+    if !crate::discovery::uuid(session)||!stage_valid(stage){return Err("Sessão ou etapa inválida.".into());}
     let dir=config.join("capy-guides");
     std::fs::create_dir_all(&dir).map_err(|e|e.to_string())?;
-    if std::fs::symlink_metadata(&dir).map_err(|e|e.to_string())?.file_type().is_symlink(){return Err("Diretório de referências incompatível.".into());}
-    settings::write_json(&dir.join(format!("{session}.status.json")),&serde_json::json!({"version":1,"sessionId":session,"stage":stage}))
+    check_directory(config)?;let file=mutex(&path(config,session))?;exclusive(&file)?;
+    let original=status_bytes(config,session)?;
+    let previous=original.as_deref().map(|bytes|parse_status(bytes,session)).transpose()?;
+    let failed=stage!="recorded"||previous.is_some_and(|s|s.failed||s.stage!="recorded");
+    if status_bytes(config,session)?!=original{return Err("Diagnóstico alterado fora da Capy; registro preservado.".into());}
+    settings::write_json_limit(&dir.join(format!("{session}.status.json")),&Status{version:1,session_id:session.into(),stage:stage.into(),failed},8192)
+}
+pub fn collection_warning(config:&Path,session:&str)->Option<String>{
+    let result=(||{
+        if !crate::discovery::uuid(session){return Err("Sessão inválida para diagnóstico.".into());}
+        status_bytes(config,session)?.as_deref().map(|bytes|parse_status(bytes,session)).transpose()
+    })();
+    match result{
+        Ok(Some(s)) if s.failed||s.stage!="recorded"=>Some("Coleta incompleta: um ou mais eventos de instruções não foram preservados. Confira as referências ausentes na sessão original antes de aprovar.".into()),
+        Err(_)=>Some("Diagnóstico de instruções indisponível ou incompatível; não foi possível confirmar se houve falhas de coleta. Confira a sessão original antes de aprovar.".into()),
+        _=>None,
+    }
 }
 fn same_folder(a:&Path,b:&Path)->bool{a.canonicalize().ok().zip(b.canonicalize().ok()).is_some_and(|(a,b)|a==b)}
 fn valid(instruction:&Instruction)->bool{
@@ -52,6 +93,10 @@ fn mutex(path:&Path)->Result<File,String>{
     if lock.exists()&&!std::fs::symlink_metadata(&lock).is_ok_and(|m|m.file_type().is_file()){return Err("Mutex de referências incompatível.".into());}
     OpenOptions::new().create(true).truncate(false).read(true).write(true).open(lock).map_err(|e|e.to_string())
 }
+fn exclusive(file:&File)->Result<(),String>{
+    for _ in 0..40{if file.try_lock().is_ok(){return Ok(());}std::thread::sleep(Duration::from_millis(10));}
+    Err("Referências ocupadas; carga não registrada.".into())
+}
 pub fn record(config:&Path,session:&str,cwd:&Path,instruction:Instruction,at:u64)->Result<(),String>{
     if !crate::discovery::uuid(session)||!valid(&instruction){return Err("Evento de instruções incompatível.".into());}
     let snapshot=(||->Result<(String,bool),()>{
@@ -70,8 +115,7 @@ pub fn record(config:&Path,session:&str,cwd:&Path,instruction:Instruction,at:u64
         return Err("Diretório de referências incompatível.".into());
     }
     let file=mutex(&file_path)?;
-    let mut locked=false;for _ in 0..40{if file.try_lock().is_ok(){locked=true;break;}std::thread::sleep(Duration::from_millis(10));}
-    if !locked{return Err("Referências ocupadas; carga não registrada.".into());}
+    exclusive(&file)?;
     let original=stored_bytes(&file_path)?;
     let mut evidence=match &original{
         None=>Evidence{version:1,session_id:session.into(),cwd:cwd.into(),guides:Vec::new(),partial:false},
@@ -87,6 +131,7 @@ pub fn record(config:&Path,session:&str,cwd:&Path,instruction:Instruction,at:u64
 }
 pub fn load(config:&Path,session:&str,cwd:&Path)->Result<Option<Evidence>,String>{
     if !crate::discovery::uuid(session){return Err("Sessão inválida para as referências.".into());}
+    check_directory(config)?;
     let file_path=path(config,session);
     let metadata=match std::fs::symlink_metadata(&file_path){Ok(metadata)=>metadata,Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Ok(None),Err(e)=>return Err(e.to_string())};
     if !metadata.file_type().is_file(){return Err("Registro de referências incompatível.".into());}
@@ -103,6 +148,23 @@ mod tests{
     fn fixture()->PathBuf{let p=std::env::temp_dir().join(format!("capy-loaded-guides-{}",uuid::Uuid::new_v4()));std::fs::create_dir_all(&p).unwrap();p}
     fn instruction(path:&Path)->Instruction{Instruction{file_path:path.to_string_lossy().into(),memory_type:"Project".into(),load_reason:"session_start".into(),parent_file_path:None}}
     fn cleanup(root:&Path){let temp=std::env::temp_dir().canonicalize().unwrap();let own=root.canonicalize().unwrap();assert_eq!(own.parent(),Some(temp.as_path()));assert!(own.file_name().unwrap().to_string_lossy().starts_with("capy-loaded-guides-"));std::fs::remove_dir_all(own).unwrap();}
+    #[test]
+    fn loaded_instructions_status_failure_survives_success_and_concurrency(){
+        let root=fixture();status(&root,SESSION,"record-failed").unwrap();
+        let mut threads=Vec::new();for _ in 0..8{let own=root.clone();threads.push(std::thread::spawn(move||status(&own,SESSION,"recorded").unwrap()));}
+        for thread in threads{thread.join().unwrap();}
+        let saved:serde_json::Value=serde_json::from_slice(&std::fs::read(path(&root,SESSION).with_extension("status.json")).unwrap()).unwrap();
+        assert_eq!(saved["failed"],true);assert!(collection_warning(&root,SESSION).unwrap().contains("Coleta incompleta"));
+        std::fs::write(path(&root,SESSION).with_extension("status.json"),format!("{{\"version\":1,\"sessionId\":\"{SESSION}\",\"stage\":\"record-failed\"}}")).unwrap();
+        status(&root,SESSION,"recorded").unwrap();assert!(collection_warning(&root,SESSION).unwrap().contains("Coleta incompleta"));cleanup(&root);
+    }
+    #[test]
+    fn loaded_instructions_incompatible_status_is_preserved_and_warns(){
+        let root=fixture();std::fs::create_dir_all(root.join("capy-guides")).unwrap();let saved=path(&root,SESSION).with_extension("status.json");
+        for original in ["{\"version\":2,\"future\":true}".into(),format!("{{\"version\":1,\"sessionId\":\"{SESSION}\",\"stage\":\"unknown\"}}"),"{\"version\":1,\"sessionId\":\"22222222-2222-2222-2222-222222222222\",\"stage\":\"recorded\"}".into()," ".repeat(8193)]{
+            std::fs::write(&saved,&original).unwrap();assert!(status(&root,SESSION,"recorded").is_err());assert_eq!(std::fs::read(&saved).unwrap(),original.as_bytes());assert!(collection_warning(&root,SESSION).unwrap().contains("Diagnóstico"));
+        }cleanup(&root);
+    }
     #[test]
     fn loaded_instructions_preserve_exact_session_snapshot_and_reject_drift(){
         let root=fixture();let guide=root.join("CLAUDE.md");std::fs::write(&guide,"# Plano\nNão alterar API").unwrap();

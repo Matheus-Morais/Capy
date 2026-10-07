@@ -85,8 +85,8 @@
   "passed": true,
   "ready": [
     "pet",
-    "summary",
-    "panel"
+    "panel",
+    "summary"
   ],
   "uiErrors": []
 }
