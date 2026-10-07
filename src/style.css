@@ -147,6 +147,7 @@ html:has(.pet-window),.pet-window { background:transparent; overflow:hidden; use
 .managed-task h3 { font-size:13px; margin:0; overflow-wrap:anywhere; }
 .managed-task p { margin:5px 0; }
 .terminal-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:20px; }
+#terminalSection { scroll-margin-top:8px; }
 .terminal-heading h2 { font-size:14px; margin:0; }
 .terminal-heading button { font-size:12px; }
 #terminalViewport { height:340px; padding:10px; background:#272b24; margin-top:12px; border-radius:5px; }

@@ -66,7 +66,6 @@ export async function initializeTasks():Promise<void>{
     const token=++attachment;
     attached=task;lastSequence=0;queued=[];replaying=true;terminalExited=false;
     section.hidden=false;
-    section.scrollIntoView({block:'start'});
     document.getElementById('terminalTitle')!.textContent=`Claude · ${task.model}`;
     document.getElementById('terminalIdentity')!.textContent=`${task.cwd} · ${task.account??'conta do perfil'} · ${billingLabel(task.billing)} · sessão ${task.id}`;
     if(!opened){term.open(document.getElementById('terminalViewport')!);opened=true;}else term.reset();
@@ -78,7 +77,7 @@ export async function initializeTasks():Promise<void>{
       document.getElementById('terminalNotice')!.textContent=terminalExited?'O CLI encerrou. Sua conversa pode ser retomada pelo identificador.':'As teclas e respostas vão somente para esta sessão.';
       (document.getElementById('interruptTerminal') as HTMLButtonElement).disabled=terminalExited;
       (document.getElementById('terminalModel') as HTMLButtonElement).disabled=terminalExited;
-      resize();term.focus();
+      resize();term.focus();section.scrollIntoView({block:'start'});
     }finally{if(attachment===token){replaying=false;queued=[];}}
   };
   term.onData(data=>{if(attached&&!terminalExited)void invoke('terminal_input',{id:attached.id,data}).catch(showError);});

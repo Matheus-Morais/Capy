@@ -7,20 +7,23 @@ import {createServer} from 'node:net';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
+import {verifyLiveTaskControls} from './verify-live-task-controls.mjs';
 
 const workspace=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
 const exe=join(workspace,'src-tauri','target','release','capy.exe');
 await stat(exe);await mkdir(root,{recursive:true});
 let exitFixture;
+const liveTaskControls=process.argv.includes('--live-task-controls');
+const liveTaskMode=process.argv.includes('--live-task')||liveTaskControls;
 const corruptProfiles=process.argv.includes('--profiles-corrupt');
 const incompatibleProfiles='[{"futureProfileVersion":2,"opaque":"preserve exact bytes"}]\r\n';
 if(corruptProfiles){
-  assert.ok(!process.argv.some(arg=>['--live-task','--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)),'Incompatible profiles proof must run without provider calls');
+  assert.ok(!liveTaskMode&&!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)),'Incompatible profiles proof must run without provider calls');
   await writeFile(join(root,'profiles.json'),incompatibleProfiles);
 }
 let liveTask,liveTaskProfile,liveTaskProcess,liveTaskPanel;
-if(process.argv.includes('--live-task'))assert.ok(!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)),'Interactive task proof must run separately');
+if(liveTaskMode)assert.ok(!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)),'Interactive task proof must run separately');
 if(process.argv.includes('--exit-review')){
   assert.ok(!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery'].includes(arg)),'Exit state fixture must run separately from provider calls');
   exitFixture={id:randomUUID(),title:'Own exit state fixture',target:{kind:'api',profileId:randomUUID(),provider:'OpenAI',account:'Own exit fixture',billing:'api',credentialRevision:randomUUID()},model:'fixture-model',messages:[],revision:0,state:'idle',activeNonce:null,usedNonces:[],lastError:null,cliStarted:false,cliAttempted:false,processPolicy:null,recoveryReview:null,interruptions:[],transferredTo:null};
@@ -141,7 +144,7 @@ try{
     check('native_profiles_exit_review_remains_available',(await panel.invoke('prepare_exit_review')).resources.length===0);
     await panel.screenshot('profiles-corrupt');
   }
-  if(process.argv.includes('--live-task')){
+  if(liveTaskMode){
     liveTaskPanel=panel;
     const project=join(root,'own-task-project');await mkdir(project);
     const marker=`CAPY_TASK_${randomUUID()}`;const instruction=`Responda apenas ${marker}. Não use ferramentas nem altere arquivos.`;
@@ -155,6 +158,7 @@ try{
     check('native_task_form_keeps_exact_folder_account_model_prompt_and_mode',liveTask.profileId===liveTaskProfile.id&&liveTask.account===identity.account&&liveTask.billing==='subscription'&&liveTask.model==='haiku'&&liveTask.prompt===instruction&&liveTask.mode==='embedded');
     await waitFor(()=>panel.evaluate(`!document.querySelector('#terminalSection').hidden && document.querySelector('#terminalIdentity').textContent.includes(${JSON.stringify(liveTask.id)})`),'Terminal anexado ao UUID próprio');
     check('native_task_terminal_identity_matches_created_task',await panel.evaluate(`document.querySelector('#terminalIdentity').textContent.includes(${JSON.stringify(identity.account)}) && document.querySelector('#terminalTitle').textContent.includes('haiku')`));
+    await writeFile(join(root,'task-initial-geometry.json'),JSON.stringify(await panel.evaluate(`({section:document.querySelector('#terminalSection').getBoundingClientRect().toJSON(),viewport:document.querySelector('#terminalViewport').getBoundingClientRect().toJSON(),height:innerHeight})`),null,2));
     check('native_task_terminal_is_visible_without_manual_scrolling',await panel.evaluate(`(()=>{const section=document.querySelector('#terminalSection').getBoundingClientRect();const viewport=document.querySelector('#terminalViewport').getBoundingClientRect();return section.top>=0&&section.top<50&&viewport.height>0&&viewport.bottom<=innerHeight;})()`));
     const screen=()=>panel.evaluate(`document.querySelector('.xterm-rows')?.textContent??''`);let trusted=false;
     const history=await waitFor(async()=>{
@@ -367,6 +371,10 @@ try{
   await waitFor(()=>pet.evaluate(`!document.querySelector('#pet').classList.contains('g-wave')`),'Painel marca pedidos como vistos');
   check('native_panel_acknowledges_attention',true);
   if(liveTask){
+    if(liveTaskControls){
+      await panel.evaluate(`document.querySelector('#terminalSection').scrollIntoView({block:'start'});true`);
+      await verifyLiveTaskControls({panel,task:liveTask,profile:liveTaskProfile,process:liveTaskProcess,root,check,waitFor,taskHistory,processInfo});
+    }
     await panel.call('Page.enable');const review=await panel.invoke('prepare_exit_review');
     check('native_task_exit_review_matches_only_owned_real_terminal',review.resources.length===1&&review.resources[0].kind==='terminal'&&review.resources[0].id===liveTask.id&&sameFolder(review.resources[0].cwd,liveTask.cwd)&&review.resources[0].account===liveTask.account);
     await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('request_exit').catch(error=>{window.__capyExitError=String(error);});true`);
