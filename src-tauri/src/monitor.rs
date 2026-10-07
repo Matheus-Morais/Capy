@@ -29,7 +29,10 @@ pub fn schedule(app: tauri::AppHandle) {
                 if last_claude.elapsed() >= Duration::from_secs(60) || profile_signature != signature {
                     claude_rows = profiles.iter().flat_map(crate::claude_quotas::poll).collect();
                     let prefs=quota_app.state::<crate::settings::Store>().get().unwrap_or_default();
-                    for profile in profiles.iter().filter(|profile|prefs.quota_rules.iter().any(|rule|rule.fallback.iter().any(|d|d.profile_id==profile.id))){
+                    let chats=quota_app.state::<Arc<crate::chat_history::Store>>().list().unwrap_or_default();
+                    for profile in profiles.iter().filter(|profile|prefs.quota_rules.iter().any(|rule|
+                        rule.fallback.iter().any(|d|d.profile_id==profile.id)||chats.iter().any(|chat|
+                            chat.target.profile_id==profile.id&&chat.target.provider==rule.provider&&chat.target.account==rule.account))){
                         let _=quota_app.state::<crate::profiles::Store>().probe(profile,None);
                     }
                     last_claude = Instant::now();
@@ -99,6 +102,12 @@ pub fn schedule(app: tauri::AppHandle) {
                 };
             }
             let handoffs=handoff_store.list().unwrap_or_default();
+            if let Ok(profiles)=&profile_rows{
+                match crate::chat_routing::evaluate(&app.state::<Arc<crate::chat_history::Store>>(),profiles,&profile_store.chat_targets(now),&quotas,&prefs,now){
+                    Ok(statuses)=>routing.extend(statuses),
+                    Err(error)=>routing.push(crate::routing::Status{task_id:"chat".into(),state:"unavailable".into(),message:error}),
+                }
+            }
             let (mut interventions, mut subscriptions) = app
                 .state::<Arc<crate::interventions::service::Service>>()
                 .snapshot();

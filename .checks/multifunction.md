@@ -139,6 +139,17 @@ Continuidade automática do chat — passo 1/3 concluído: o Store prepara uma r
 | Drift, trabalho ou incerteza não prepara | `src-tauri/src/chat_transfer.rs:245`: revision/account/billing/model/state divergentes retornam None; linhas 249–252 recusam snapshot antigo, working e unknown |
 | Registro incompatível preservado | `src-tauri/src/chat_transfer.rs:254`: erro e bytes idênticos |
 
+Continuidade automática do chat — passo 2/3 concluído: `chat_routing::evaluate` reutiliza a política das janelas de quota para chats CLI Claude por assinatura. As identidades do perfil devem estar confirmadas, vinculadas à cobrança declarada e ter até 120s; identidade ausente/alterada, dado antigo, envio working/unknown e alternativas indisponíveis não produzem transferência. O monitor consulta também perfis de origem dos chats configurados, prepara o resumo com instruções capturadas e publica revisão/status nos snapshots já existentes. Destino pode ser outro perfil CLI com cobrança explicitada, revalidada na aprovação existente; APIs próprias não oferecem uma janela de quota observável e não são presumidas elegíveis. Quatro testes de integração local e o teste do cache de identidade passaram, sem chamadas a provedores.
+
+| Critério do passo 2 | Assertion |
+| --- | --- |
+| Gatilhos independentes e limiar exato | `src-tauri/src/chat_routing.rs:62`: abaixo do limiar não há revisão; linha 64 confere destination/model/sourceRevision para 300 e 10080 minutos |
+| Preparação sem envio/repetição | `src-tauri/src/chat_routing.rs:65`: uma conversa e usedNonces inalterados; linhas 66–67 conservam nonce e cancelamento |
+| Aguardar turno/incerteza | `src-tauri/src/chat_routing.rs:74`: waitingTurn e revisão ausente; linha 75 mantém unknown sem revisão; linha 78 confere versão depois do fim |
+| Dado antigo/sem identidade não aciona | `src-tauri/src/chat_routing.rs:85`: amostra stale, futura, expirada, sem conta ou janela configurada mantém revisões vazias; linha 88 recusa conta de origem divergente |
+| Ordem, esgotamento e aviso | `src-tauri/src/chat_routing.rs:93`: destino r após q esgotado; linha 95: exhausted com UUID exato, mensagem e nenhuma revisão |
+| Cache de identidade exato/recente | `src-tauri/src/profiles.rs:220`: account/billing/profileId; linhas 221–224: limite inclusivo, passado/futuro, login/conta/cobrança; linha 227: edição externa do perfil recusa cache |
+
 **C14** — Cada transferência tem resumo revisável e aprovação única; mudança de cobrança identificada exige confirmação.
 Proof: `cargo test --manifest-path src-tauri/Cargo.toml handoff_rejects_billing_identity_and_turn_drift_without_consuming_review`; `handoff_approval_is_single_use_and_persists_across_restart`; `handoff_failure_restores_edited_summary_with_fresh_required_approval`; `handoff_cancellation_suppresses_only_the_same_source_boundary`; fluxo próprio Tauri aprovado em `scratch/capy-visual-06a4baff-3da6-4d00-9c7b-22bc177a9845/report.json` (40 checks), com resumo editado, `idle_prompt` real, destino Haiku/assinatura, replay recusado e saída aprovando/encerrando os dois UUIDs/processos próprios.
 

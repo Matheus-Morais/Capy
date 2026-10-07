@@ -73,6 +73,17 @@ impl Store {
             Some(crate::routing::Candidate{profile_id:profile.id,provider:profile.provider,account:identity.account.clone(),ready:identity.logged_in&&*at<=now&&now-*at<=120_000})
         }).collect()
     }
+    pub fn chat_targets(&self,now:u64)->Vec<crate::chat_history::Target>{
+        let Ok(profiles)=self.list()else{return vec![];};
+        let Ok(identities)=self.identities.lock()else{return vec![];};
+        profiles.into_iter().filter_map(|profile|{
+            let (at,identity)=identities.get(&profile.id)?;
+            if !identity.logged_in||*at>now||now-*at>120_000||identity.billing!=profile.billing{return None;}
+            let target=crate::chat_history::Target{kind:"claudeCli".into(),profile_id:profile.id,provider:profile.provider,
+                account:identity.account.clone()?,billing:identity.billing.clone(),credential_revision:None};
+            crate::chat_history::valid_target(&target).then_some(target)
+        }).collect()
+    }
     pub fn add(&self,label:String,existing:Option<PathBuf>,billing:String)->Result<Profile,String>{
         if !settings::valid_text(&label,80) || !["subscription","api"].contains(&billing.as_str()) {return Err("Nome ou tipo de cobrança inválido.".into());}
         let mut value=self.value.lock().map_err(|_|"Perfis indisponíveis.")?;self.unchanged(&value)?;
@@ -200,6 +211,21 @@ mod tests{
     use super::*;
     fn fixture()->PathBuf{let root=std::env::temp_dir().join(format!("capy-profiles-{}",uuid::Uuid::new_v4()));std::fs::create_dir_all(&root).unwrap();root}
     fn sample(root:&Path)->Profile{Profile{id:"fixture".into(),label:"Conta".into(),provider:"Claude".into(),config_dir:root.join("config"),billing:"subscription".into()}}
+    #[test]
+    fn profiles_chat_targets_require_recent_exact_identity_and_billing(){
+        let root=fixture();let profile=sample(&root);std::fs::write(root.join("profiles.json"),serde_json::to_vec(&vec![profile.clone()]).unwrap()).unwrap();
+        let store=Store::load(root.clone());let identity=Identity{logged_in:true,account:Some("own@example.invalid".into()),billing:"subscription".into(),message:String::new()};
+        assert!(store.chat_targets(1000).is_empty());
+        store.identities.lock().unwrap().insert(profile.id.clone(),(1000,identity.clone()));
+        let targets=store.chat_targets(1000);assert_eq!(targets.len(),1);assert_eq!(targets[0].account,"own@example.invalid");assert_eq!(targets[0].billing,"subscription");assert_eq!(targets[0].profile_id,profile.id);
+        assert_eq!(store.chat_targets(121000).len(),1);
+        assert!(store.chat_targets(999).is_empty());assert!(store.chat_targets(121001).is_empty());
+        for field in ["login","account","empty","billing"]{let mut changed=identity.clone();match field{"login"=>changed.logged_in=false,"account"=>changed.account=None,"empty"=>changed.account=Some(" ".into()),_=>changed.billing="api".into()};
+            store.identities.lock().unwrap().insert(profile.id.clone(),(1000,changed));assert!(store.chat_targets(1000).is_empty(),"{field}");
+        }
+        store.identities.lock().unwrap().insert(profile.id.clone(),(1000,identity));assert_eq!(store.chat_targets(1000).len(),1);
+        std::fs::write(root.join("profiles.json"),b"[]").unwrap();assert!(store.chat_targets(1000).is_empty());std::fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn profiles_invalid_metadata_blocks_operations_without_overwriting(){
         let root=fixture();let path=root.join("profiles.json");let profile=sample(&root);

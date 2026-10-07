@@ -12,6 +12,7 @@ mod chat_recovery;
 mod chat_commands;
 mod chat_presence;
 mod chat_transfer;
+mod chat_routing;
 mod exit_review;
 mod antigravity;
 mod claude_activity;
