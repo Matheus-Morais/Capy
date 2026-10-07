@@ -15,6 +15,8 @@ pub struct Session {
     pub hidden: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_action: Option<crate::source_access::SourceAction>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub completion: Option<String>,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +28,11 @@ pub struct Snapshot {
     pub quotas: Vec<crate::quotas::Row>,
     pub interventions: Vec<crate::interventions::registry::View>,
     pub subscriptions: Vec<crate::interventions::service::Subscription>,
+    pub preferences: crate::settings::Preferences,
+    pub quota_alerts: Vec<crate::quota_policy::Alert>,
+    pub handoffs: Vec<crate::handoff::Review>,
+    pub routing: Vec<crate::routing::Status>,
+    pub chat_transfers: Vec<crate::chat_transfer::Review>,
 }
 impl Default for Snapshot {
     fn default() -> Self {
@@ -38,6 +45,11 @@ impl Default for Snapshot {
             quotas: vec![],
             interventions: vec![],
             subscriptions: vec![],
+            preferences: crate::settings::Preferences::default(),
+            quota_alerts: vec![],
+            handoffs: vec![],
+            routing: vec![],
+            chat_transfers: vec![],
         }
     }
 }
@@ -51,6 +63,11 @@ impl Snapshot {
             quotas: vec![],
             interventions: vec![],
             subscriptions: vec![],
+            preferences: crate::settings::Preferences::default(),
+            quota_alerts: vec![],
+            handoffs: vec![],
+            routing: vec![],
+            chat_transfers: vec![],
         }
     }
     pub fn apply(&mut self, action: &str, id: &str, answer: &str) -> Result<(), String> {
@@ -67,6 +84,9 @@ impl Snapshot {
                 self.interventions.clear();
                 self.subscriptions.clear();
                 self.quotas.clear();
+                self.chat_transfers.clear();
+                self.handoffs.clear();
+                self.routing.clear();
                 self.sessions = if answer == "sleeping" || answer == "real" {
                     vec![]
                 } else {

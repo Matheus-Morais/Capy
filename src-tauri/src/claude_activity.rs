@@ -194,23 +194,59 @@ pub fn collect() {
             return Err(());
         }
         cleanup(&dir, discovery::process_birth);
-        write_observation(
-            &dir.join(format!("{}.json", h.session_id)),
-            &Observation {
+        let observation=Observation {
                 version: 1,
-                session_id: h.session_id,
-                cwd: h.cwd,
+                session_id: h.session_id.clone(),
+                cwd: h.cwd.clone(),
                 pid,
                 proc_start: p.proc_start,
                 at_ms,
                 state: state.into(),
-            },
-        )
+            };
+        let receipt=TurnReceipt{version:1,session_id:h.session_id.clone(),cwd:h.cwd,pid,proc_start:observation.proc_start.clone(),at_ms,
+            event:if h.hook_event_name=="Notification" && h.notification_type.as_deref()==Some("idle_prompt") {"idle_prompt".into()}else{h.hook_event_name}};
+        write_turn_receipt(&dir.join(format!("{}.boundary.json",h.session_id)),&receipt)?;
+        write_observation(&dir.join(format!("{}.json",h.session_id)),&observation)
     })();
 }
 
 pub fn enrich(sources: &Sources, report: &mut Report) {
     enrich_with(sources, report, now_ms(), discovery::process_birth);
+}
+#[derive(Clone,Serialize,Deserialize,PartialEq)]
+#[serde(rename_all="camelCase")]
+pub struct Boundary { pub at_ms:u64, pub pid:u32, pub proc_start:String }
+#[derive(Serialize,Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TurnReceipt {version:u8,session_id:String,cwd:String,pid:u32,proc_start:String,at_ms:u64,event:String}
+fn write_turn_receipt(path:&Path,receipt:&TurnReceipt)->Result<(),()>{
+    if path.exists()&&!fs::symlink_metadata(path).is_ok_and(|m|m.file_type().is_file()){return Err(());}
+    let mut file=OpenOptions::new().create(true).truncate(false).read(true).write(true).open(path).map_err(|_|())?;
+    file.try_lock().map_err(|_|())?;
+    if read_json::<TurnReceipt>(&mut file,RECORD_LIMIT).is_ok_and(|old|old.pid==receipt.pid&&old.proc_start==receipt.proc_start&&old.at_ms>=receipt.at_ms){return Ok(());}
+    let bytes=serde_json::to_vec(receipt).map_err(|_|())?;
+    file.seek(SeekFrom::Start(0)).map_err(|_|())?;file.set_len(0).map_err(|_|())?;file.write_all(&bytes).map_err(|_|())
+}
+pub fn turn_boundary(config_dir:&Path,session_id:&str,cwd:&str,now:u64)->Option<Boundary>{
+    let observation=boundary_observation(config_dir,session_id,cwd)?;
+    if !now.checked_sub(observation.at_ms).is_some_and(|age|(1_000..=TTL_MS).contains(&age)){return None;}
+    if observation.proc_start.parse::<u64>().ok().and_then(|start|discovery::process_birth(observation.pid).map(|actual|actual==start))!=Some(true){return None;}
+    Some(Boundary{at_ms:observation.at_ms,pid:observation.pid,proc_start:observation.proc_start})
+}
+fn boundary_observation(config_dir:&Path,session_id:&str,cwd:&str)->Option<TurnReceipt>{
+    if !uuid(session_id)||config_dir.join("capy-activity/disabled").exists(){return None;}
+    let path=config_dir.join("capy-activity").join(format!("{session_id}.boundary.json"));
+    if !fs::symlink_metadata(&path).is_ok_and(|m|m.file_type().is_file()){return None;}
+    let file=File::open(path).ok()?;file.try_lock_shared().ok()?;
+    let observation:TurnReceipt=read_json(file,RECORD_LIMIT).ok()?;
+    let same_cwd=Path::new(&observation.cwd).canonicalize().ok().is_some_and(|actual|Path::new(cwd).canonicalize().is_ok_and(|expected|actual==expected));
+    if observation.version!=1||observation.session_id!=session_id||!same_cwd||!matches!(observation.event.as_str(),"StopFailure"|"idle_prompt"){return None;}
+    Some(observation)
+}
+pub fn boundary_unchanged(config_dir:&Path,session_id:&str,cwd:&str,expected:&Boundary)->bool{
+    let Some(observation)=boundary_observation(config_dir,session_id,cwd)else{return false;};
+    observation.at_ms==expected.at_ms&&observation.pid==expected.pid&&observation.proc_start==expected.proc_start
+        && expected.proc_start.parse::<u64>().ok().is_some_and(|start|discovery::process_birth(expected.pid).is_none_or(|actual|actual==start))
 }
 fn enrich_with(
     sources: &Sources,

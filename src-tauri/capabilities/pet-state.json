@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "pet-state",
+  "description": "The mascot reads its own visibility to pause hidden animations.",
+  "windows": ["pet"],
+  "permissions": ["core:window:allow-is-visible"]
+}

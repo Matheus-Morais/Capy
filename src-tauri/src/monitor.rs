@@ -11,6 +11,9 @@ pub fn schedule(app: tauri::AppHandle) {
     let quota_app = app.clone();
     std::thread::spawn(move || {
         let mut cache = crate::quotas::Cache::default();
+        let mut claude_rows = Vec::new();
+        let mut last_claude = Instant::now() - Duration::from_secs(60);
+        let mut profile_signature = String::new();
         loop {
             let started = Instant::now();
             let real = quota_app
@@ -20,7 +23,19 @@ pub fn schedule(app: tauri::AppHandle) {
                 .map(|s| s.scenario == "real")
                 .unwrap_or(false);
             if real {
-                let rows = cache.poll(&discovery::Sources::local());
+                let mut rows = cache.poll(&discovery::Sources::local());
+                let profiles = quota_app.state::<crate::profiles::Store>().list().unwrap_or_default();
+                let signature = serde_json::to_string(&profiles).unwrap_or_default();
+                if last_claude.elapsed() >= Duration::from_secs(60) || profile_signature != signature {
+                    claude_rows = profiles.iter().flat_map(crate::claude_quotas::poll).collect();
+                    let prefs=quota_app.state::<crate::settings::Store>().get().unwrap_or_default();
+                    for profile in profiles.iter().filter(|profile|prefs.quota_rules.iter().any(|rule|rule.fallback.iter().any(|d|d.profile_id==profile.id))){
+                        let _=quota_app.state::<crate::profiles::Store>().probe(profile,None);
+                    }
+                    last_claude = Instant::now();
+                    profile_signature = signature;
+                }
+                rows.extend(claude_rows.clone());
                 if let Ok(mut output) = quota_output.lock() {
                     *output = rows;
                 }
@@ -40,17 +55,53 @@ pub fn schedule(app: tauri::AppHandle) {
             let sources = discovery::Sources::local();
             let mut report = discovery::scan(&sources);
             activity::enrich(&sources, &mut report);
+            crate::profiles::enrich_sessions(&app.state::<crate::profiles::Store>(), &sources, &mut report);
             let quotas = quota_rows
                 .lock()
                 .map(|rows| rows.clone())
                 .unwrap_or_default();
+            let prefs = app.state::<crate::settings::Store>().get().unwrap_or_default();
+            let alerts = app.state::<crate::quota_policy::Service>()
+                .evaluate(&quotas, &prefs, crate::quotas::now_ms())
+                .unwrap_or_else(|error| { eprintln!("Quota alerts: {error}"); app.state::<crate::quota_policy::Service>().snapshot() });
+            let profile_store=app.state::<crate::profiles::Store>();
+            let handoff_store=app.state::<Arc<crate::handoff::Store>>();
+            let now=crate::quotas::now_ms();
+            let candidates=profile_store.candidates(now);
+            let mut routing=Vec::new();
+            let tasks=app.state::<Arc<crate::tasks::Store>>().list();
+            if let Ok(tasks)=&tasks{let _=handoff_store.prune(tasks);}
+            for task in tasks.unwrap_or_default().into_iter().rev().take(64){
+                if !handoff_store.eligible(&task){continue;}
+                let Some(account)=task.account.as_deref()else{continue;};
+                let Some(rule)=prefs.quota_rules.iter().find(|r|r.provider=="Claude"&&r.account==account)else{continue;};
+                let Ok(source)=profile_store.get(&task.profile_id)else{continue;};
+                let boundary=crate::claude_activity::turn_boundary(&source.config_dir,&task.id,&task.cwd.to_string_lossy(),now);
+                if boundary.as_ref().is_some_and(|b|!handoff_store.should_prepare(&task,b)){continue;}
+                let decision=crate::routing::decide(rule,&task.profile_id,&task.model,&quotas,&candidates,boundary.is_some(),now);
+                match decision {
+                crate::routing::Decision::Review{destination}=>{
+                    if let Ok(profile)=profile_store.get(&destination.profile_id){
+                        if let Err(error)=handoff_store.prepare(&task,&source,&profile,destination.model,true){routing.push(crate::routing::Status{task_id:task.id.clone(),state:"unavailable".into(),message:error});}
+                    }
+                },
+                crate::routing::Decision::WaitingTurn=>routing.push(crate::routing::Status{task_id:task.id,state:"waitingTurn".into(),message:"Percentual de troca atingido. Aguardando confirmação do fim do turno atual.".into()}),
+                crate::routing::Decision::Exhausted=>routing.push(crate::routing::Status{task_id:task.id,state:"exhausted".into(),message:"Nenhuma alternativa disponível na cadeia. Verifique o login e as quotas das contas de destino.".into()}),
+                crate::routing::Decision::Idle=>{}
+                };
+            }
+            let handoffs=handoff_store.list().unwrap_or_default();
             let (mut interventions, mut subscriptions) = app
                 .state::<Arc<crate::interventions::service::Service>>()
                 .snapshot();
-            let snapshot = (|| {
+            let _ = (|| {
                 let mut data = state.demo.lock().ok()?;
                 if data.scenario != "real" {
                     return None;
+                }
+                let chat_transfers=app.state::<Arc<crate::chat_history::Store>>().transfer_reviews().unwrap_or_default();
+                if let Ok(chats)=app.state::<Arc<crate::chat_history::Store>>().list(){
+                    report.sessions.extend(app.state::<crate::chat_presence::Service>().rows(&chats,crate::quotas::now_ms()));
                 }
                 state.preferences.lock().ok()?.apply(&mut report.sessions);
                 interventions.retain(|v| {
@@ -70,6 +121,10 @@ pub fn schedule(app: tauri::AppHandle) {
                     && data.quotas == quotas
                     && data.interventions == interventions
                     && data.subscriptions == subscriptions
+                    && data.quota_alerts == alerts
+                    && serde_json::to_value(&data.handoffs).ok()==serde_json::to_value(&handoffs).ok()
+                    && data.routing==routing
+                    && serde_json::to_value(&data.chat_transfers).ok()==serde_json::to_value(&chat_transfers).ok()
                 {
                     return None;
                 }
@@ -78,13 +133,15 @@ pub fn schedule(app: tauri::AppHandle) {
                 data.quotas = quotas;
                 data.interventions = interventions;
                 data.subscriptions = subscriptions;
-                Some(data.clone())
-            })();
-            if let Some(snapshot) = snapshot {
-                if let Err(error) = app.emit("demo-updated", snapshot) {
+                data.quota_alerts = alerts;
+                data.handoffs = handoffs;
+                data.routing = routing;
+                data.chat_transfers=chat_transfers;
+                if let Err(error) = app.emit("demo-updated", data.clone()) {
                     eprintln!("Discovery update: {error}");
                 }
-            }
+                Some(())
+            })();
         }
         std::thread::sleep(Duration::from_secs(5).saturating_sub(started.elapsed()));
     });

@@ -1,0 +1,54 @@
+# Prova nativa parcial da Capy multifuncional
+
+Executável local compilado em 2026-10-06. Esta prova não encerra C1–C19 nem substitui o verificador independente final.
+
+`node scripts/verify-pet-native.mjs` passou em 12 checks no WebView2 do executável, em processo próprio com preferências e cache isolados. Artefatos privados: `scratch/capy-visual-1e858f7d-bcc2-4038-ba44-f6a9b98b9b02/report.json` e PNGs.
+
+Provas observadas:
+- Painel e resumo sem overflow horizontal na dimensão nativa padrão.
+- Teclado visível durante a demonstração de trabalho.
+- Hover move o olhar; saída da mascote limpa o olhar e não mantém acompanhamento global.
+- Clique reage e abre o resumo.
+- Ocultar pausa animações; reabrir retira a pausa.
+- Preferência de movimento reduzido retira animações e translação do olhar.
+- Novo pedido acena e mostra badge; abrir o painel marca a atenção como vista.
+
+As capturas `waiting.png`, `working.png`, `summary.png` e `panel.png` foram abertas e inspecionadas. Preservam a capivara frontal, cores e tipografia existentes; os cards e footer do resumo permanecem legíveis no scroll e o painel não corta conteúdo horizontalmente. A captura de espera é um frame, não prova todo o movimento do braço.
+
+Lacunas: arraste real com mouse físico, áudio nativo, saudação na inicialização real, sono após 180s reais, comemoração por conclusão real do provedor e dados/cards de integrações reais. Relógio/sono/saudação/conclusão têm testes do controlador; isso não fecha as lacunas nativas.
+
+`npm run verify:native` passou nos 20 checks de janelas, geometria, IPC e descoberta, sem erros de frontend, após corrigir a permissão `is_visible` restrita à janela `pet`. A primeira tentativa foi interceptada pela prévia antiga aberta; a seguinte encontrou a ACL ausente. Nenhuma dessas tentativas falhas foi contabilizada como aprovação.
+
+As provas não iniciaram turnos de IA nem mudaram configurações/credenciais de contas externas.
+
+## Chat — inicialização nativa parcial
+
+Depois da inclusão do chat, a build desktop e o smoke nativo passaram novamente; `node scripts/verify-pet-native.mjs` passou em 16 checks. Artefatos: `scratch/capy-visual-44f1d760-52f3-49ef-ac22-08d47e5d7e8a/report.json` e PNGs. Os quatro checks novos verificam comando `list_chats` com histórico próprio vazio, criação bloqueada antes de verificar conta, campo de chave password sem autocomplete e ausência de overflow horizontal. A captura `chat.png` foi aberta e inspecionada: formulário, origem CLI, modelo e ações estão legíveis no painel nativo com scroll.
+
+Não foi cadastrada chave real nem enviado turno nesta prova. Não comprova cadastro pela UI, conversa CLI/API, cobrança efetiva, histórico com conteúdo, transferências ou animações ligadas ao chat. A execução de teste própria foi encerrada e o executável atualizado foi reaberto em modo normal.
+
+## Chat Claude — turno real e ligação à mascote
+
+`node scripts/verify-pet-native.mjs --live-chat` passou em 21 checks em 2026-10-06. Artefatos próprios: `scratch/capy-visual-c4bbfd68-bf0b-4765-b41f-62a79f1623b6/report.json`. Antes do único turno curto, o CLI oficial confirmou login, identidade e cobrança de assinatura; a prova rejeita API antes de enviar. Criou UUID próprio, observou a mascote trabalhando e comemorando somente após resultado confirmado, comparou resposta e UUID, abriu a conversa pelo card e verificou o término da comemoração. Preferências, dados da Capy e cache WebView2 ficaram isolados. Nenhuma sessão de trabalho existente foi retomada.
+
+O teste `chat_cli_live_subscription_keeps_exact_history_across_model_change`, executado explicitamente com `--ignored`, passou em dois turnos reais próprios: criou UUID com Sonnet, retomou o mesmo UUID com Haiku e recuperou um marcador aleatório enviado apenas na primeira mensagem. A primeira execução encontrou a perda de identidade ao forçar CLAUDE_CONFIG_DIR no padrão; foi corrigida no launcher/auth/PTY, mantendo pasta explícita nos demais perfis. A falha anterior ocorreu antes de qualquer turno e não conta como prova aprovada.
+
+Essas provas fecham somente o caminho Claude por assinatura exercitado. API real, transferências, outros provedores/modelos, eventos de conclusão de tarefas interativas, arraste/áudio e demais lacunas do plano continuam abertos. Smoke nativo passou novamente em 20 checks sem erro de frontend.
+
+## Transferência de chat — revisão e execução real parcial
+
+Após a build desktop mais recente, `node scripts/verify-pet-native.mjs --live-chat --live-transfer` passou em 29 checks em 2026-10-06. Artefatos privados: `scratch/capy-visual-d5715ea3-0e05-4f56-aa14-6021b4e902a0/report.json` e `transfer-review.png`. A captura foi inspecionada: origem, destino, modelo, cobrança e campos de revisão estão legíveis; o formulário permite scroll sem overflow horizontal.
+
+A prova confirmou um turno Claude próprio, preparação pela interface, aceno/badge para revisão pendente, checkbox de tamanho adequado e consentimento inicialmente desmarcado. Aprovação sem revisão foi rejeitada sem consumir o pedido. A aprovação pela interface criou outro UUID com Haiku na mesma conta por assinatura, enviou o resumo editado e recebeu resposta com o marcador. Repetir a aprovação foi rejeitado sem criar terceira conversa.
+
+Isso substitui a lacuna de transferência apenas para esse caminho exercitado. API real, outras contas/provedores, mudança efetiva de cobrança, recuperação revisada de envio incerto, conclusão de tarefas interativas e o restante do escopo continuam pendentes. A suíte atual passou em 82 testes Rust (um teste opt-in ignorado nesta execução), 28 JS e build frontend; os três testes de transferência incluem recuperação sem reenvio e preservação da resposta concorrente de outra conversa. Não substitui o verificador independente final.
+
+## Processo do chat — encerramento forçado e launcher real
+
+`chat_process_job_kills_only_owned_tree_when_owner_is_terminated` passou com processos Windows reais próprios: o proprietário fixture foi encerrado à força, filho e neto encerraram, e outro processo com o mesmo executável permaneceu aberto. O launcher cria o processo diretamente no job privado, herdando somente I/O; falha de associação impede o spawn, sem fallback. Referência: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute (JOB_LIST e HANDLE_LIST) e https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects (KILL_ON_JOB_CLOSE).
+
+Após a build desktop, `node scripts/verify-pet-native.mjs --live-chat --live-transfer` passou novamente nos 29 checks com o launcher novo. Artefatos privados: `scratch/capy-visual-f58c027c-3270-49a8-bb23-2687d5e49ed8/report.json`. O Claude real por assinatura recebeu ambos os turnos próprios, incluindo resumo editado na nova conversa Haiku. A gravação antecipada da tentativa CLI não quebrou versão/nonce ou aprovação única.
+
+Suíte atual: 86 Rust aprovados, um teste live opt-in ignorado nessa suíte padrão; 28 JS e builds frontend/desktop aprovados. `chat_cli_attempt_survives_interruption_without_assuming_result_or_resending` prova preservação de mensagem/nonce e tentativa após reinício, mas não prova recuperação revisada: essa interface ainda falta. Nenhuma sessão de trabalho externa foi encerrada nesta prova. Não substitui a revisão independente final do escopo completo.
+
+Smoke nativo da mesma build passou em 20 checks, sem erros de frontend; executável local reaberto em modo normal.

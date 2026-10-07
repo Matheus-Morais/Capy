@@ -61,6 +61,7 @@ impl Fixture {
                 command: Some("old".into()),
                 hidden: false,
                 source_action: None,
+                completion: None,
             }],
             integrations: vec![],
         }
@@ -207,4 +208,28 @@ fn bounded_metadata_and_order() {
     let remaining = fs::read_dir(directory(&f.sources)).unwrap().count();
     assert!(remaining >= 13);
     assert!(remaining < 141);
+}
+
+#[test]
+fn handoff_boundary_never_uses_stop_that_another_hook_can_block(){
+    let f=Fixture::new();
+    let cwd=f.sources.claude.canonicalize().unwrap();
+    let pid=std::process::id();let birth=discovery::process_birth(pid).unwrap();
+    let at=now_ms().saturating_sub(1_001);
+    let path=directory(&f.sources).join(format!("{ID}.boundary.json"));
+    for event in ["Stop","PreToolUse","UserPromptSubmit","PermissionRequest","SessionEnd"]{
+        let receipt=TurnReceipt{version:1,session_id:ID.into(),cwd:cwd.to_string_lossy().into_owned(),pid,proc_start:birth.to_string(),at_ms:at,event:event.into()};
+        fs::write(&path,serde_json::to_vec(&receipt).unwrap()).unwrap();
+        assert!(turn_boundary(&f.sources.claude,ID,&cwd.to_string_lossy(),now_ms()).is_none(),"{event}");
+    }
+    for event in ["idle_prompt","StopFailure"]{
+        let receipt=TurnReceipt{version:1,session_id:ID.into(),cwd:cwd.to_string_lossy().into_owned(),pid,proc_start:birth.to_string(),at_ms:at,event:event.into()};
+        fs::write(&path,serde_json::to_vec(&receipt).unwrap()).unwrap();
+        let boundary=turn_boundary(&f.sources.claude,ID,&cwd.to_string_lossy(),now_ms()).unwrap();
+        assert!(boundary_unchanged(&f.sources.claude,ID,&cwd.to_string_lossy(),&boundary));
+        assert!(turn_boundary(&f.sources.claude,ID,&cwd.to_string_lossy(),at+TTL_MS+1).is_none());
+        let resumed=TurnReceipt{at_ms:at+1,event:"UserPromptSubmit".into(),..receipt};
+        fs::write(&path,serde_json::to_vec(&resumed).unwrap()).unwrap();
+        assert!(!boundary_unchanged(&f.sources.claude,ID,&cwd.to_string_lossy(),&boundary));
+    }
 }

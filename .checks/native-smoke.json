@@ -84,8 +84,8 @@
   "error": null,
   "passed": true,
   "ready": [
-    "summary",
     "panel",
+    "summary",
     "pet"
   ],
   "uiErrors": []

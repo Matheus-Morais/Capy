@@ -103,6 +103,7 @@ pub(crate) fn session(agent: &str, kind: &str, id: &str, cwd: &str) -> Session {
         command: None,
         hidden: false,
         source_action: None,
+        completion: None,
     }
 }
 

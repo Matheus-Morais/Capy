@@ -254,6 +254,7 @@ fn exact_request_and_single_submission() {
         message: String::new(),
         hidden: false,
         source_action: None,
+        completion: None,
     };
     assert!(Source::from_session(&session, true).is_ok());
     assert_eq!(

@@ -3,6 +3,10 @@ import { action, desktopCommand, native, showError, snapshot, subscribe, respond
 import { escape, sessionRow, renderQuotas } from './presentation';
 import { pendingIntervention, interventionContext, captureInterventionAnswers, restoreInterventionAnswers } from './interventions-ui';
 import { runInterventionSubscriptionClick } from './intervention-subscription';
+import { renderPreferences } from './settings-ui';
+import { initializeAccounts } from './accounts-ui';
+import { renderHandoffs } from './handoff-ui';
+import { shouldCloseOnEscape } from './keyboard';
 
 const sessions = document.getElementById('sessions')!;
 const notice = document.getElementById('notice')!;
@@ -13,13 +17,15 @@ let latestSnapshot: Snapshot | undefined;
 let cancelQuotaExpiry: (() => void) | undefined;
 function render(data: Snapshot) {
   latestSnapshot = data;
+  renderPreferences(data);
+  renderHandoffs(data);
   const retained = captureInterventionAnswers(sessions.querySelectorAll<HTMLInputElement>('[data-question-answer],[data-free-answer]'), document.activeElement);
   if (realMode !== (data.scenario === 'real')) notice.textContent = '';
   realMode = data.scenario === 'real';
   const visible = data.sessions.filter(s => !s.hidden).sort((a,b) => Number(b.state === 'waiting') - Number(a.state === 'waiting'));
-  const waiting = visible.filter(s => s.state === 'waiting').length;
-  document.getElementById('subtitle')!.textContent = waiting ? `${waiting} sessões precisam de você` : `${visible.length} sessões acompanhadas`;
-  sessions.innerHTML = visible.length ? visible.map(s => sessionRow(s, realMode, data.interventions.filter(r => r.sessionId === s.id), data.subscriptions.find(sub => sub.sessionId === s.id))).join('') : realMode
+  const waiting = visible.filter(s => s.state === 'waiting').length + (data.chatTransfers??[]).length;
+  document.getElementById('subtitle')!.textContent = waiting ? `${waiting} pedidos precisam de você` : `${visible.length} sessões acompanhadas`;
+  sessions.innerHTML = visible.length ? visible.map(s => sessionRow(s, realMode, data.interventions.filter(r => r.sessionId === s.id), data.subscriptions.find(sub => sub.sessionId === s.id),data.chatTransfers?.find(review=>s.id===`chat:${review.sourceId}`))).join('') : realMode
     ? '<div class="empty"><h2>Nenhuma sessão visível.</h2><p>Abra uma sessão de Claude Code ou Codex. A lista é atualizada automaticamente a cada 5 segundos; sessões ocultas podem ser restauradas abaixo.</p></div>'
     : '<div class="empty"><h2>Tudo tranquilo por aqui.</h2><p>Restaure as sessões ocultas ou escolha outro cenário no painel completo.</p></div>';
   restoreInterventionAnswers(sessions.querySelectorAll<HTMLInputElement>('[data-question-answer],[data-free-answer]'), retained);
@@ -58,7 +64,7 @@ sessions.addEventListener('click', event => {
     button.disabled = true;
     button.setAttribute('aria-busy', 'true');
     void desktopCommand('open_source', { id }).then(() => {
-      notice.textContent = 'Abertura solicitada ao Codex.';
+      notice.textContent = 'Abertura solicitada para a conversa selecionada.';
     }).catch(showError).finally(() => {
       opening.delete(id);
       void snapshot().then(render).catch(showError);
@@ -122,6 +128,14 @@ document.querySelectorAll<HTMLButtonElement>('[data-scenario]').forEach(b => {
   b.addEventListener('click', () => { notice.textContent = ''; void action('scenario', '', b.dataset.scenario!).catch(showError); });
 });
 document.getElementById('reduceMotion')?.addEventListener('change', event => void action('motion', '', String((event.target as HTMLInputElement).checked)).catch(showError));
-document.addEventListener('keydown', event => { if (event.key === 'Escape') void desktopCommand('hide_window', { label: document.body.dataset.surface }).catch(showError); });
-async function start() { await subscribe(render); render(await snapshot()); await desktopCommand('ui_ready'); }
+document.addEventListener('keydown', event => {
+  const target=event.target instanceof Element?event.target:null;
+  if(shouldCloseOnEscape(event.key,{
+    defaultPrevented:event.defaultPrevented,composing:event.isComposing,
+    terminal:!!target?.closest('#terminalViewport'),
+    editing:!!target?.closest('input,textarea,select,[contenteditable="true"]'),
+    dialog:!!target?.closest('dialog,[role="dialog"]'),
+  }))void desktopCommand('hide_window', { label: document.body.dataset.surface }).catch(showError);
+});
+async function start() { await subscribe(render); render(await snapshot()); if(document.body.dataset.surface==='panel'){await (await import('./tasks-ui')).initializeTasks();await (await import('./chat-ui')).initializeChat();} await initializeAccounts(); await desktopCommand('ui_ready'); }
 void start().catch(showError);
