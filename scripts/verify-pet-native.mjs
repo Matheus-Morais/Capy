@@ -23,6 +23,8 @@ const liveTaskModel=process.argv.includes('--live-task-model');
 const liveTaskGuides=process.argv.includes('--live-task-guides');
 const liveTaskHandoff=process.argv.includes('--live-task-handoff');
 assert.ok([liveTaskControls,liveTaskModel,liveTaskGuides,liveTaskHandoff].filter(Boolean).length<=1,'Model, guides, handoff and interruption proofs run separately');
+const liveChatGuides=process.argv.includes('--live-chat-guides');
+assert.ok(!liveChatGuides||!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--live-task','--live-task-controls','--live-task-model','--live-task-guides','--live-task-handoff','--live-task-external'].includes(arg)),'Chat instruction capture runs separately with one short subscription call');
 const liveTaskMode=process.argv.includes('--live-task')||liveTaskControls||liveTaskModel||liveTaskGuides||liveTaskHandoff;
 const liveTaskExternal=process.argv.includes('--live-task-external');
 assert.ok(!(liveTaskExternal&&(liveTaskMode||process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review','--profiles-corrupt'].includes(arg)))),'External task proof runs separately');
@@ -140,10 +142,15 @@ try{
   const petTarget=await waitFor(async()=>ownTarget(await targets(),'/index.html')??ownTarget(await targets(),'/'),'Mascote nativa/CDP');
   let pet=await connect(petTarget);
   await waitFor(()=>pet.evaluate(`document.querySelector('#pet') instanceof SVGSVGElement && !!window.__TAURI_INTERNALS__`),'SVG carregado');
+  let panelShown=false,lastPanelError;
+  for(let attempt=0;attempt<30&&!panelShown;attempt++){
+    try{await pet.invoke('show_panel');panelShown=true;}
+    catch(error){lastPanelError=error;await delay(100);}
+  }
+  assert.ok(panelShown,`Painel nativo não ficou disponível: ${lastPanelError?.message??'sem resposta'}`);
   const panelTarget=await waitFor(async()=>ownTarget(await targets(),'/panel.html'),'Painel nativo/CDP');
   let panel=await connect(panelTarget);
   await waitFor(()=>panel.evaluate(`!!document.querySelector('#startTask') && !!document.querySelector('#accountList')`),'Controles do painel');
-  await pet.invoke('show_panel');
   check('native_panel_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
   await panel.screenshot('panel');
   await waitFor(()=>panel.evaluate(`!!document.querySelector('#chatCreateForm') && !!document.querySelector('#chatSendForm')`),'Controles de chat');
@@ -262,7 +269,7 @@ try{
     check('native_exit_unreadable_history_blocks_exit_and_shows_reason',unreadable&&!childExited&&JSON.parse(await readFile(path,'utf8')).futureField==='preserve me');
     Object.assign(exitFixture,{state:'failed',activeNonce:null,lastError:'Own state fixture ended; no provider call occurred.'});await writeFile(path,JSON.stringify(exitFixture));
   }
-  if(process.argv.includes('--live-chat')||process.argv.includes('--live-transfer')||process.argv.includes('--live-recovery')){
+  if(process.argv.includes('--live-chat')||process.argv.includes('--live-transfer')||process.argv.includes('--live-recovery')||liveChatGuides){
     await panel.invoke('demo_action',{action:'scenario',id:'',answer:'real'});
     const identity=await panel.invoke('profile_identity',{id:'claude-default',cwd:null});
     check('native_live_chat_pins_subscription_before_any_send',identity.loggedIn&&identity.billing==='subscription'&&!!identity.account);
@@ -274,8 +281,11 @@ try{
       await waitFor(()=>panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(alternateChat.id)}`),'Conversa ociosa própria exata selecionada');
       check('native_live_chat_opens_alternate_owned_uuid_before_send',alternateChat.id!==chat.id&&(await panel.invoke('list_chats')).find(value=>value.id===alternateChat.id)?.messages.length===0);
     }
-    const firstMarker=process.argv.includes('--live-recovery')?`CAPY_RECOVERY_${randomUUID()}`:'CAPY_NATIVE_CHAT_PROOF';
-    await panel.evaluate(`window.__capyChatProof=window.__TAURI_INTERNALS__.invoke('send_chat',{request:${JSON.stringify({id:chat.id,revision:chat.revision,nonce:randomUUID(),model:'sonnet',text:`Memorize este marcador para a próxima mensagem: ${firstMarker}. Responda apenas esse marcador. Não use ferramentas.`})}}); window.__capyChatProof.then(result=>{window.__capyChatProofResult=result;},error=>{window.__capyChatProofError=String(error);}); true`);
+    const firstMarker=process.argv.includes('--live-recovery')?`CAPY_RECOVERY_${randomUUID()}`:liveChatGuides?`CAPY_CHAT_GUIDE_${randomUUID()}`:'CAPY_NATIVE_CHAT_PROOF';
+    const chatWorkspace=join(root,'chat','workspaces',chat.id);
+    if(liveChatGuides){await mkdir(chatWorkspace,{recursive:true});await writeFile(join(chatWorkspace,'CLAUDE.md'),`When asked for the marker from this workspace instruction, reply only: ${firstMarker}`);}
+    const firstPrompt=liveChatGuides?`What exact marker does this workspace instruction give you? Reply with only the marker. Do not use tools.`:`Memorize este marcador para a próxima mensagem: ${firstMarker}. Responda apenas esse marcador. Não use ferramentas.`;
+    await panel.evaluate(`window.__capyChatProof=window.__TAURI_INTERNALS__.invoke('send_chat',{request:${JSON.stringify({id:chat.id,revision:chat.revision,nonce:randomUUID(),model:'sonnet',text:firstPrompt})}}); window.__capyChatProof.then(result=>{window.__capyChatProofResult=result;},error=>{window.__capyChatProofError=String(error);}); true`);
     await waitFor(()=>pet.evaluate(`document.querySelector('#pet').classList.contains('s-working')`),'Chat real mostra trabalho',30_000);
     check('native_live_chat_immediately_drives_working_pet',true);
     await waitFor(()=>pet.evaluate(`document.querySelector('#pet').classList.contains('g-celebrate')`),'Resultado real confirma comemoração',30_000);
@@ -339,12 +349,16 @@ try{
       check('native_recovery_resumes_original_uuid_and_context_with_new_message',continued.id===chat.id&&continued.model==='haiku'&&continued.messages.length===3&&continued.messages.at(-1).text.includes(firstMarker));
       check('native_recovery_uncertainty_remains_visible_after_new_success',continued.interruptions.length===1&&await panel.evaluate(`document.querySelector('#chatMessages').textContent.includes('Resposta deste envio indisponível')`));
     }
-    if(process.argv.includes('--live-transfer')){
+    if(process.argv.includes('--live-transfer')||liveChatGuides){
       await panel.evaluate(`document.querySelector('#chatCreateForm input[name="model"]').value='haiku';document.querySelector('#chatVerify').click();`);
       await waitFor(()=>panel.evaluate(`!document.querySelector('#chatPrepareTransfer').disabled`),'Destino verificado para transferência',15_000);
       await panel.evaluate(`document.querySelector('#chatPrepareTransfer').click()`);
       await waitFor(()=>panel.evaluate(`!!document.querySelector('#chatReview form[data-chat-review]')`),'Resumo revisável na interface',15_000);
       const review=await panel.invoke('chat_transfer_review',{sourceId:chat.id});
+      if(liveChatGuides){
+        check('native_live_chat_transfer_summary_contains_captured_path_and_text',review.summary.guides.includes(join(chatWorkspace,'CLAUDE.md'))&&review.summary.guides.includes(firstMarker));
+        check('native_live_chat_transfer_review_renders_captured_instruction',await panel.evaluate(`document.querySelector('#chatReview').textContent.includes(${JSON.stringify(firstMarker)})`));
+      }
       if(process.argv.includes('--live-recovery'))check('native_live_transfer_preserves_uncertainty_in_read_only_origin_warning',
         review.uncertainMessages?.[0]===0&&review.summary.state.includes('Mensagem 1: resultado indisponível')&&await panel.evaluate(`document.querySelector('[data-chat-uncertainty]')?.textContent.includes('mensagens 1 sem resposta confirmada')`));
       check('native_live_transfer_review_pins_source_destination_and_model',review.sourceId===chat.id&&review.destination.billing==='subscription'&&review.model==='haiku');
@@ -356,6 +370,7 @@ try{
       await panel.screenshot('transfer-review');
       const denied=await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('approve_chat_transfer',${JSON.stringify({sourceId:chat.id,nonce:review.nonce,summary:review.summary,reviewed:false,billingConfirmed:false})}).then(()=>false,()=>true)`);
       check('native_live_transfer_server_rejects_missing_review',denied);
+      if(process.argv.includes('--live-transfer')){
       const edited={...review.summary,objective:'Responda apenas CAPY_NATIVE_TRANSFER_PROOF, sem ferramentas.',decisions:'A validação anterior já terminou. Preserve seu contexto como referência; a nova solicitação é responder apenas CAPY_NATIVE_TRANSFER_PROOF.',state:'Última resposta recebida. Prossiga com o objetivo revisado.',nextSteps:'Responda somente CAPY_NATIVE_TRANSFER_PROOF. Não repita solicitações anteriores já concluídas.'};
       await panel.evaluate(`(()=>{const form=document.querySelector('#chatReview form');const values=${JSON.stringify(edited)};for(const [key,value] of Object.entries(values))form.elements.namedItem(key).value=value;form.elements.namedItem('reviewed').checked=true;form.requestSubmit();})()`);
       const destination=await waitFor(async()=>{const values=await panel.invoke('list_chats');const source=values.find(c=>c.id===chat.id);const target=values.find(c=>c.id===source?.transferredTo);if(target?.state==='failed')throw new Error(target.lastError);return target?.state==='completed'?target:null;},'Continuação real aprovada pelo formulário',40_000);
@@ -365,6 +380,7 @@ try{
       await waitFor(()=>panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(destination.id)}`),'Destino selecionado após aprovação');
       const replayDenied=await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('approve_chat_transfer',${JSON.stringify({sourceId:chat.id,nonce:review.nonce,summary:edited,reviewed:true,billingConfirmed:false})}).then(()=>false,()=>true)`);
       check('native_live_transfer_replay_does_not_create_another_destination',replayDenied&&(await panel.invoke('list_chats')).length===2);
+      }
     }
   }
   await pet.invoke('hide_window',{label:'panel'});

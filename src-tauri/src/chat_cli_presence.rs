@@ -48,6 +48,14 @@ fn ensure_directory(path: &Path) -> Result<(), String> {
     }
 }
 
+fn same_folder(a: &str, b: &str) -> bool {
+    Path::new(a)
+        .canonicalize()
+        .ok()
+        .zip(Path::new(b).canonicalize().ok())
+        .is_some_and(|(a, b)| a == b)
+}
+
 pub fn write(
     config: &Path,
     session: &str,
@@ -71,7 +79,11 @@ pub fn write(
     let lease = Lease {
         version: 1,
         session_id: session.into(),
-        cwd: cwd.to_string_lossy().into_owned(),
+        cwd: cwd
+            .canonicalize()
+            .map_err(|_| "Pasta do processo do chat mudou antes do registro.")?
+            .to_string_lossy()
+            .into_owned(),
         pid,
         proc_start: proc_start.to_string(),
         expires_at,
@@ -151,7 +163,7 @@ fn valid(
     };
     lease.version == 1
         && lease.session_id == session
-        && lease.cwd == cwd
+        && same_folder(&lease.cwd, cwd)
         && lease.pid == pid
         && lease.proc_start == proc_start.to_string()
         && lease.expires_at >= now
@@ -199,6 +211,14 @@ mod tests {
             birth,
             |id| { (id == pid).then_some(birth) }
         ));
+        let normalized = cwd.canonicalize().unwrap();
+        let alternate = format!(
+            r"\\?\{}",
+            normalized.to_string_lossy().trim_start_matches(r"\\?\")
+        );
+        assert!(valid(&path, &session, &alternate, pid, birth, now, |_| {
+            Some(birth)
+        }));
         assert!(!valid_for_config(
             &path.with_file_name("other.json"),
             &root,
