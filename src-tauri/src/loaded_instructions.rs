@@ -129,7 +129,7 @@ fn stored_bytes(path:&Path)->Result<Option<Vec<u8>>,String>{
     match File::open(path){Ok(file)=>read_bytes(file).map(Some),Err(e) if e.kind()==std::io::ErrorKind::NotFound=>Ok(None),Err(e)=>Err(e.to_string())}
 }
 fn exclusive(file:&File)->Result<(),String>{
-    for _ in 0..40{if file.try_lock().is_ok(){return Ok(());}std::thread::sleep(Duration::from_millis(10));}
+    for _ in 0..200{if file.try_lock().is_ok(){return Ok(());}std::thread::sleep(Duration::from_millis(10));}
     Err("Referências ocupadas; carga não registrada.".into())
 }
 pub fn record(config:&Path,session:&str,cwd:&Path,instruction:Instruction,at:u64)->Result<(),String>{

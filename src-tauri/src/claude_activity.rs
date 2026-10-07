@@ -19,10 +19,10 @@ struct Hook {
     hook_event_name: String,
     agent_id: Option<String>,
     notification_type: Option<String>,
-    file_path:Option<String>,
-    memory_type:Option<String>,
-    load_reason:Option<String>,
-    parent_file_path:Option<String>,
+    file_path:Option<serde_json::Value>,
+    memory_type:Option<serde_json::Value>,
+    load_reason:Option<serde_json::Value>,
+    parent_file_path:Option<serde_json::Value>,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -88,6 +88,17 @@ fn event_state(h: &Hook) -> Option<&'static str> {
         },
         _ => "unknown",
     })
+}
+fn capture_instruction(sources:&Sources,h:&Hook,at_ms:u64)->Result<(),()>{
+    let text=|value:&Option<serde_json::Value>|value.as_ref().and_then(serde_json::Value::as_str).map(str::to_owned);
+    let parent=match &h.parent_file_path{None=>Some(None),Some(value)=>value.as_str().map(|s|Some(s.to_owned()))};
+    let instruction=match (text(&h.file_path),text(&h.memory_type),text(&h.load_reason),parent){
+        (Some(file_path),Some(memory_type),Some(load_reason),Some(parent_file_path))=>crate::loaded_instructions::Instruction{file_path,memory_type,load_reason,parent_file_path},
+        _=>{let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,"record-failed");return Err(());}
+    };
+    let result=crate::loaded_instructions::record(&sources.claude,&h.session_id,Path::new(&h.cwd),instruction,at_ms);
+    let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,if result.is_ok(){"recorded"}else{"record-failed"});
+    result.map_err(|_|())
 }
 fn matches(o: &Observation, p: &Presence) -> bool {
     o.version == 1
@@ -188,10 +199,7 @@ pub fn collect() {
             return Err(());
         }
         if h.hook_event_name=="InstructionsLoaded"{
-            let instruction=crate::loaded_instructions::Instruction{file_path:h.file_path.ok_or(())?,memory_type:h.memory_type.ok_or(())?,load_reason:h.load_reason.ok_or(())?,parent_file_path:h.parent_file_path};
-            let result=crate::loaded_instructions::record(&sources.claude,&h.session_id,Path::new(&h.cwd),instruction,at_ms);
-            let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,if result.is_ok(){"recorded"}else{"record-failed"});
-            return result.map_err(|_|());
+            return capture_instruction(&sources,&h,at_ms);
         }
         let dir = directory(&sources);
         fs::create_dir_all(&dir).map_err(|_| ())?;

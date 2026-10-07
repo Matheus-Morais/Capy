@@ -109,6 +109,21 @@ fn event_contract() {
     }
 }
 #[test]
+fn instructions_loaded_invalid_metadata_records_failure_without_losing_later_evidence(){
+    let f=Fixture::new();let cwd=f.sources.claude.join("project");fs::create_dir(&cwd).unwrap();let cwd_text=cwd.to_string_lossy().into_owned();
+    let h:Hook=serde_json::from_value(serde_json::json!({"session_id":ID,"cwd":cwd_text,"hook_event_name":"InstructionsLoaded","file_path":7,"memory_type":"Project","load_reason":"session_start"})).unwrap();
+    assert!(capture_instruction(&f.sources,&h,100).is_err());
+    assert!(crate::loaded_instructions::load(&f.sources.claude,ID,&cwd).unwrap().is_none());
+    assert!(crate::loaded_instructions::collection_warning(&f.sources.claude,ID).unwrap().contains("Coleta incompleta"));
+    let missing:Hook=serde_json::from_value(serde_json::json!({"session_id":ID,"cwd":cwd_text,"hook_event_name":"InstructionsLoaded","file_path":"C:/guide.md","load_reason":"session_start"})).unwrap();
+    assert!(capture_instruction(&f.sources,&missing,150).is_err());
+    let guide=cwd.join("CLAUDE.md");fs::write(&guide,"Retain the valid event").unwrap();
+    let valid:Hook=serde_json::from_value(serde_json::json!({"session_id":ID,"cwd":cwd_text,"hook_event_name":"InstructionsLoaded","file_path":guide,"memory_type":"Project","load_reason":"session_start"})).unwrap();
+    capture_instruction(&f.sources,&valid,200).unwrap();
+    assert!(crate::loaded_instructions::load(&f.sources.claude,ID,&cwd).unwrap().unwrap().guides.iter().any(|g|g.text.as_deref()==Some("Retain the valid event")));
+    assert!(crate::loaded_instructions::collection_warning(&f.sources.claude,ID).unwrap().contains("Coleta incompleta"));
+}
+#[test]
 fn identity_expiry_and_limits() {
     let f = Fixture::new();
     let o = f.observation("working");
