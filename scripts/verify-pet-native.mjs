@@ -30,7 +30,7 @@ let quotaProfile,quotaOriginal;
 if(quotaSettings){
   const configDir=join(root,'own-claude-config');await mkdir(configDir);
   quotaProfile={id:'own-quota-settings',label:'Own quota settings fixture',provider:'Claude',configDir,billing:'subscription'};
-  quotaOriginal={model:'haiku',statusLine:{type:'command',command:'echo own-original',padding:2,refreshInterval:10},hooks:{Stop:[]},ownFutureValue:{preserve:'ação_日本語'}};
+  quotaOriginal={model:'haiku',statusLine:{type:'command',command:'echo capy_ação_日本語_🦫',padding:2,refreshInterval:10},hooks:{Stop:[]},ownFutureValue:{preserve:'ação_日本語'}};
   await writeFile(join(configDir,'settings.json'),JSON.stringify(quotaOriginal));
   await writeFile(join(root,'profiles.json'),JSON.stringify([quotaProfile]));
 }
@@ -433,6 +433,9 @@ try{
     await panel.invoke('connect_claude_quotas',{id:quotaProfile.id,enabled:true});
     const enabled=JSON.parse(await readFile(path,'utf8'));const active=await readFile(path);const backup=await readFile(bridgePath);
     check('native_quota_settings_connect_preserves_other_fields',enabled.model===quotaOriginal.model&&JSON.stringify(enabled.hooks)===JSON.stringify(quotaOriginal.hooks)&&JSON.stringify(enabled.ownFutureValue)===JSON.stringify(quotaOriginal.ownFutureValue)&&enabled.statusLine.command.includes('capy-quotas/statusline.ps1'));
+    const wrapper=promisify(execFile)('powershell.exe',['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',join(quotaProfile.configDir,'capy-quotas','statusline.ps1')],{windowsHide:true,timeout:20_000,maxBuffer:8192});
+    wrapper.child.stdin.end('{}\n');
+    check('native_quota_settings_embedded_wrapper_preserves_original_unicode_output',(await wrapper).stdout.trim()==='capy_ação_日本語_🦫');
     const rejects=()=>panel.invoke('connect_claude_quotas',{id:quotaProfile.id,enabled:false}).then(()=>false,()=>true);
     await writeFile(bridgePath,'{"invalid":true}');
     check('native_quota_settings_corrupt_bridge_blocks_disconnect',await rejects());

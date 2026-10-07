@@ -99,6 +99,8 @@ Preservação da statusline — decisão antes da implementação em 2026-10-07:
 
 Prova nativa desta preservação: `--quota-settings` usa perfil e settings.json exclusivos em scratch, sem login/envio a provedor. Exercitar conectar/desconectar pelo comando Tauri, corrupção/ausência do bridge, mudança externa e restauração íntegra. Não altera a statusline do usuário nem prova quotas reais; C11 real continua aberto.
 
+Porta do wrapper: bridge.json é UTF-8, inclusive quando o comando original contém Unicode; explicitar encoding na leitura PowerShell. Prova local `statusline wrapper preserves Unicode in the existing command` executa somente comando fixture próprio, inclusive quando o coletor falha, sem alterar a configuração do usuário. Alternativa rejeitada: encoding implícito Windows PowerShell, que corrompe acentos, japonês e emoji do comando original.
+
 **C12** — Limiares 50/60/70/80/90 editáveis/desativáveis e novos limiares; aviso único por conta/janela, saltos agrupados.
 Proof: `cargo test --manifest-path src-tauri/Cargo.toml quota_policy`
 

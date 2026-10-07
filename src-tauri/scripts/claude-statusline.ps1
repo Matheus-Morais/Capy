@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'SilentlyContinue'
 $OutputEncoding = [Text.UTF8Encoding]::new($false)
 $capyPayload = $input | Out-String
-$capyBridge = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'bridge.json') | ConvertFrom-Json
+$capyBridge = Get-Content -Encoding UTF8 -Raw -LiteralPath (Join-Path $PSScriptRoot 'bridge.json') | ConvertFrom-Json
 if ($capyBridge.original) {
     $capyPayload | & $capyBridge.executable --claude-statusline $capyBridge.configDir | Out-Null
     if ($capyBridge.bash) {
