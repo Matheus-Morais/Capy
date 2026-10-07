@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import {spawn} from 'node:child_process';
+import {spawn,execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 import {randomUUID} from 'node:crypto';
-import {mkdir, writeFile, readFile, stat} from 'node:fs/promises';
+import {mkdir, writeFile, readFile, stat,readdir} from 'node:fs/promises';
 import {createServer} from 'node:net';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -12,6 +13,8 @@ const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
 const exe=join(workspace,'src-tauri','target','release','capy.exe');
 await stat(exe);await mkdir(root,{recursive:true});
 let exitFixture;
+let liveTask,liveTaskProfile,liveTaskProcess,liveTaskPanel;
+if(process.argv.includes('--live-task'))assert.ok(!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)),'Interactive task proof must run separately');
 if(process.argv.includes('--exit-review')){
   assert.ok(!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery'].includes(arg)),'Exit state fixture must run separately from provider calls');
   exitFixture={id:randomUUID(),title:'Own exit state fixture',target:{kind:'api',profileId:randomUUID(),provider:'OpenAI',account:'Own exit fixture',billing:'api',credentialRevision:randomUUID()},model:'fixture-model',messages:[],revision:0,state:'idle',activeNonce:null,usedNonces:[],lastError:null,cliStarted:false,cliAttempted:false,processPolicy:null,recoveryReview:null,interruptions:[],transferredTo:null};
@@ -73,6 +76,33 @@ async function connect(target){
 const ownTarget=(values,path)=>values.find(target=>target.type==='page'
   && /^https?:\/\/tauri\.localhost\//.test(target.url)
   && new URL(target.url).pathname===path);
+const sameFolder=(a,b)=>a.replace(/^\\\\\?\\/,'').replaceAll('\\','/').toLowerCase()===b.replace(/^\\\\\?\\/,'').replaceAll('\\','/').toLowerCase();
+async function taskHistory(task,profile){
+  const projects=join(profile.configDir,'projects');const dirs=await readdir(projects,{withFileTypes:true});assert.ok(dirs.length<=2048);
+  let found;
+  for(const dir of dirs.filter(dir=>dir.isDirectory())){
+    const path=join(projects,dir.name,`${task.id}.jsonl`);let info;
+    try{info=await stat(path);}catch(error){if(error.code==='ENOENT')continue;throw error;}
+    assert.ok(info.size<=2_097_152);assert.ok(!found,'Own UUID appears in only one project');
+    const rows=(await readFile(path,'utf8')).split('\n').filter(Boolean).map(line=>{try{return JSON.parse(line);}catch{return null;}}).filter(Boolean);
+    found={path,rows};
+  }
+  return found;
+}
+async function processInfo(pid){
+  assert.ok(Number.isInteger(pid)&&pid>0&&pid<=0xffffffff);
+  const {stdout}=await promisify(execFile)('powershell.exe',['-NoProfile','-Command',`$p=Get-Process -Id ${pid} -ErrorAction SilentlyContinue; if($p){[pscustomobject]@{pid=$p.Id;started=$p.StartTime.ToUniversalTime().ToString('o');path=$p.Path}|ConvertTo-Json -Compress}else{'null'}`],{windowsHide:true,timeout:10_000,maxBuffer:4096});
+  return JSON.parse(stdout.trim());
+}
+async function taskProcess(task,profile){
+  const folder=join(profile.configDir,'sessions');const entries=await readdir(folder);assert.ok(entries.length<=4096);
+  for(const name of entries.filter(name=>name.endsWith('.json'))){
+    const path=join(folder,name);let value;
+    try{assert.ok((await stat(path)).size<=65_536);value=JSON.parse(await readFile(path,'utf8'));}catch(error){if(error.code==='ENOENT')continue;throw error;}
+    if(value.sessionId===task.id&&sameFolder(value.cwd,task.cwd))return processInfo(value.pid);
+  }
+  return null;
+}
 
 let failure;
 try{
@@ -92,6 +122,46 @@ try{
   await panel.evaluate(`document.querySelector('.chat-workbench > details').open=true;document.querySelector('#chatCreateForm').closest('details').open=true;document.querySelector('.chat-workbench').scrollIntoView({block:'start'})`);
   check('native_chat_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
   await panel.screenshot('chat');
+  if(process.argv.includes('--live-task')){
+    liveTaskPanel=panel;
+    const project=join(root,'own-task-project');await mkdir(project);
+    const marker=`CAPY_TASK_${randomUUID()}`;const instruction=`Responda apenas ${marker}. Não use ferramentas nem altere arquivos.`;
+    const profiles=await panel.invoke('list_profiles');liveTaskProfile=profiles.find(profile=>profile.id==='claude-default');assert.ok(liveTaskProfile);
+    const identity=await panel.invoke('profile_identity',{id:liveTaskProfile.id,cwd:project});
+    check('native_task_pins_subscription_before_launch',identity.loggedIn&&identity.billing==='subscription'&&!!identity.account);
+    await panel.evaluate(`(()=>{document.querySelector('#newTask').open=true;const form=document.querySelector('#startTask');form.elements.namedItem('profile').value='claude-default';form.elements.namedItem('cwd').value=${JSON.stringify(project)};form.elements.namedItem('cwd').dispatchEvent(new Event('input',{bubbles:true}));form.elements.namedItem('model').value='haiku';form.elements.namedItem('mode').value='embedded';form.elements.namedItem('prompt').value=${JSON.stringify(instruction)};document.querySelector('#verifyTaskAccount').click();})()`);
+    await waitFor(()=>panel.evaluate(`!document.querySelector('#startTask button[type="submit"]').disabled && document.querySelector('#taskBilling').textContent.includes('Assinatura Claude')`),'Conta do formulário de tarefa verificada',20_000);
+    await panel.evaluate(`document.querySelector('#startTask').requestSubmit();true`);
+    liveTask=await waitFor(async()=>{const tasks=await panel.invoke('list_tasks');return tasks.find(task=>sameFolder(task.cwd,project));},'Tarefa própria registrada',25_000);
+    check('native_task_form_keeps_exact_folder_account_model_prompt_and_mode',liveTask.profileId===liveTaskProfile.id&&liveTask.account===identity.account&&liveTask.billing==='subscription'&&liveTask.model==='haiku'&&liveTask.prompt===instruction&&liveTask.mode==='embedded');
+    await waitFor(()=>panel.evaluate(`!document.querySelector('#terminalSection').hidden && document.querySelector('#terminalIdentity').textContent.includes(${JSON.stringify(liveTask.id)})`),'Terminal anexado ao UUID próprio');
+    check('native_task_terminal_identity_matches_created_task',await panel.evaluate(`document.querySelector('#terminalIdentity').textContent.includes(${JSON.stringify(identity.account)}) && document.querySelector('#terminalTitle').textContent.includes('haiku')`));
+    check('native_task_terminal_is_visible_without_manual_scrolling',await panel.evaluate(`(()=>{const section=document.querySelector('#terminalSection').getBoundingClientRect();const viewport=document.querySelector('#terminalViewport').getBoundingClientRect();return section.top>=0&&section.top<50&&viewport.height>0&&viewport.bottom<=innerHeight;})()`));
+    const screen=()=>panel.evaluate(`document.querySelector('.xterm-rows')?.textContent??''`);let trusted=false;
+    const history=await waitFor(async()=>{
+      const text=await screen();await writeFile(join(root,'task-terminal-screen.txt'),text);
+      if(!trusted&&/Yes,\s*I\s*trust\s*this\s*folder/i.test(text)){
+        if(/❯\s*(?:\d+[.)]\s*)?No,?\s*exit/i.test(text)){await panel.invoke('terminal_input',{id:liveTask.id,data:'\u001b[B'});return null;}
+        if(/❯\s*(?:\d+[.)]\s*)?Yes,\s*I\s*trust\s*this\s*folder/i.test(text)){await panel.invoke('terminal_input',{id:liveTask.id,data:'\r'});trusted=true;}
+      }
+      const history=await taskHistory(liveTask,liveTaskProfile);
+      const response=history?.rows.find(row=>row.type==='assistant'&&row.sessionId===liveTask.id&&row.message?.content?.some(part=>part.type==='text'&&part.text.includes(marker)));
+      return response?{...history,response}:null;
+    },'Resposta real no histórico do UUID exato',60_000);
+    const user=history.rows.find(row=>row.type==='user'&&row.sessionId===liveTask.id&&row.isSidechain!==true);
+    check('native_task_provider_receipt_confirms_exact_uuid_folder_instruction_and_haiku',sameFolder(user.cwd,liveTask.cwd)&&JSON.stringify(user.message.content).includes(instruction)&&history.response.message.model.toLowerCase().includes('haiku'));
+    check('native_task_short_proof_does_not_execute_tools',!history.rows.some(row=>row.type==='assistant'&&row.message?.content?.some(part=>part.type==='tool_use')));
+    liveTaskProcess=await waitFor(()=>taskProcess(liveTask,liveTaskProfile),'Processo oficial da sessão própria');
+    check('native_task_has_live_official_claude_process',liveTaskProcess.path.toLowerCase().endsWith('claude.exe'));
+    await panel.evaluate(`document.querySelector('#terminalSection').scrollIntoView({block:'start'});true`);await panel.screenshot('task-terminal');
+    check('native_task_terminal_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
+    await panel.evaluate(`document.querySelector('#terminalModel').click();true`);
+    await waitFor(async()=>/Select.*model|Selecion.*modelo/i.test(await screen()),'Seletor oficial de modelo aberto');
+    check('native_task_model_control_opens_official_picker',true);await panel.screenshot('task-model-picker');
+    await panel.invoke('terminal_input',{id:liveTask.id,data:'\u001b'});
+    await waitFor(async()=>!/Select.*model|Selecion.*modelo/i.test(await screen()),'Seletor fecha sem novo envio');
+    await writeFile(join(root,'task-receipt.json'),JSON.stringify({task:liveTask,process:liveTaskProcess,historyPath:history.path,response:history.response},null,2));
+  }
   if(exitFixture){
     for(const connection of connections)connection.close();
     child.kill();await new Promise(resolve=>child.once('exit',resolve));
@@ -277,6 +347,19 @@ try{
   await pet.invoke('show_panel');
   await waitFor(()=>pet.evaluate(`!document.querySelector('#pet').classList.contains('g-wave')`),'Painel marca pedidos como vistos');
   check('native_panel_acknowledges_attention',true);
+  if(liveTask){
+    await panel.call('Page.enable');const review=await panel.invoke('prepare_exit_review');
+    check('native_task_exit_review_matches_only_owned_real_terminal',review.resources.length===1&&review.resources[0].kind==='terminal'&&review.resources[0].id===liveTask.id&&sameFolder(review.resources[0].cwd,liveTask.cwd)&&review.resources[0].account===liveTask.account);
+    await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('request_exit').catch(error=>{window.__capyExitError=String(error);});true`);
+    const dialog=await waitFor(()=>panel.takeDialog(),'Confirmação de saída do terminal Claude real');
+    check('native_task_exit_dialog_names_exact_session',dialog.type==='confirm'&&dialog.message.includes(liveTask.id)&&dialog.message.includes('fecha estes terminais integrados'));
+    await panel.call('Page.handleJavaScriptDialog',{accept:true});
+    const started=Date.now();while(!childExited&&Date.now()-started<10_000)await delay(100);check('native_task_approved_exit_closes_own_application',childExited);
+    let ownClosed=false,current;const processDeadline=Date.now()+10_000;
+    while(Date.now()<processDeadline){current=await processInfo(liveTaskProcess.pid);if(!current||current.started!==liveTaskProcess.started){ownClosed=true;break;}await delay(100);}
+    await writeFile(join(root,'task-exit.json'),JSON.stringify({originalProcess:liveTaskProcess,remainingProcess:current,ownClosed,appClosed:childExited},null,2));
+    check('native_task_approved_exit_closes_exact_claude_process',ownClosed);
+  }
   if(exitFixture){
     const review=await panel.invoke('prepare_exit_review');
     check('native_exit_completed_fixture_has_no_active_resource',review.resources.length===0);
@@ -291,6 +374,18 @@ try{
   }
 }catch(error){failure=error;}
 finally{
+  if(liveTask&&!childExited&&liveTaskPanel){
+    try{
+      if(failure){
+        await liveTaskPanel.screenshot('task-failure');
+        await writeFile(join(root,'task-replay-failure.json'),JSON.stringify(await liveTaskPanel.invoke('terminal_replay',{id:liveTask.id}),null,2));
+        await writeFile(join(root,'task-ui-failure.json'),JSON.stringify(await liveTaskPanel.evaluate(`({error:document.querySelector('#error')?.textContent,notice:document.querySelector('#terminalNotice')?.textContent,viewport:document.querySelector('#terminalViewport')?.innerHTML})`),null,2));
+      }
+      const review=await liveTaskPanel.invoke('prepare_exit_review');assert.ok(review.resources.every(resource=>resource.kind==='terminal'&&resource.id===liveTask.id));
+      await liveTaskPanel.evaluate(`window.__TAURI_INTERNALS__.invoke('confirm_exit',{nonce:${JSON.stringify(review.nonce)},confirmed:true}).catch(()=>{});true`);
+      await Promise.race([new Promise(resolve=>child.once('exit',resolve)),delay(5000)]);
+    }catch(error){await writeFile(join(root,'task-cleanup-error.txt'),String(error));}
+  }
   for(const connection of connections)connection.close();
   if(!childExited){child.kill();await Promise.race([new Promise(resolve=>child.once('exit',resolve)),delay(5000)]);}
   const report={passed:!failure,checks,error:failure?.stack??null,root};

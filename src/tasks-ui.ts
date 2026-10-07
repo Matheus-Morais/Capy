@@ -66,6 +66,7 @@ export async function initializeTasks():Promise<void>{
     const token=++attachment;
     attached=task;lastSequence=0;queued=[];replaying=true;terminalExited=false;
     section.hidden=false;
+    section.scrollIntoView({block:'start'});
     document.getElementById('terminalTitle')!.textContent=`Claude · ${task.model}`;
     document.getElementById('terminalIdentity')!.textContent=`${task.cwd} · ${task.account??'conta do perfil'} · ${billingLabel(task.billing)} · sessão ${task.id}`;
     if(!opened){term.open(document.getElementById('terminalViewport')!);opened=true;}else term.reset();
