@@ -160,6 +160,8 @@ Troca real no terminal — decisão antes do runner em 2026-10-07: `--live-task-
 
 Porta descoberta na prova: o registro da tarefa conserva o modelo de lançamento; depois de uma troca oficial, esse dado não prova o modelo atual. Título/lista da tarefa e confirmação de saída identificam explicitamente `modelo inicial`, sem inventar um modelo atual. O atual é controlado pelo CLI. Alternativa rejeitada: apresentar Haiku como atual após uma resposta Sonnet confirmada ou reescrever o registro a partir do texto do seletor. Prova: receipt Sonnet no mesmo UUID, teste `exit confirmation names exact resources and distinguishes uncertain consumption` e assertions nativas dos rótulos.
 
+Prova própria concluída: `node scripts/verify-pet-native.mjs --live-task-model` passou em 36 checks na raiz `scratch/capy-visual-fcd572a3-f875-4e75-ab25-f0258a47028e`. `model-switch-receipt.json` confirma Haiku → Sonnet 5.5, mesmo UUID `fb643a55-9283-4184-9889-e6380b8d3083` e mesma pasta própria; seletor oficial observado antes da escolha; resposta assistant Sonnet contém o marcador novo; settings originais inalterados e nenhuma ferramenta observada. O checklist também confirma rótulo “modelo inicial” na lista e saída revisada. Detalhes/capturas em `.checks/multifunction.visual.md`. C16 continua aberto para as operações restantes de conta/provedor e aprovações independentes.
+
 ### S4 — Iniciar, chat e origem · ~15 KB de fontes existentes · ~4k de leitura
 
 **C17** — Tarefa escolhe pasta/provedor/conta/modelo/instrução e abre CLI externo padrão ou terminal integrado.
