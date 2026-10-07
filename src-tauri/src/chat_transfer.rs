@@ -7,13 +7,20 @@ use std::{collections::HashSet,path::Path};
 pub struct Review {
     pub nonce:String,pub source_id:String,pub source_revision:u64,pub source_target:Target,
     pub destination:Target,pub model:String,pub summary:Summary,
+    #[serde(default)]
+    pub uncertain_messages:Vec<usize>,
 }
 #[derive(Deserialize,Serialize)]
+#[serde(deny_unknown_fields)]
 struct Journal {before_source:Conversation,source:Conversation,destination:Conversation,before_ids:Vec<String>,ids:Vec<String>}
 
 fn validate_journal(j:&Journal)->bool{
     let mut ids=HashSet::new();
+    let mut expected=j.before_source.clone();expected.state="transferred".into();
+    expected.transferred_to=Some(j.destination.id.clone());expected.revision=j.before_source.revision.saturating_add(1);
+    expected.used_nonces.push(j.source.used_nonces.last().cloned().unwrap_or_default());
     chat_history::valid(&j.before_source)&&eligible(&j.before_source)&&chat_history::valid(&j.source)&&chat_history::valid(&j.destination)
+        &&serde_json::to_value(&expected).ok()==serde_json::to_value(&j.source).ok()
         &&j.before_source.id==j.source.id&&j.before_source.revision.checked_add(1)==Some(j.source.revision)
         &&j.before_source.target==j.source.target&&j.source.used_nonces.len()==j.before_source.used_nonces.len()+1
         &&j.source.used_nonces.starts_with(&j.before_source.used_nonces)
@@ -52,23 +59,33 @@ pub fn recover(root:&Path)->Result<(),String>{
     apply(root,&journal)
 }
 
+fn uncertain_messages(source:&Conversation)->Vec<usize>{
+    let mut result:Vec<_>=source.interruptions.iter().map(|entry|entry.message_index).collect();result.sort_unstable();result
+}
+fn lost_results_note(source:&Conversation)->String{
+    if source.interruptions.is_empty(){return String::new();}
+    format!("Registro original da Capy — resultados perdidos:\n{}\nNão repetir automaticamente essas mensagens. A aprovação de recuperação não confirmou uma resposta ou ausência de consumo.",
+        uncertain_messages(source).into_iter().map(|index|format!("Mensagem {}: resultado indisponível; consumo pode ter ocorrido; revisado sem reenvio.",index+1)).collect::<Vec<_>>().join("\n"))
+}
+
 fn summary(store:&Store,source:&Conversation)->Summary{
     use crate::handoff_context::excerpt;
     let reference=format!("Histórico original integral: {} · {} mensagens · versão {}.",store.root.join(format!("{}.json",source.id)).display(),source.messages.len(),source.revision);
     let instructions=source.messages.iter().filter(|m|m.role=="user").map(|m|m.text.as_str()).collect::<Vec<_>>().join("\n\n");
     let dialogue=source.messages.iter().enumerate().rev().map(|(i,m)|format!("Mensagem {} [{}]:\n{}",i+1,m.role,m.text)).collect::<Vec<_>>().join("\n\n");
     let last=source.messages.last().map(|m|m.text.as_str()).unwrap_or("Conversa sem mensagens.");
+    let lost=lost_results_note(source);
     Summary{
         objective:excerpt(source.messages.iter().find(|m|m.role=="user").map(|m|m.text.as_str()).unwrap_or(&source.title),8_000),
         decisions:excerpt(&format!("Instruções recebidas, em ordem. Revise decisões e regras também nas respostas do histórico.\n\n{instructions}"),48_000),
-        state:excerpt(&format!("Estado observado: {}. Aviso: {}.\n{reference}\n\nHistórico do mais recente para o mais antigo:\n{dialogue}",source.state,source.last_error.as_deref().unwrap_or("nenhum")),60_000),
+        state:excerpt(&format!("Estado observado do último envio: {}. Aviso: {}.\n{reference}\n{lost}\n\nHistórico do mais recente para o mais antigo:\n{dialogue}",source.state,source.last_error.as_deref().unwrap_or("nenhum")),60_000),
         files:"O chat não executou ferramentas de arquivos. Alterações externas não foram verificadas; registre aqui os caminhos e o estado que precisam continuar.".into(),
         tests:"O chat não executou testes. Resultados mencionados no texto exigem confirmação; registre evidências e comandos reais antes de aprovar.".into(),
         next_steps:excerpt(&format!("Revise o que ainda precisa ser feito a partir da última mensagem:\n{last}\n\nNão repetir automaticamente mensagens anteriores nem tratar resposta parcial como conclusão."),12_000),
         guides:format!("{reference}\nAs instruções e respostas citadas acima preservam referências textuais. Nenhum plano/.md foi lido por ferramenta neste chat. Cite aqui os caminhos/seções e suas regras relevantes; referências externas mencionadas no texto precisam ser verificadas. Trechos extensos podem estar limitados com aviso: consulte o histórico integral antes de aprovar."),
     }
 }
-fn eligible(source:&Conversation)->bool{source.state!="working"&&source.state!="unknown"&&source.transferred_to.is_none()&&source.used_nonces.len()<200}
+fn eligible(source:&Conversation)->bool{source.state!="working"&&source.state!="unknown"&&source.transferred_to.is_none()&&source.used_nonces.len()<chat_history::MAX_NONCES}
 impl Store {
     fn review_for(&self,source:&Conversation)->Result<Option<Review>,String>{
         let path=self.root.join(format!("{}.review.json",source.id));
@@ -77,7 +94,8 @@ impl Store {
         if review.source_id!=source.id||!crate::discovery::uuid(&review.nonce)||!chat_history::valid_target(&review.source_target)
             ||!chat_history::valid_target(&review.destination)||!crate::chat_api::valid_model(&review.model){return Err("Revisão de chat incompatível; o arquivo foi preservado.".into());}
         review.summary.validate()?;
-        Ok((eligible(source)&&source.revision==review.source_revision&&source.target==review.source_target&&!source.used_nonces.contains(&review.nonce)).then_some(review))
+        Ok((eligible(source)&&source.revision==review.source_revision&&source.target==review.source_target
+            &&review.uncertain_messages==uncertain_messages(source)&&!source.used_nonces.contains(&review.nonce)).then_some(review))
     }
     pub fn transfer_reviews(&self)->Result<Vec<Review>,String>{
         let mut reviews=Vec::new();
@@ -93,7 +111,8 @@ impl Store {
         if review.source_id!=source_id||!crate::discovery::uuid(&review.nonce)||!chat_history::valid_target(&review.source_target)
             ||!chat_history::valid_target(&review.destination)||!crate::chat_api::valid_model(&review.model){return Err("Revisão incompatível; o arquivo foi preservado.".into());}
         review.summary.validate()?;
-        if !eligible(&source)||source.used_nonces.contains(&review.nonce)||source.revision!=review.source_revision||source.target!=review.source_target{return Err("A revisão expirou ou já foi usada; prepare um novo resumo.".into());}
+        if !eligible(&source)||source.used_nonces.contains(&review.nonce)||source.revision!=review.source_revision||source.target!=review.source_target
+            ||review.uncertain_messages!=uncertain_messages(&source){return Err("A revisão expirou ou já foi usada; prepare um novo resumo.".into());}
         Ok(review)
     }
     pub fn prepare_transfer(&self,source_id:&str,destination:Target,model:String)->Result<Review,String>{
@@ -106,7 +125,7 @@ impl Store {
         let source=self.read(source_id)?;
         if !eligible(&source)||!chat_history::valid_target(&destination)||!crate::chat_api::valid_model(&model){return Err("Aguarde um fim de turno confirmado e escolha um destino válido antes de transferir.".into());}
         self.review_for(&source)?;
-        let review=Review{nonce:uuid::Uuid::new_v4().to_string(),source_id:source.id.clone(),source_revision:source.revision,source_target:source.target.clone(),destination,model,summary:summary(self,&source)};
+        let review=Review{nonce:uuid::Uuid::new_v4().to_string(),source_id:source.id.clone(),source_revision:source.revision,source_target:source.target.clone(),destination,model,summary:summary(self,&source),uncertain_messages:uncertain_messages(&source)};
         review.summary.validate()?;
         settings::write_json_limit(&self.root.join(format!("{source_id}.review.json")),&review,2_097_152)?;Ok(review)
     }
@@ -116,14 +135,17 @@ impl Store {
             return Err("Revise o resumo e confirme as identidades exatas desta transferência.".into());
         }
         if review.source_target.billing!=review.destination.billing&&!billing_confirmed{return Err("Confirme a mudança de cobrança somente para esta transferência.".into());}
-        let prompt=edited.prompt();if prompt.len()>196_608{return Err("O resumo excede 192 KiB. Preserve referências e encurte os trechos antes de aprovar.".into());}
         self.available()?;let mut ids=self.ids.lock().map_err(|_|"Conversas indisponíveis.")?;
         self.consistent()?;
         let latest:Review=settings::read_json_limit(&self.root.join(format!("{source_id}.review.json")),2_097_152)?;
         if latest.nonce!=nonce{return Err("Uma nova revisão substituiu esta aprovação.".into());}
         let mut source=self.read(source_id)?;
         let before_source=source.clone();
-        if !eligible(&source)||source.revision!=review.source_revision||source.target!=review.source_target||source.used_nonces.iter().any(|n|n==nonce){return Err("A conversa mudou ou esta aprovação já foi usada.".into());}
+        if !eligible(&source)||source.revision!=review.source_revision||source.target!=review.source_target||source.used_nonces.iter().any(|n|n==nonce)
+            ||review.uncertain_messages!=uncertain_messages(&source)||latest.uncertain_messages!=review.uncertain_messages{return Err("A conversa mudou ou esta aprovação já foi usada.".into());}
+        let mut prompt=edited.prompt();let lost=lost_results_note(&source);
+        if !lost.is_empty(){prompt.push_str("\n\n");prompt.push_str(&lost);}
+        if prompt.len()>196_608{return Err("O resumo e os avisos de origem excedem 192 KiB. Preserve referências e encurte os trechos antes de aprovar.".into());}
         if ids.len()>=500{return Err("Limite de 500 conversas; nenhuma aprovação foi consumida.".into());}
         let send_nonce=uuid::Uuid::new_v4().to_string();
         let policy=(review.destination.kind=="claudeCli").then(||"windows-job-v1".into());
@@ -154,6 +176,51 @@ mod tests {
     use super::*;
     fn cli()->Target{Target{kind:"claudeCli".into(),profile_id:"claude-test".into(),provider:"Claude".into(),account:"test@example.invalid".into(),billing:"subscription".into(),credential_revision:None}}
     fn api()->Target{Target{kind:"api".into(),profile_id:uuid::Uuid::new_v4().to_string(),provider:"OpenAI".into(),account:"Local key".into(),billing:"api".into(),credential_revision:Some(uuid::Uuid::new_v4().to_string())}}
+    #[test]
+    fn chat_transfer_keeps_lost_results_after_success_and_edited_summary(){
+        let root=std::env::temp_dir().join(format!("capy-transfer-gaps-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
+        let chat=store.create("Uncertain result".into(),api(),"model".into()).unwrap();
+        let send=uuid::Uuid::new_v4().to_string();store.begin(&chat.id,0,send.clone(),"model".into(),"First instruction".into()).unwrap();
+        store.recover_interrupted().unwrap();let lost=store.get(&chat.id).unwrap();
+        let prepared=store.prepare_recovery(&chat.id,lost.revision,false).unwrap();let approval=prepared.recovery_review.unwrap().nonce;
+        let reviewed=store.approve_recovery(&chat.id,prepared.revision,&approval,true,&chat.target,false).unwrap();
+        let next=uuid::Uuid::new_v4().to_string();store.begin(&chat.id,reviewed.revision,next.clone(),"model".into(),"Different instruction".into()).unwrap();
+        store.finish(&chat.id,&next,Ok(crate::chat_api::Reply{text:"A later confirmed answer".into(),completed:true,note:None}),false).unwrap();
+        let source=store.get(&chat.id).unwrap();assert!(source.last_error.is_none());assert_eq!(source.state,"completed");
+        let target=api();let review=store.prepare_transfer(&chat.id,target.clone(),"model".into()).unwrap();
+        assert_eq!(review.uncertain_messages,vec![0]);assert!(review.summary.state.contains("Mensagem 1: resultado indisponível"));
+        assert!(review.summary.state.contains("consumo pode ter ocorrido"));assert!(review.summary.state.contains("A later confirmed answer"));
+        let mut edited=review.summary;edited.state="Latest answer received; continue the reviewed plan.".into();
+        let destination=store.approve_transfer(&chat.id,&review.nonce,edited,true,false,&source.target,&target).unwrap();
+        assert!(destination.messages[0].text.contains("Latest answer received"));
+        assert!(destination.messages[0].text.contains("Mensagem 1: resultado indisponível"));
+        assert!(destination.messages[0].text.contains("Não repetir automaticamente"));
+        let restored=Store::load(root.clone());let transferred=restored.get(&chat.id).unwrap();
+        assert_eq!(transferred.interruptions.len(),1);assert_eq!(transferred.interruptions[0].send_nonce,send);
+        assert_eq!(transferred.interruptions[0].approval_nonce,approval);assert_eq!(transferred.messages.len(),3);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn chat_transfer_journal_rejects_changes_outside_transfer_and_preserves_files(){
+        let root=std::env::temp_dir().join(format!("capy-journal-metadata-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
+        let base=store.create("Original title".into(),cli(),"sonnet".into()).unwrap();
+        store.begin(&base.id,0,uuid::Uuid::new_v4().to_string(),"sonnet".into(),"Lost result".into()).unwrap();store.recover_interrupted().unwrap();
+        let unknown=store.get(&base.id).unwrap();let recovery=store.prepare_recovery(&base.id,unknown.revision,false).unwrap();
+        let source=store.approve_recovery(&base.id,recovery.revision,&recovery.recovery_review.unwrap().nonce,true,&base.target,false).unwrap();
+        let review=store.prepare_transfer(&source.id,api(),"model".into()).unwrap();
+        let destination=store.approve_transfer(&source.id,&review.nonce,review.summary,true,true,&source.target,&review.destination).unwrap();
+        let transferred=store.get(&source.id).unwrap();
+        let mut journal=Journal{before_source:source.clone(),source:transferred,destination,before_ids:vec![source.id.clone()],ids:store.ids.lock().unwrap().clone()};
+        journal.source.title="Changed outside approval".into();
+        assert!(!validate_journal(&journal));
+        journal.source.title=source.title.clone();journal.source.interruptions.clear();assert!(!validate_journal(&journal));
+        // Partial commit: destination written, source/index still at the old state.
+        store.write(&source).unwrap();settings::write_json(&root.join("index.json"),&vec![source.id.clone()]).unwrap();
+        let path=root.join(format!("{}.json",source.id));let before=std::fs::read(&path).unwrap();
+        settings::write_json_limit(&root.join("transfer-pending.json"),&journal,8_388_608).unwrap();
+        assert!(recover(&root).is_err());assert_eq!(std::fs::read(&path).unwrap(),before);
+        assert!(root.join("transfer-pending.json").exists());std::fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn chat_transfer_requires_revision_identity_billing_single_nonce(){
         let root=std::env::temp_dir().join(format!("capy-transfer-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());

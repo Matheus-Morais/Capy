@@ -13,3 +13,13 @@ test('chat transfer exposes all review fields exact billing and fresh required c
   const same=chatTransferForm({...review,destination:target});
   assert.match(same,/name="reviewed" required/);assert.ok(!same.includes('name="billingConfirmed"'));
 });
+test('chat transfer shows lost results as source metadata outside editable summary fields',()=>{
+  const target={provider:'Claude',account:'Fixture',billing:'subscription'};
+  const review={nonce:'own',sourceTarget:target,destination:target,model:'haiku',uncertainMessages:[0,12],summary:Object.fromEntries(['objective','decisions','state','files','tests','nextSteps','guides'].map(key=>[key,'Reviewed text']))};
+  const html=chatTransferForm(review);
+  assert.match(html,/<p data-chat-uncertainty>/);assert.match(html,/mensagens 1, 13 sem resposta confirmada/);
+  assert.match(html,/Este aviso acompanha o contexto enviado ao destino/);
+  assert.doesNotMatch(html,/name="uncertainMessages"|contenteditable/);
+  assert.equal((html.match(/<textarea /g)??[]).length,7);
+  assert.doesNotMatch(chatTransferForm({...review,uncertainMessages:[]}),/data-chat-uncertainty/);
+});

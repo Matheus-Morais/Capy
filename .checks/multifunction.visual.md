@@ -62,3 +62,11 @@ A prova usou três turnos curtos próprios por assinatura. Depois do primeiro re
 A primeira execução falhou no check de layout, antes de aprovar a recuperação (`scratch/capy-visual-62482e39-c89b-485b-b0a5-348f5a29b650/report.json`). O consentimento herdava a grade dos formulários; recebeu o mesmo layout flex dos consentimentos de transferência. Não foi reduzida nenhuma assertion nem contada a falha como aprovação.
 
 Esta prova simula perda na persistência após resultado real; não prova uma falha de rede ou cancelamento durante geração. API real, sessões CLI antigas sem proteção comprovada, demais contas/provedores e o escopo completo continuam sem validação final. Suíte: 91 Rust aprovados, um opt-in ignorado; 29 JS aprovados; builds frontend/desktop e 20 checks de smoke aprovados. Revisão independente final continua pendente.
+
+## Avisos persistentes na transferência e capacidade da continuidade
+
+Em 2026-10-06, a build desktop passou e `node scripts/verify-pet-native.mjs --live-recovery --live-transfer` passou nos 40 checks em `scratch/capy-visual-d86c5056-5896-4eda-bf3b-bf86e061fe61/report.json`. A captura `transfer-review.png` foi aberta e inspecionada: o aviso de origem aparece legível antes dos campos editáveis, identifica a mensagem sem resposta confirmada e informa possível consumo e envio do aviso ao destino. O documento continua sem overflow horizontal.
+
+A prova nativa substitui o estado editável por texto sem o aviso de resultado perdido. Após aprovar, o contexto da nova conversa conserva o aviso original e a orientação de não repetir automaticamente a mensagem. O resultado posterior bem-sucedido não apagou o registro anterior. São três turnos curtos em conversas próprias Claude por assinatura; a perda é simulada no registro local depois de um resultado real confirmado, como na prova anterior.
+
+Suíte: 96 testes Rust aprovados, um opt-in ignorado; 30 JS aprovados; frontend e desktop build aprovados. Smoke nativo da mesma build passou em 20 checks, sem erros de frontend. Testes de armazenamento exercitaram 199 recuperações consecutivas, transferência após o limite de mensagens, reserva até 512 nonces, rejeição de replay e de metadados incompatíveis sem sobrescrever arquivos. Isso não prova API real, outras contas/provedores nem conclui os demais checks do plano. Revisão independente final permanece pendente.

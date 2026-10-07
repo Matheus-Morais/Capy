@@ -3,10 +3,10 @@ use serde::{Deserialize,Serialize};
 use std::{io::{BufRead,BufReader,Read},path::Path};
 
 #[derive(Clone,Deserialize,Serialize)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
 pub struct Review {pub id:String,pub nonce:String,pub revision:u64,pub target:Target,pub resume_cli:bool}
 #[derive(Clone,Deserialize,Serialize)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
 pub struct Interruption {pub message_index:usize,pub send_nonce:String,pub approval_nonce:String}
 
 pub fn valid_review(chat:&Conversation,review:&Review)->bool{
@@ -15,7 +15,7 @@ pub fn valid_review(chat:&Conversation,review:&Review)->bool{
         &&(!review.resume_cli||chat.target.kind=="claudeCli")
 }
 fn eligible(chat:&Conversation)->Result<(),String>{
-    if chat.state!="unknown"||chat.active_nonce.is_some()||chat.transferred_to.is_some()||chat.used_nonces.len()>=200
+    if chat.state!="unknown"||chat.active_nonce.is_some()||chat.transferred_to.is_some()||chat.used_nonces.len()>=crate::chat_history::MAX_NONCES-1
         ||chat.messages.last().is_none_or(|message|message.role!="user") {
         return Err("A conversa mudou ou não possui um envio incerto para revisar.".into());
     }
@@ -112,6 +112,28 @@ mod tests {
         store.begin(&chat.id,0,uuid::Uuid::new_v4().to_string(),"model".into(),"Never repeat this".into()).unwrap();
         if cli {let mut pending=store.get(&chat.id).unwrap();pending.cli_attempted=true;store.write(&pending).unwrap();}
         store.recover_interrupted().unwrap();store.get(&chat.id).unwrap()
+    }
+    #[test]
+    fn chat_recovery_capacity_retains_every_nonce_and_allows_full_history_transfer(){
+        let root=std::env::temp_dir().join(format!("capy-recovery-capacity-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
+        let target=Target{kind:"api".into(),profile_id:uuid::Uuid::new_v4().to_string(),provider:"OpenAI".into(),account:"Fixture".into(),billing:"api".into(),credential_revision:Some(uuid::Uuid::new_v4().to_string())};
+        let mut chat=store.create("Repeated lost results".into(),target,"model".into()).unwrap();let mut nonces=Vec::new();
+        for index in 0..199 {
+            let send=uuid::Uuid::new_v4().to_string();store.begin(&chat.id,chat.revision,send.clone(),"model".into(),format!("Unique instruction {index}")).unwrap();
+            store.recover_interrupted().unwrap();let unknown=store.get(&chat.id).unwrap();
+            let prepared=store.prepare_recovery(&chat.id,unknown.revision,false).unwrap();let approval=prepared.recovery_review.unwrap().nonce;
+            chat=store.approve_recovery(&chat.id,prepared.revision,&approval,true,&chat.target,false).unwrap();
+            nonces.extend([send,approval]);
+            if index==100 {assert!(store.begin(&chat.id,chat.revision,nonces[0].clone(),"model".into(),"Replay old request".into()).is_err());}
+        }
+        assert_eq!(chat.messages.len(),199);assert_eq!(chat.interruptions.len(),199);assert_eq!(chat.used_nonces,nonces);
+        assert!(store.begin(&chat.id,chat.revision,uuid::Uuid::new_v4().to_string(),"model".into(),"History is full".into()).is_err());
+        let restored=Store::load(root.clone());let review=restored.prepare_transfer(&chat.id,chat.target.clone(),"model".into()).unwrap();
+        for index in 0..199 {assert!(review.summary.state.contains(&format!("Mensagem {}: resultado indisponível",index+1)));}
+        let nonce=review.nonce.clone();restored.approve_transfer(&chat.id,&nonce,review.summary,true,false,&chat.target,&chat.target).unwrap();
+        nonces.push(nonce);assert_eq!(restored.get(&chat.id).unwrap().used_nonces,nonces);
+        assert_eq!(restored.get(&chat.id).unwrap().interruptions.len(),199);
+        std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
     fn chat_recovery_requires_fresh_approval_identity_and_keeps_uncertainty_without_send(){

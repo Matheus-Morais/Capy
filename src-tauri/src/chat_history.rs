@@ -2,8 +2,10 @@ use crate::{chat_api::Message, discovery, settings};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, path::PathBuf, sync::Mutex};
 
+pub(crate) const MAX_NONCES:usize=512;
+
 #[derive(Clone, Deserialize, Serialize, PartialEq)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
 pub struct Target {
     pub kind: String,
     pub profile_id: String,
@@ -14,7 +16,7 @@ pub struct Target {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
 pub struct Conversation {
     pub id: String,
     pub title: String,
@@ -56,12 +58,13 @@ pub(crate) fn valid_target(target: &Target) -> bool {
 
 pub(crate) fn valid(record: &Conversation) -> bool {
     let mut nonces=HashSet::new();
+    let mut lost_messages=HashSet::new();let mut lost_sends=HashSet::new();let mut approvals=HashSet::new();
     discovery::uuid(&record.id) && settings::valid_text(&record.title,80) && valid_target(&record.target)
         && crate::chat_api::valid_model(&record.model)
         && ["idle","working","completed","partial","failed","unknown","transferred"].contains(&record.state.as_str())
         && record.messages.len()<=200 && record.messages.iter().all(|m| ["user","assistant"].contains(&m.role.as_str()) && !m.text.trim().is_empty())
         && record.messages.iter().map(|m|m.text.len()).sum::<usize>()<=262_144
-        && record.used_nonces.len()<=200 && record.used_nonces.iter().all(|n|discovery::uuid(n)&&nonces.insert(n))
+        && record.used_nonces.len()<=MAX_NONCES && record.used_nonces.iter().all(|n|discovery::uuid(n)&&nonces.insert(n))
         && match record.active_nonce.as_ref() {
             Some(n) => record.state=="working" && record.used_nonces.contains(n),
             None => record.state!="working",
@@ -72,6 +75,8 @@ pub(crate) fn valid(record: &Conversation) -> bool {
         && record.recovery_review.as_ref().is_none_or(|review|crate::chat_recovery::valid_review(record,review))
         && record.interruptions.len()<=200 && record.interruptions.iter().all(|entry|
             record.messages.get(entry.message_index).is_some_and(|message|message.role=="user")
+            &&entry.send_nonce!=entry.approval_nonce&&lost_messages.insert(entry.message_index)
+            &&lost_sends.insert(&entry.send_nonce)&&approvals.insert(&entry.approval_nonce)
             &&record.used_nonces.contains(&entry.send_nonce)&&record.used_nonces.contains(&entry.approval_nonce))
 }
 
@@ -157,7 +162,7 @@ impl Store {
             return Err("O histórico CLI não foi confirmado. Prepare uma transferência revisada para uma nova conversa.".into());
         }
         if text.trim().is_empty() || text.len()>196_608 || record.messages.iter().map(|m|m.text.len()).sum::<usize>()+text.len()>196_608
-            || record.messages.len()>198 || record.used_nonces.len()>=200 {
+            || record.messages.len()>198 || record.used_nonces.len()>=MAX_NONCES-2 {
             return Err("Histórico cheio. Prepare uma transferência revisada antes de continuar.".into());
         }
         record.model=model;record.messages.push(Message{role:"user".into(),text});record.used_nonces.push(nonce.clone());
@@ -217,6 +222,39 @@ impl Store {
 mod tests {
     use super::*;
     fn target()->Target{Target{kind:"api".into(),profile_id:uuid::Uuid::new_v4().to_string(),provider:"OpenAI".into(),account:"Local key label".into(),billing:"api".into(),credential_revision:Some(uuid::Uuid::new_v4().to_string())}}
+    #[test]
+    fn chat_nonce_capacity_reserves_recovery_transfer_and_rejects_overflow_without_pruning(){
+        let root=std::env::temp_dir().join(format!("capy-nonce-reserve-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
+        let mut chat=store.create("Reserved capacity".into(),target(),"model".into()).unwrap();
+        chat.used_nonces=(0..509).map(|_|uuid::Uuid::new_v4().to_string()).collect();store.write(&chat).unwrap();
+        assert!(store.begin(&chat.id,0,chat.used_nonces[0].clone(),"model".into(),"Replay".into()).is_err());
+        let send=uuid::Uuid::new_v4().to_string();store.begin(&chat.id,0,send,"model".into(),"Last possible send".into()).unwrap();
+        store.recover_interrupted().unwrap();let unknown=store.get(&chat.id).unwrap();
+        let reviewed=store.prepare_recovery(&chat.id,unknown.revision,false).unwrap();
+        let recovered=store.approve_recovery(&chat.id,reviewed.revision,&reviewed.recovery_review.unwrap().nonce,true,&chat.target,false).unwrap();
+        assert_eq!(recovered.used_nonces.len(),511);assert!(recovered.used_nonces.starts_with(&chat.used_nonces));
+        assert!(store.begin(&chat.id,recovered.revision,uuid::Uuid::new_v4().to_string(),"model".into(),"No remaining reserve".into()).is_err());
+        let review=store.prepare_transfer(&chat.id,chat.target.clone(),"model".into()).unwrap();
+        store.approve_transfer(&chat.id,&review.nonce,review.summary,true,false,&chat.target,&chat.target).unwrap();
+        let transferred=Store::load(root.clone()).get(&chat.id).unwrap();assert_eq!(transferred.used_nonces.len(),512);assert!(transferred.used_nonces.starts_with(&chat.used_nonces));
+        let before=std::fs::read(root.join(format!("{}.json",chat.id))).unwrap();
+        let mut overflow=transferred;overflow.used_nonces.push(uuid::Uuid::new_v4().to_string());assert!(store.write(&overflow).is_err());
+        assert_eq!(std::fs::read(root.join(format!("{}.json",chat.id))).unwrap(),before);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn chat_history_preserves_unknown_metadata_and_rejects_duplicate_interruption_receipts(){
+        let root=std::env::temp_dir().join(format!("capy-history-metadata-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
+        let chat=store.create("Future fields".into(),target(),"model".into()).unwrap();
+        store.begin(&chat.id,0,uuid::Uuid::new_v4().to_string(),"model".into(),"Uncertain".into()).unwrap();store.recover_interrupted().unwrap();
+        let unknown=store.get(&chat.id).unwrap();let prepared=store.prepare_recovery(&chat.id,unknown.revision,false).unwrap();
+        let mut approved=store.approve_recovery(&chat.id,prepared.revision,&prepared.recovery_review.unwrap().nonce,true,&chat.target,false).unwrap();
+        approved.interruptions.push(approved.interruptions[0].clone());assert!(!valid(&approved));assert!(store.write(&approved).is_err());
+        let path=root.join(format!("{}.json",chat.id));let mut value=serde_json::to_value(store.get(&chat.id).unwrap()).unwrap();
+        value["futureMetadata"]=serde_json::json!({"retain":"do not erase"});std::fs::write(&path,value.to_string()).unwrap();
+        let before=std::fs::read(&path).unwrap();assert!(Store::load(root.clone()).list().is_err());
+        assert_eq!(std::fs::read(&path).unwrap(),before);std::fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn chat_cli_attempt_survives_interruption_without_assuming_result_or_resending(){
         let root=std::env::temp_dir().join(format!("capy-chat-attempt-{}",uuid::Uuid::new_v4()));

@@ -40,6 +40,15 @@ Sugestões para discutir, ainda não aprovadas e sem alterar o escopo implementa
 
 Questão aberta: permitir gestos espontâneos discretos durante ociosidade ou restringir reações a eventos e interações? A recomendação é permitir os discretos, interrompidos por trabalho/pedidos e desativados por reduzir movimento.
 
+Retorno adicional solicitado pelo usuário (propostas, sem autorização de implementação):
+- Ao receber um pedido de atenção: aceno e indicação da sessão correspondente; com vários pedidos, mostrar a quantidade e dar acesso à lista, evitando sobrepor gestos.
+- Durante espera observada por resposta: postura atenta, distinta do teclado de programação; não inferir raciocínio a partir de silêncio.
+- Ao retornar de uma pausa: espreguiçar-se brevemente; em ociosidade, variar entre bocejo, ajuste de postura e uma folhinha.
+- Personalidade configurável: intensidade discreta, normal ou expressiva; modo foco mantém indicações e reduz gestos espontâneos.
+- Prioridade proposta para animações concorrentes: pedido de ação, falha confirmada, trabalho, conclusão breve, ociosidade. A indicação de atenção permanece disponível mesmo quando o gesto termina.
+
+Próxima decisão de personalidade: gestos espontâneos discretos quando ociosa (recomendado), somente reações a eventos, ou personalidade com deslocamento pela tela. Deslocamento permanece fora do escopo aprovado.
+
 ## Interfaces
 
 Reutilizar snapshot/eventos Tauri e adaptadores existentes. Acrescentar preferências persistidas, perfis de conta e recursos declarados por provedor. Não oferecer operações cuja integração não exista. Toda continuação mantém identidade da sessão/pedido/conta e revalida antes da execução. UI de demonstração continua explicitamente separada.
