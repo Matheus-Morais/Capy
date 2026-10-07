@@ -118,13 +118,23 @@ fn transcript(profile:&Profile,id:&str)->Option<PathBuf>{
 }
 pub fn build_summary(task:&Task,profile:&Profile)->Result<Summary,String>{
     let path=transcript(profile,&task.id).ok_or("O histórico da sessão exata não foi encontrado. Abra a conversa original antes de tentar preparar a continuação.")?;
-    let context=handoff_context::load(&path)?;
+    let mut context=handoff_context::load(&path)?;
+    let automatic=match crate::loaded_instructions::load(&profile.config_dir,&task.id,&task.cwd){
+        Ok(Some(evidence))=>{
+            context.partial|=evidence.partial;
+            let references=evidence.guides.iter().map(|g|format!("- {} · {} · {}{}",g.instruction.file_path,g.instruction.memory_type,g.instruction.load_reason,g.instruction.parent_file_path.as_ref().map(|p|format!(" · importado por {p}")).unwrap_or_default())).collect::<Vec<_>>().join("\n");
+            let excerpts=evidence.guides.iter().map(|g|format!("Arquivo: {}\nConsulta no hook em {}ms; conteúdo não é cópia garantida do contexto interno do CLI:\n{}",g.instruction.file_path,g.observed_at,g.text.as_deref().unwrap_or("Conteúdo não recuperado; confira o arquivo e a sessão original."))).collect::<Vec<_>>().join("\n\n");
+            format!("Referências automáticas observadas por InstructionsLoaded:\n{references}\n\nTrechos consultados no hook:\n{excerpts}\n\nO registro contém somente eventos observados; confira referências ausentes antes de aprovar.")
+        },
+        Ok(None)=>{context.partial=true;"Sem registro InstructionsLoaded desta sessão; complete as referências carregadas automaticamente antes de aprovar.".into()},
+        Err(error)=>{context.partial=true;format!("Referências automáticas indisponíveis: {error} Confira a origem antes de aprovar.")},
+    };
     if context.answers.is_empty() && context.instructions.is_empty() {
         return Err("O histórico não contém mensagens recuperáveis. Não foi possível preparar um resumo comprovável.".into());
     }
     let history=format!("Histórico original da sessão: {}",path.display());
     let warning=if context.partial {
-        "\nAVISO: histórico parcial ou trechos limitados. Confira o histórico original e complete o resumo antes de aprovar."
+        "\nAVISO: contexto parcial (histórico ou instruções) ou trechos limitados. Confira a origem e complete o resumo antes de aprovar."
     }else{""};
     let instructions=context.instructions.iter().rev().take(8).rev().cloned().collect::<Vec<_>>().join("\n\n");
     let answers=context.answers.iter().rev().take(8).rev().cloned().collect::<Vec<_>>().join("\n\n");
@@ -154,7 +164,7 @@ pub fn build_summary(task:&Task,profile:&Profile)->Result<Summary,String>{
     let pending=next_steps(&context);
     let guides=context.guides.iter().map(|(path,read)|format!("Arquivo: {path}\n{}",
         if read.is_empty(){"Leitura solicitada, mas seu conteúdo/resultados não foram observados."}else{read})).collect::<Vec<_>>().join("\n\n");
-    let guides=excerpt(&format!("{}\n\nArquivos carregados automaticamente pelo CLI não são presumidos como lidos: complete aqui suas referências/regras caso o histórico não as registre.\n\n{history}{warning}",
+    let guides=excerpt(&format!("{automatic}\n\nLeituras explícitas de .md no histórico:\n{}\n\nArquivos carregados automaticamente pelo CLI não são presumidos como lidos: complete aqui suas referências/regras caso o histórico não as registre.\n\n{history}{warning}",
         if guides.is_empty(){"Nenhuma leitura explícita de .md identificada."}else{&guides}),40_000);
     let objective=excerpt(&format!("Instrução inicial:\n{}\n\nInstruções posteriores registradas:\n{instructions}\n\n{history}{warning}",task.prompt),40_000);
     let summary=Summary{objective,decisions,state,files,tests:tests_text,next_steps:excerpt(&format!("{pending}\n\n{history}{warning}"),24_000),guides};
@@ -317,6 +327,19 @@ mod tests{
         std::fs::remove_dir_all(root).unwrap();
     }
 
+    #[test]
+    fn handoff_summary_includes_observed_automatic_instructions(){
+        let root=std::env::temp_dir().join(format!("capy-auto-summary-{}",uuid::Uuid::new_v4()));let cwd=root.join("project");let config=root.join("config");
+        std::fs::create_dir_all(&cwd).unwrap();std::fs::create_dir_all(config.join("projects/fixture")).unwrap();
+        let task=Task{id:uuid::Uuid::new_v4().to_string(),profile_id:"p".into(),account:Some("a".into()),billing:"subscription".into(),model:"haiku".into(),cwd:cwd.clone(),prompt:"Keep the contract".into(),mode:"embedded".into(),created_at:0};
+        let profile=Profile{id:"p".into(),label:"Own fixture".into(),provider:"Claude".into(),config_dir:config.clone(),billing:"subscription".into()};
+        std::fs::write(config.join("projects/fixture").join(format!("{}.jsonl",task.id)),"{\"type\":\"user\",\"message\":{\"content\":\"Keep the contract\"}}\n{\"type\":\"assistant\",\"message\":{\"content\":\"Next: test it\"}}").unwrap();
+        let guide=cwd.join("plan.md");std::fs::write(&guide,"# Contract\nPreserve public fields").unwrap();
+        let instruction=crate::loaded_instructions::Instruction{file_path:guide.to_string_lossy().into(),memory_type:"Project".into(),load_reason:"include".into(),parent_file_path:Some(cwd.join("CLAUDE.md").to_string_lossy().into())};
+        crate::loaded_instructions::record(&config,&task.id,&cwd,instruction,100).unwrap();std::fs::write(&guide,"changed after load").unwrap();
+        let summary=build_summary(&task,&profile).unwrap();assert!(summary.guides.contains("plan.md"));assert!(summary.guides.contains("CLAUDE.md"));assert!(summary.guides.contains("Preserve public fields"));assert!(summary.guides.contains("include"));assert!(!summary.guides.contains("changed after load"));
+        assert_eq!(root.parent(),Some(std::env::temp_dir().as_path()));assert!(root.file_name().unwrap().to_string_lossy().starts_with("capy-auto-summary-"));std::fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn handoff_summary_rejects_combined_prompt_over_task_limit(){
         let text="x".repeat(40_000);

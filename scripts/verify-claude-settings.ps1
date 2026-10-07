@@ -12,6 +12,7 @@ try {
     if ([IO.File]::ReadAllText($settings) -cne $once) { throw 'Enable is not idempotent' }
     $config = $once | ConvertFrom-Json
     if ($config.hooks.Stop.Count -ne 2 -or $config.hooks.Stop[0].hooks[0].command -ne 'echo existing') { throw 'Existing hooks changed' }
+    if ($config.hooks.InstructionsLoaded.Count -ne 1 -or $config.hooks.InstructionsLoaded[0].hooks[0].command -notlike '*--claude-hook') { throw 'Automatic instructions hook missing' }
     New-Item -ItemType Directory -Force -Path (Join-Path $dir 'capy-activity') | Out-Null
     [IO.File]::WriteAllText((Join-Path $dir 'capy-activity/stale.json'),'{}')
     & "$PSScriptRoot/claude-hooks.ps1" -Action Disable -ConfigDir $dir -CapyExe $exe | Out-Null

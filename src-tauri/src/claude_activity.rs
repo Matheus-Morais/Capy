@@ -19,6 +19,10 @@ struct Hook {
     hook_event_name: String,
     agent_id: Option<String>,
     notification_type: Option<String>,
+    file_path:Option<String>,
+    memory_type:Option<String>,
+    load_reason:Option<String>,
+    parent_file_path:Option<String>,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -172,17 +176,22 @@ pub fn collect() {
             return Ok(());
         }
         let (pid, start) = process::claude_ancestor().ok_or(())?;
-        let p: Presence = read_json(
-            File::open(sources.claude.join("sessions").join(format!("{pid}.json")))
-                .map_err(|_| ())?,
-            RECORD_LIMIT,
-        )?;
+        let presence: Result<Presence,()> = File::open(sources.claude.join("sessions").join(format!("{pid}.json"))).map_err(|_|()).and_then(|file|read_json(file,RECORD_LIMIT));
+        if h.hook_event_name=="InstructionsLoaded"&&presence.is_err(){let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,"presence-unavailable");}
+        let p: Presence = presence?;
         if p.pid != pid
             || p.session_id != h.session_id
             || p.cwd != h.cwd
             || p.proc_start != start.to_string()
         {
+            if h.hook_event_name=="InstructionsLoaded"{let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,"presence-mismatch");}
             return Err(());
+        }
+        if h.hook_event_name=="InstructionsLoaded"{
+            let instruction=crate::loaded_instructions::Instruction{file_path:h.file_path.ok_or(())?,memory_type:h.memory_type.ok_or(())?,load_reason:h.load_reason.ok_or(())?,parent_file_path:h.parent_file_path};
+            let result=crate::loaded_instructions::record(&sources.claude,&h.session_id,Path::new(&h.cwd),instruction,at_ms);
+            let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,if result.is_ok(){"recorded"}else{"record-failed"});
+            return result.map_err(|_|());
         }
         let dir = directory(&sources);
         fs::create_dir_all(&dir).map_err(|_| ())?;

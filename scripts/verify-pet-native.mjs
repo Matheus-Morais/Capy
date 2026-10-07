@@ -10,6 +10,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {verifyLiveTaskControls} from './verify-live-task-controls.mjs';
 import {verifyLiveTaskModel} from './verify-live-task-model.mjs';
 import {externalTaskProof} from './verify-live-task-external.mjs';
+import {instructionProof} from './verify-live-task-guides.mjs';
 
 const workspace=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
@@ -18,8 +19,9 @@ await stat(exe);await mkdir(root,{recursive:true});
 let exitFixture;
 const liveTaskControls=process.argv.includes('--live-task-controls');
 const liveTaskModel=process.argv.includes('--live-task-model');
-assert.ok(!(liveTaskControls&&liveTaskModel),'Model and interruption proofs run separately');
-const liveTaskMode=process.argv.includes('--live-task')||liveTaskControls||liveTaskModel;
+const liveTaskGuides=process.argv.includes('--live-task-guides');
+assert.ok([liveTaskControls,liveTaskModel,liveTaskGuides].filter(Boolean).length<=1,'Model, guides and interruption proofs run separately');
+const liveTaskMode=process.argv.includes('--live-task')||liveTaskControls||liveTaskModel||liveTaskGuides;
 const liveTaskExternal=process.argv.includes('--live-task-external');
 assert.ok(!(liveTaskExternal&&(liveTaskMode||process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review','--profiles-corrupt'].includes(arg)))),'External task proof runs separately');
 let externalProof;
@@ -166,6 +168,8 @@ try{
     const project=join(root,'own-task-project');await mkdir(project);
     const marker=`CAPY_TASK_${randomUUID()}`;const instruction=`Responda apenas ${marker}. Não use ferramentas nem altere arquivos.`;
     const profiles=await panel.invoke('list_profiles');liveTaskProfile=profiles.find(profile=>profile.id==='claude-default');assert.ok(liveTaskProfile);
+    const guideProof=liveTaskGuides?instructionProof({panel,root,project,profile:liveTaskProfile,check,waitFor,sameFolder,taskHistory}):null;
+    await guideProof?.prepare();
     const identity=await panel.invoke('profile_identity',{id:liveTaskProfile.id,cwd:project});
     check('native_task_pins_subscription_before_launch',identity.loggedIn&&identity.billing==='subscription'&&!!identity.account);
     await panel.evaluate(`(()=>{document.querySelector('#newTask').open=true;const form=document.querySelector('#startTask');form.elements.namedItem('profile').value='claude-default';form.elements.namedItem('cwd').value=${JSON.stringify(project)};form.elements.namedItem('cwd').dispatchEvent(new Event('input',{bubbles:true}));form.elements.namedItem('model').value='haiku';form.elements.namedItem('mode').value='embedded';form.elements.namedItem('prompt').value=${JSON.stringify(instruction)};document.querySelector('#verifyTaskAccount').click();})()`);
@@ -195,6 +199,8 @@ try{
     check('native_task_has_live_official_claude_process',liveTaskProcess.path.toLowerCase().endsWith('claude.exe'));
     await panel.evaluate(`document.querySelector('#terminalSection').scrollIntoView({block:'start'});true`);await panel.screenshot('task-terminal');
     check('native_task_terminal_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
+    await guideProof?.verify(liveTask);
+    await panel.evaluate(`document.querySelector('#terminalSection').scrollIntoView({block:'start'});true`);
     await panel.evaluate(`document.querySelector('#terminalModel').click();true`);
     await waitFor(async()=>/Select.*model|Selecion.*modelo/i.test(await screen()),'Seletor oficial de modelo aberto');
     check('native_task_model_control_opens_official_picker',true);await panel.screenshot('task-model-picker');
@@ -348,7 +354,9 @@ try{
   await pet.screenshot('working');
   const box=await pet.evaluate(`(()=>{const r=document.querySelector('#petToggle').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};})()`);
   const x=box.x+box.width*.8,y=box.y+box.height*.6;
+  await pet.call('Input.dispatchMouseEvent',{type:'mouseMoved',x:0,y:0});
   await pet.call('Input.dispatchMouseEvent',{type:'mouseMoved',x,y});
+  await waitFor(()=>pet.evaluate(`document.querySelector('#pet').classList.contains('is-hovered') && document.querySelector('#pet').style.getPropertyValue('--gaze-x')!==''`),'Hover e gaze após evento WebView');
   check('native_hover_gaze',await pet.evaluate(`document.querySelector('#pet').classList.contains('is-hovered') && document.querySelector('#pet').style.getPropertyValue('--gaze-x')!==''`));
   await pet.screenshot('hover');
   await pet.call('Input.dispatchMouseEvent',{type:'mouseMoved',x:0,y:0});

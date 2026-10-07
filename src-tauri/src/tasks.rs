@@ -114,8 +114,8 @@ fn task_arguments(task:&Task,root:&Path)->Result<Vec<String>,String>{
     let shell_path=|p:&Path|->Result<String,String>{let text=p.to_string_lossy();let text=text.strip_prefix(r"\\?\").unwrap_or(&text).replace('\\',"/");if text.chars().any(|c|matches!(c,'"'|'$'|'`'|'\n'|'\r')){return Err("Caminho incompatível com hooks do CLI.".into());}Ok(text)};
     let command=format!("powershell -NoProfile -ExecutionPolicy Bypass -File \"{}\" -CapyExe \"{}\"",shell_path(&hook)?,shell_path(&exe)?);
     let mut hooks=serde_json::Map::new();
-    for event in ["SessionStart","UserPromptSubmit","PreToolUse","PermissionRequest","PermissionDenied","PostToolUse","PostToolUseFailure","PostToolBatch","Notification","Stop","StopFailure","SessionEnd"]{
-        hooks.insert(event.into(),serde_json::json!([{"hooks":[{"type":"command","command":command,"timeout":2}]}]));
+    for event in ["SessionStart","InstructionsLoaded","UserPromptSubmit","PreToolUse","PermissionRequest","PermissionDenied","PostToolUse","PostToolUseFailure","PostToolBatch","Notification","Stop","StopFailure","SessionEnd"]{
+        hooks.insert(event.into(),serde_json::json!([{"hooks":[{"type":"command","command":command,"timeout":if event=="InstructionsLoaded"{10}else{2}}]}]));
     }
     let settings=root.join("task-settings.json");settings::write_json(&settings,&serde_json::json!({"hooks":hooks}))?;
     let mut args=vec!["--session-id".into(),task.id.clone(),"--model".into(),task.model.clone(),"--settings".into(),settings.to_string_lossy().into_owned()];

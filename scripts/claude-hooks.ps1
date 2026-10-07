@@ -15,7 +15,7 @@ $config = if ($null -ne $original) { $original | ConvertFrom-Json } else { [pscu
 if ($null -eq $config -or $config -isnot [pscustomobject]) { throw 'Settings must be a JSON object' }
 if (-not $config.PSObject.Properties['hooks']) { $config | Add-Member hooks ([pscustomobject]@{}) }
 if ($null -eq $config.hooks -or $config.hooks -isnot [pscustomobject]) { throw 'hooks must be a JSON object' }
-$events = @('SessionStart','UserPromptSubmit','PreToolUse','PermissionRequest','PermissionDenied','PostToolUse','PostToolUseFailure','PostToolBatch','Notification','Stop','StopFailure','SessionEnd')
+$events = @('SessionStart','InstructionsLoaded','UserPromptSubmit','PreToolUse','PermissionRequest','PermissionDenied','PostToolUse','PostToolUseFailure','PostToolBatch','Notification','Stop','StopFailure','SessionEnd')
 foreach ($event in $events) {
     $groups = @()
     if ($config.hooks.PSObject.Properties[$event]) {
@@ -26,7 +26,7 @@ foreach ($event in $events) {
             elseif ($kept.Count -gt 0) { $group.hooks = $kept; $groups += $group }
         }
     }
-    if ($Action -eq 'Enable') { $groups += [pscustomobject]@{ hooks = @([pscustomobject]@{ type='command'; command=$command; timeout=2 }) } }
+    if ($Action -eq 'Enable') { $groups += [pscustomobject]@{ hooks = @([pscustomobject]@{ type='command'; command=$command; timeout=$(if($event -eq 'InstructionsLoaded'){10}else{2}) }) } }
     if ($groups.Count -gt 0) {
         if ($config.hooks.PSObject.Properties[$event]) { $config.hooks.$event = $groups }
         else { $config.hooks | Add-Member $event $groups }

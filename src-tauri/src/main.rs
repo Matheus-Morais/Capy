@@ -30,6 +30,7 @@ mod tasks;
 mod routing;
 mod handoff;
 mod handoff_context;
+mod loaded_instructions;
 mod smoke;
 mod source_access;
 
