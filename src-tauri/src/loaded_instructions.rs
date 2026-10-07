@@ -175,6 +175,21 @@ pub fn load(config:&Path,session:&str,cwd:&Path)->Result<Option<Evidence>,String
     let bytes=stored_bytes(&file_path)?.ok_or("Registro de referências mudou durante a leitura.")?;
     let evidence:Evidence=serde_json::from_slice(&bytes).map_err(|_|"Referências de instruções inválidas; registro preservado.")?;validate(&evidence,session,cwd)?;Ok(Some(evidence))
 }
+pub fn render(config:&Path,session:&str,cwd:&Path)->Result<Option<String>,String>{
+    let warning=collection_warning(config,session);
+    let Some(evidence)=load(config,session,cwd)?else{return Ok(warning);};
+    let mut text=String::from("Instruções observadas automaticamente pelo hook InstructionsLoaded da Capy:\n");
+    for guide in &evidence.guides{
+        use std::fmt::Write as _;
+        let _=writeln!(text,"- {} [{}; {}; pai: {}]",guide.instruction.file_path,guide.instruction.memory_type,
+            guide.instruction.load_reason,guide.instruction.parent_file_path.as_deref().unwrap_or("nenhum"));
+        if let Some(contents)=&guide.text{let _=writeln!(text,"  Trecho capturado:\n{}",contents);}
+        if guide.partial{text.push_str("  Captura parcial ou arquivo indisponível; consulte a origem.\n");}
+    }
+    if evidence.partial{text.push_str("A coleta está incompleta; confira arquivos e imports ausentes na origem.\n");}
+    if let Some(warning)=warning{text.push_str(&warning);}
+    Ok(Some(crate::handoff_context::excerpt(&text,48_000)))
+}
 
 #[cfg(test)]
 mod tests{

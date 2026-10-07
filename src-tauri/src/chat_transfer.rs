@@ -68,7 +68,7 @@ fn lost_results_note(source:&Conversation)->String{
         uncertain_messages(source).into_iter().map(|index|format!("Mensagem {}: resultado indisponível; consumo pode ter ocorrido; revisado sem reenvio.",index+1)).collect::<Vec<_>>().join("\n"))
 }
 
-fn summary(store:&Store,source:&Conversation)->Summary{
+fn summary(store:&Store,source:&Conversation,loaded_guides:Option<&str>)->Summary{
     use crate::handoff_context::excerpt;
     let reference=format!("Histórico original integral: {} · {} mensagens · versão {}.",store.root.join(format!("{}.json",source.id)).display(),source.messages.len(),source.revision);
     let instructions=source.messages.iter().filter(|m|m.role=="user").map(|m|m.text.as_str()).collect::<Vec<_>>().join("\n\n");
@@ -82,7 +82,10 @@ fn summary(store:&Store,source:&Conversation)->Summary{
         files:"O chat não executou ferramentas de arquivos. Alterações externas não foram verificadas; registre aqui os caminhos e o estado que precisam continuar.".into(),
         tests:"O chat não executou testes. Resultados mencionados no texto exigem confirmação; registre evidências e comandos reais antes de aprovar.".into(),
         next_steps:excerpt(&format!("Revise o que ainda precisa ser feito a partir da última mensagem:\n{last}\n\nNão repetir automaticamente mensagens anteriores nem tratar resposta parcial como conclusão."),12_000),
-        guides:format!("{reference}\nAs instruções e respostas citadas acima preservam referências textuais. Nenhum plano/.md foi lido por ferramenta neste chat. Hooks foram desativados nesta execução; a Capy não tem evidência dos CLAUDE.md/imports carregados automaticamente pelo CLI. Revise e cite aqui os caminhos/seções e regras relevantes; referências externas mencionadas no texto precisam ser verificadas. Trechos extensos podem estar limitados com aviso: consulte o histórico integral antes de aprovar."),
+        guides:format!("{reference}\nAs instruções e respostas citadas acima preservam referências textuais. Nenhum plano/.md foi lido por ferramenta neste chat. {} Referências externas mencionadas no texto precisam ser verificadas. Trechos extensos podem estar limitados com aviso: consulte o histórico integral antes de aprovar.",
+            loaded_guides.map(|guides|format!("{guides}\nA captura automática pode ser parcial; verifique a origem antes de aprovar."))
+                .unwrap_or_else(||if source.target.kind=="claudeCli"{"Este chat não forneceu evidência de CLAUDE.md/imports carregados automaticamente pelo CLI. Revise e cite os caminhos/seções e regras relevantes.".into()}
+                    else{"A origem é um chat de API; referências automáticas de instruções do CLI não se aplicam.".into()})),
     }
 }
 fn eligible(source:&Conversation)->bool{source.state!="working"&&source.state!="unknown"&&source.transferred_to.is_none()&&source.used_nonces.len()<chat_history::MAX_NONCES}
@@ -115,7 +118,11 @@ impl Store {
             ||review.uncertain_messages!=uncertain_messages(&source){return Err("A revisão expirou ou já foi usada; prepare um novo resumo.".into());}
         Ok(review)
     }
+    #[cfg(test)]
     pub fn prepare_transfer(&self,source_id:&str,destination:Target,model:String)->Result<Review,String>{
+        self.prepare_transfer_with_guides(source_id,destination,model,None)
+    }
+    pub fn prepare_transfer_with_guides(&self,source_id:&str,destination:Target,model:String,loaded_guides:Option<&str>)->Result<Review,String>{
         self.available()?;let ids=self.ids.lock().map_err(|_|"Conversas indisponíveis.")?;
         self.consistent()?;
         if !ids.iter().any(|id|id==source_id){return Err("Conversa não encontrada.".into());}
@@ -125,7 +132,7 @@ impl Store {
         let source=self.read(source_id)?;
         if !eligible(&source)||!chat_history::valid_target(&destination)||!crate::chat_api::valid_model(&model){return Err("Aguarde um fim de turno confirmado e escolha um destino válido antes de transferir.".into());}
         self.review_for(&source)?;
-        let review=Review{nonce:uuid::Uuid::new_v4().to_string(),source_id:source.id.clone(),source_revision:source.revision,source_target:source.target.clone(),destination,model,summary:summary(self,&source),uncertain_messages:uncertain_messages(&source)};
+        let review=Review{nonce:uuid::Uuid::new_v4().to_string(),source_id:source.id.clone(),source_revision:source.revision,source_target:source.target.clone(),destination,model,summary:summary(self,&source,loaded_guides),uncertain_messages:uncertain_messages(&source)};
         review.summary.validate()?;
         settings::write_json_limit(&self.root.join(format!("{source_id}.review.json")),&review,2_097_152)?;Ok(review)
     }
@@ -201,13 +208,17 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
-    fn chat_transfer_discloses_disabled_instruction_hooks_for_cli_source(){
+    fn chat_transfer_discloses_missing_instruction_evidence_for_cli_source(){
         let root=std::env::temp_dir().join(format!("capy-transfer-guides-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
         let source=store.create("Review loaded instructions".into(),cli(),"haiku".into()).unwrap();
         let review=store.prepare_transfer(&source.id,api(),"model".into()).unwrap();
-        assert!(review.summary.guides.contains("Hooks foram desativados nesta execução"));
-        assert!(review.summary.guides.contains("não tem evidência dos CLAUDE.md/imports"));
-        assert!(review.summary.guides.contains("Revise e cite aqui os caminhos/seções"));
+        assert!(review.summary.guides.contains("não forneceu evidência de CLAUDE.md/imports"));
+        assert!(review.summary.guides.contains("Revise e cite os caminhos/seções"));
+        let loaded="Instruções observadas automaticamente:\n- C:/chat/CLAUDE.md [Project; session_start; pai: nenhum]\nTrecho capturado: preserve a saída";
+        let next=store.create("Review captured instructions".into(),cli(),"haiku".into()).unwrap();
+        let review=store.prepare_transfer_with_guides(&next.id,api(),"model".into(),Some(loaded)).unwrap();
+        assert!(review.summary.guides.contains("C:/chat/CLAUDE.md"));
+        assert!(review.summary.guides.contains("preserve a saída"));
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]

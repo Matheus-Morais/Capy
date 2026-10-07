@@ -6,6 +6,7 @@ mod credential_vault;
 mod chat_api;
 mod chat_history;
 mod chat_cli;
+mod chat_cli_presence;
 mod chat_process;
 mod chat_recovery;
 mod chat_commands;
@@ -578,7 +579,8 @@ fn main() {
         return;
     }
     if args.iter().any(|a| a == "--claude-hook") {
-        claude_activity::collect();
+        let lease=args.iter().position(|a|a=="--chat-lease").and_then(|i|args.get(i+1)).map(PathBuf::from);
+        claude_activity::collect(lease.as_deref());
         return;
     }
     if let Some(path) = args

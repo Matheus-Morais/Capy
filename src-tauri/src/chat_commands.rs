@@ -143,9 +143,13 @@ pub async fn prepare_chat_transfer(app:tauri::AppHandle,source_id:String,request
     tauri::async_runtime::spawn_blocking(move||{
         let store=app.state::<Arc<chat_history::Store>>();let source=store.get(&source_id)?;
         if ["working","unknown"].contains(&source.state.as_str()){return Err("Aguarde um fim de turno confirmado antes de transferir.".into());}
-        verify_target(&app,&source.target,Some(&store.workspace(&source.id)?))?;
+        let workspace=store.workspace(&source.id)?;
+        let source_transport=verify_target(&app,&source.target,Some(&workspace))?;
+        let loaded_guides=source_transport.profile.as_ref().map(|profile|
+            crate::loaded_instructions::render(&profile.config_dir,&source.id,&workspace)
+                .unwrap_or_else(|error|Some(format!("Não foi possível ler referências capturadas: {error}")))).flatten();
         let destination=request_target(&app,&request)?;verify_target(&app,&destination,None)?;
-        let review=store.prepare_transfer(&source_id,destination,request.model)?;
+        let review=store.prepare_transfer_with_guides(&source_id,destination,request.model,loaded_guides.as_deref())?;
         crate::chat_presence::refresh(&app);Ok(review)
     }).await.map_err(|_|"Não foi possível preparar a revisão.".to_owned())?
 }

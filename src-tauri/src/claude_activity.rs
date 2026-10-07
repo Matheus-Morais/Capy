@@ -171,7 +171,7 @@ fn cleanup(dir: &Path, birth: impl Fn(u32) -> Option<u64>) {
     }
 }
 
-pub fn collect() {
+pub fn collect(chat_lease:Option<&Path>) {
     // Hook failures never influence Claude's permission flow and never expose its input.
     let at_ms = now_ms();
     let _ = (|| -> Result<(), ()> {
@@ -187,17 +187,25 @@ pub fn collect() {
             return Ok(());
         }
         let (pid, start) = process::claude_ancestor().ok_or(())?;
-        let presence: Result<Presence,()> = File::open(sources.claude.join("sessions").join(format!("{pid}.json"))).map_err(|_|()).and_then(|file|read_json(file,RECORD_LIMIT));
-        if h.hook_event_name=="InstructionsLoaded"&&presence.is_err(){let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,"presence-unavailable");}
-        let p: Presence = presence?;
-        if p.pid != pid
-            || p.session_id != h.session_id
-            || p.cwd != h.cwd
-            || p.proc_start != start.to_string()
-        {
-            if h.hook_event_name=="InstructionsLoaded"{let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,"presence-mismatch");}
-            return Err(());
-        }
+        let presence_path=sources.claude.join("sessions").join(format!("{pid}.json"));
+        let proc_start=match File::open(&presence_path){
+            Ok(file)=>{
+                let p:Presence=read_json(file,RECORD_LIMIT)?;
+                if p.pid!=pid||p.session_id!=h.session_id||p.cwd!=h.cwd||p.proc_start!=start.to_string(){
+                    if h.hook_event_name=="InstructionsLoaded"{let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,"presence-mismatch");}
+                    return Err(());
+                }
+                p.proc_start
+            }
+            Err(error) if error.kind()==std::io::ErrorKind::NotFound=>{
+                if chat_lease.is_some_and(|path|crate::chat_cli_presence::valid_for_config(path,&sources.claude,&h.session_id,&h.cwd,pid,start,discovery::process_birth)){start.to_string()}
+                else{
+                    if h.hook_event_name=="InstructionsLoaded"{let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,"presence-unavailable");}
+                    return Err(());
+                }
+            }
+            Err(_)=>return Err(()),
+        };
         if h.hook_event_name=="InstructionsLoaded"{
             return capture_instruction(&sources,&h,at_ms);
         }
@@ -216,7 +224,7 @@ pub fn collect() {
                 session_id: h.session_id.clone(),
                 cwd: h.cwd.clone(),
                 pid,
-                proc_start: p.proc_start,
+                proc_start: proc_start.clone(),
                 at_ms,
                 state: state.into(),
             };

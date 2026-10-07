@@ -75,11 +75,13 @@ mod windows {
 
     pub struct OwnedChild {
         process:Handle,
+        pid:u32,
         job:Option<Handle>,
         pub stdin:Option<File>,
         pub stdout:Option<File>,
     }
     impl OwnedChild {
+        pub fn id(&self)->u32{self.pid}
         pub fn try_wait(&mut self)->io::Result<Option<ExitStatus>>{
             use std::os::windows::process::ExitStatusExt;
             match unsafe{WaitForSingleObject(self.process.0,0)} {
@@ -134,7 +136,7 @@ mod windows {
             CREATE_NO_WINDOW|CREATE_UNICODE_ENVIRONMENT|EXTENDED_STARTUPINFO_PRESENT,env.as_ptr().cast(),cwd.as_ptr(),&startup.StartupInfo,&mut info)};
         if created==0{return Err(io::Error::last_os_error());}
         let process=Handle(info.hProcess);let _thread=Handle(info.hThread);
-        Ok(OwnedChild{process,job:Some(job),stdin:Some(input.into_file()),stdout:Some(output.into_file())})
+        Ok(OwnedChild{process,pid:info.dwProcessId,job:Some(job),stdin:Some(input.into_file()),stdout:Some(output.into_file())})
     }
 
     #[cfg(test)]
