@@ -35,6 +35,7 @@ export async function verifyLiveTaskModel({panel,task,profile,root,check,waitFor
   const after=await settings();
   check('native_model_switch_preserves_user_default_settings_bytes',before===null?after===null:after!==null&&before.equals(after));
   check('native_model_switch_labels_launch_model_without_claiming_current_model',await panel.evaluate(`document.querySelector('#terminalTitle').textContent.includes('modelo inicial: haiku') && document.querySelector('#managedTasks').textContent.includes('modelo inicial: haiku')`));
+  check('native_model_switch_terminal_renderer_fits_its_visible_background',await panel.evaluate(`(()=>{const viewport=document.querySelector('#terminalViewport').getBoundingClientRect();const screen=document.querySelector('#terminalViewport .xterm-screen').getBoundingClientRect();return screen.top>=viewport.top&&screen.left>=viewport.left&&screen.bottom<=viewport.bottom&&screen.right<=viewport.right;})()`));
   await writeFile(join(root,'model-switch-receipt.json'),JSON.stringify({taskId:task.id,cwd:task.cwd,historyPath:receipt.history.path,response:receipt.response,settingsUnchanged:true,settingsHash:before&&createHash('sha256').update(before).digest('hex')},null,2));
   await panel.screenshot('model-switch-result');
 }

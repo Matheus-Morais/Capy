@@ -9,6 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
 import {verifyLiveTaskControls} from './verify-live-task-controls.mjs';
 import {verifyLiveTaskModel} from './verify-live-task-model.mjs';
+import {externalTaskProof} from './verify-live-task-external.mjs';
 
 const workspace=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
@@ -19,6 +20,9 @@ const liveTaskControls=process.argv.includes('--live-task-controls');
 const liveTaskModel=process.argv.includes('--live-task-model');
 assert.ok(!(liveTaskControls&&liveTaskModel),'Model and interruption proofs run separately');
 const liveTaskMode=process.argv.includes('--live-task')||liveTaskControls||liveTaskModel;
+const liveTaskExternal=process.argv.includes('--live-task-external');
+assert.ok(!(liveTaskExternal&&(liveTaskMode||process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review','--profiles-corrupt'].includes(arg)))),'External task proof runs separately');
+let externalProof;
 const corruptProfiles=process.argv.includes('--profiles-corrupt');
 const incompatibleProfiles='[{"futureProfileVersion":2,"opaque":"preserve exact bytes"}]\r\n';
 if(corruptProfiles){
@@ -103,7 +107,7 @@ async function taskHistory(task,profile){
 }
 async function processInfo(pid){
   assert.ok(Number.isInteger(pid)&&pid>0&&pid<=0xffffffff);
-  const {stdout}=await promisify(execFile)('powershell.exe',['-NoProfile','-Command',`$p=Get-Process -Id ${pid} -ErrorAction SilentlyContinue; if($p){[pscustomobject]@{pid=$p.Id;started=$p.StartTime.ToUniversalTime().ToString('o');path=$p.Path}|ConvertTo-Json -Compress}else{'null'}`],{windowsHide:true,timeout:10_000,maxBuffer:4096});
+  const {stdout}=await promisify(execFile)('powershell.exe',['-NoProfile','-Command',`$ErrorActionPreference='Stop'; for($attempt=0;$attempt -lt 4;$attempt++){ $p=Get-Process -Id ${pid} -ErrorAction SilentlyContinue; if(-not $p -or $p.HasExited){'null';exit}; $started=$p.StartTime; $path=$p.Path; if($started -and $path){[pscustomobject]@{pid=$p.Id;started=$started.ToUniversalTime().ToString('o');path=$path}|ConvertTo-Json -Compress;exit}; Start-Sleep -Milliseconds 25 }; throw 'Identidade do processo indisponível.'`],{windowsHide:true,timeout:10_000,maxBuffer:4096});
   return JSON.parse(stdout.trim());
 }
 async function taskProcess(task,profile){
@@ -410,8 +414,15 @@ try{
     check('native_profiles_exit_event_closes_own_application',childExited);
     check('native_profiles_incompatible_bytes_preserved_after_exit',await readFile(join(root,'profiles.json'),'utf8')===incompatibleProfiles);
   }
+  if(liveTaskExternal){
+    externalProof=externalTaskProof({panel,root,check,waitFor,taskHistory,sameFolder,appExited:()=>childExited});
+    await externalProof.verify();
+  }
 }catch(error){failure=error;}
 finally{
+  if(externalProof){
+    try{await externalProof.cleanup();}catch(error){failure??=error;await writeFile(join(root,'external-cleanup-error.txt'),String(error));}
+  }
   if(liveTask&&!childExited&&liveTaskPanel){
     try{
       if(failure){
