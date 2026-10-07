@@ -19,6 +19,44 @@ pub struct Guide {pub instruction:Instruction,pub text:Option<String>,pub observ
 pub struct Evidence {version:u8,session_id:String,cwd:PathBuf,pub guides:Vec<Guide>,pub partial:bool}
 
 fn path(config:&Path,session:&str)->PathBuf{config.join("capy-guides").join(format!("{session}.json"))}
+fn store_lock(config:&Path,create:bool)->Result<Option<File>,String>{
+    let dir=config.join("capy-guides");
+    if create{std::fs::create_dir_all(&dir).map_err(|e|e.to_string())?;}
+    match std::fs::symlink_metadata(&dir){
+        Ok(m) if m.file_type().is_dir()=>{},
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound&&!create=>return Ok(None),
+        _=>return Err("Diretório de referências incompatível.".into()),
+    }
+    let lock=dir.join(".store.lock");
+    match std::fs::symlink_metadata(&lock){
+        Ok(m) if m.file_type().is_file()=>{},
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound=>{},
+        _=>return Err("Mutex de referências incompatível.".into()),
+    }
+    OpenOptions::new().create(true).truncate(false).read(true).write(true).open(lock).map(Some).map_err(|e|e.to_string())
+}
+fn recognized_session_asset(name:&str)->Option<&str>{
+    for suffix in [".status.json",".json",".lock"]{
+        if let Some(id)=name.strip_suffix(suffix).filter(|id|crate::discovery::uuid(id)){return Some(id);}
+    }
+    let name=name.strip_prefix('.')?;
+    let (session,tail)=name.split_once(".status.json.").or_else(||name.split_once(".json."))?;
+    let temp=tail.strip_suffix(".pending")?;
+    if crate::discovery::uuid(session)&&crate::discovery::uuid(temp){Some(session)}else{None}
+}
+pub fn prune(config:&Path,retained:&[String])->Result<(),String>{
+    if retained.len()>2_048||retained.iter().any(|id|!crate::discovery::uuid(id)){return Err("Lista de sessões retidas incompatível; cache preservado.".into());}
+    let ids=retained.iter().map(String::as_str).collect::<std::collections::HashSet<_>>();
+    let Some(lock)=store_lock(config,false)?else{return Ok(());};exclusive(&lock)?;
+    let dir=config.join("capy-guides");let mut entries=Vec::new();
+    for entry in std::fs::read_dir(&dir).map_err(|e|e.to_string())?.take(65_537){entries.push(entry.map_err(|e|e.to_string())?);}
+    if entries.len()>65_536{return Err("Cache excede o limite de itens para limpeza; nenhum registro foi removido.".into());}
+    for entry in entries{
+        if !entry.file_type().is_ok_and(|kind|kind.is_file()){continue;}
+        let name=entry.file_name();let Some(session)=name.to_str().and_then(recognized_session_asset)else{continue;};
+        if !ids.contains(session){std::fs::remove_file(entry.path()).map_err(|e|e.to_string())?;}
+    }Ok(())
+}
 #[derive(Deserialize,Serialize)]
 #[serde(rename_all="camelCase",deny_unknown_fields)]
 struct Status{version:u8,session_id:String,stage:String,#[serde(default)]failed:bool}
@@ -49,7 +87,7 @@ pub fn status(config:&Path,session:&str,stage:&str)->Result<(),String>{
     if !crate::discovery::uuid(session)||!stage_valid(stage){return Err("Sessão ou etapa inválida.".into());}
     let dir=config.join("capy-guides");
     std::fs::create_dir_all(&dir).map_err(|e|e.to_string())?;
-    check_directory(config)?;let file=mutex(&path(config,session))?;exclusive(&file)?;
+    check_directory(config)?;let file=store_lock(config,true)?.ok_or("Mutex de referências indisponível.")?;exclusive(&file)?;
     let original=status_bytes(config,session)?;
     let previous=original.as_deref().map(|bytes|parse_status(bytes,session)).transpose()?;
     let failed=stage!="recorded"||previous.is_some_and(|s|s.failed||s.stage!="recorded");
@@ -59,6 +97,8 @@ pub fn status(config:&Path,session:&str,stage:&str)->Result<(),String>{
 pub fn collection_warning(config:&Path,session:&str)->Option<String>{
     let result=(||{
         if !crate::discovery::uuid(session){return Err("Sessão inválida para diagnóstico.".into());}
+        let Some(lock)=store_lock(config,false)?else{return Ok(None);};
+        lock.try_lock_shared().map_err(|_|"Diagnóstico de instruções ocupado.")?;
         status_bytes(config,session)?.as_deref().map(|bytes|parse_status(bytes,session)).transpose()
     })();
     match result{
@@ -88,11 +128,6 @@ fn read_bytes(file:impl Read)->Result<Vec<u8>,String>{
 fn stored_bytes(path:&Path)->Result<Option<Vec<u8>>,String>{
     match File::open(path){Ok(file)=>read_bytes(file).map(Some),Err(e) if e.kind()==std::io::ErrorKind::NotFound=>Ok(None),Err(e)=>Err(e.to_string())}
 }
-fn mutex(path:&Path)->Result<File,String>{
-    let lock=path.with_extension("lock");
-    if lock.exists()&&!std::fs::symlink_metadata(&lock).is_ok_and(|m|m.file_type().is_file()){return Err("Mutex de referências incompatível.".into());}
-    OpenOptions::new().create(true).truncate(false).read(true).write(true).open(lock).map_err(|e|e.to_string())
-}
 fn exclusive(file:&File)->Result<(),String>{
     for _ in 0..40{if file.try_lock().is_ok(){return Ok(());}std::thread::sleep(Duration::from_millis(10));}
     Err("Referências ocupadas; carga não registrada.".into())
@@ -114,7 +149,7 @@ pub fn record(config:&Path,session:&str,cwd:&Path,instruction:Instruction,at:u64
         ||file_path.exists()&&!std::fs::symlink_metadata(&file_path).is_ok_and(|m|m.file_type().is_file()){
         return Err("Diretório de referências incompatível.".into());
     }
-    let file=mutex(&file_path)?;
+    let file=store_lock(config,true)?.ok_or("Mutex de referências indisponível.")?;
     exclusive(&file)?;
     let original=stored_bytes(&file_path)?;
     let mut evidence=match &original{
@@ -135,7 +170,7 @@ pub fn load(config:&Path,session:&str,cwd:&Path)->Result<Option<Evidence>,String
     let file_path=path(config,session);
     let metadata=match std::fs::symlink_metadata(&file_path){Ok(metadata)=>metadata,Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Ok(None),Err(e)=>return Err(e.to_string())};
     if !metadata.file_type().is_file(){return Err("Registro de referências incompatível.".into());}
-    let file=mutex(&file_path)?;
+    let file=store_lock(config,false)?.ok_or("Mutex de referências indisponível.")?;
     file.try_lock_shared().map_err(|_|"Referências ocupadas; confira antes de transferir.")?;
     let bytes=stored_bytes(&file_path)?.ok_or("Registro de referências mudou durante a leitura.")?;
     let evidence:Evidence=serde_json::from_slice(&bytes).map_err(|_|"Referências de instruções inválidas; registro preservado.")?;validate(&evidence,session,cwd)?;Ok(Some(evidence))
@@ -157,6 +192,17 @@ mod tests{
         assert_eq!(saved["failed"],true);assert!(collection_warning(&root,SESSION).unwrap().contains("Coleta incompleta"));
         std::fs::write(path(&root,SESSION).with_extension("status.json"),format!("{{\"version\":1,\"sessionId\":\"{SESSION}\",\"stage\":\"record-failed\"}}")).unwrap();
         status(&root,SESSION,"recorded").unwrap();assert!(collection_warning(&root,SESSION).unwrap().contains("Coleta incompleta"));cleanup(&root);
+    }
+    #[test]
+    fn loaded_instructions_prune_removes_only_stale_session_data_and_temporary_files(){
+        let root=fixture();let dir=root.join("capy-guides");std::fs::create_dir_all(&dir).unwrap();
+        let keep="22222222-2222-2222-2222-222222222222";let stale=SESSION;
+        for (name,value) in [(format!("{keep}.json"),"keep"),(format!("{keep}.status.json"),"keep"),(format!("{keep}.lock"),"keep"),(format!("{stale}.json"),"stale"),(format!("{stale}.status.json"),"stale"),(format!("{stale}.lock"),"stale"),(format!(".{stale}.json.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.pending"),"temporary"),(format!(".{stale}.status.json.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.pending"),"temporary"),("unrelated.md".into(),"preserve")]{std::fs::write(dir.join(name),value).unwrap();}
+        let result=prune(&root,&[keep.to_owned()]);
+        assert!(result.is_ok());assert!(dir.join(format!("{keep}.json")).exists());assert!(dir.join(format!("{keep}.status.json")).exists());
+        assert!(!dir.join(format!("{stale}.json")).exists());assert!(!dir.join(format!("{stale}.status.json")).exists());
+        assert!(!dir.join(format!("{stale}.lock")).exists());assert!(dir.join(".store.lock").exists());
+        assert!(!dir.join(format!(".{stale}.json.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.pending")).exists());assert!(!dir.join(format!(".{stale}.status.json.aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.pending")).exists());assert_eq!(std::fs::read_to_string(dir.join("unrelated.md")).unwrap(),"preserve");cleanup(&root);
     }
     #[test]
     fn loaded_instructions_incompatible_status_is_preserved_and_warns(){

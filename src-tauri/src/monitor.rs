@@ -65,11 +65,19 @@ pub fn schedule(app: tauri::AppHandle) {
                 .evaluate(&quotas, &prefs, crate::quotas::now_ms())
                 .unwrap_or_else(|error| { eprintln!("Quota alerts: {error}"); app.state::<crate::quota_policy::Service>().snapshot() });
             let profile_store=app.state::<crate::profiles::Store>();
+            let profile_rows=profile_store.list();
             let handoff_store=app.state::<Arc<crate::handoff::Store>>();
             let now=crate::quotas::now_ms();
             let candidates=profile_store.candidates(now);
             let mut routing=Vec::new();
             let tasks=app.state::<Arc<crate::tasks::Store>>().list();
+            let chat_rows=app.state::<Arc<crate::chat_history::Store>>().list();
+            if let (Ok(task_rows),Ok(profiles),Ok(chats))=(&tasks,&profile_rows,&chat_rows){
+                let mut retained=task_rows.iter().map(|task|task.id.clone()).collect::<Vec<_>>();
+                retained.extend(chats.iter().filter(|chat|chat.target.kind=="claudeCli").map(|chat|chat.id.clone()));
+                retained.extend(report.sessions.iter().filter(|session|session.kind=="claude").filter_map(|session|session.id.strip_prefix("claude:").filter(|id|discovery::uuid(id)).map(str::to_owned)));
+                for profile in profiles{let _=crate::loaded_instructions::prune(&profile.config_dir,&retained);}
+            }
             if let Ok(tasks)=&tasks{let _=handoff_store.prune(tasks);}
             for task in tasks.unwrap_or_default().into_iter().rev().take(64){
                 if !handoff_store.eligible(&task){continue;}
@@ -100,7 +108,7 @@ pub fn schedule(app: tauri::AppHandle) {
                     return None;
                 }
                 let chat_transfers=app.state::<Arc<crate::chat_history::Store>>().transfer_reviews().unwrap_or_default();
-                if let Ok(chats)=app.state::<Arc<crate::chat_history::Store>>().list(){
+                if let Ok(chats)=&chat_rows{
                     report.sessions.extend(app.state::<crate::chat_presence::Service>().rows(&chats,crate::quotas::now_ms()));
                 }
                 state.preferences.lock().ok()?.apply(&mut report.sessions);

@@ -82,7 +82,7 @@ fn summary(store:&Store,source:&Conversation)->Summary{
         files:"O chat não executou ferramentas de arquivos. Alterações externas não foram verificadas; registre aqui os caminhos e o estado que precisam continuar.".into(),
         tests:"O chat não executou testes. Resultados mencionados no texto exigem confirmação; registre evidências e comandos reais antes de aprovar.".into(),
         next_steps:excerpt(&format!("Revise o que ainda precisa ser feito a partir da última mensagem:\n{last}\n\nNão repetir automaticamente mensagens anteriores nem tratar resposta parcial como conclusão."),12_000),
-        guides:format!("{reference}\nAs instruções e respostas citadas acima preservam referências textuais. Nenhum plano/.md foi lido por ferramenta neste chat. Cite aqui os caminhos/seções e suas regras relevantes; referências externas mencionadas no texto precisam ser verificadas. Trechos extensos podem estar limitados com aviso: consulte o histórico integral antes de aprovar."),
+        guides:format!("{reference}\nAs instruções e respostas citadas acima preservam referências textuais. Nenhum plano/.md foi lido por ferramenta neste chat. Hooks foram desativados nesta execução; a Capy não tem evidência dos CLAUDE.md/imports carregados automaticamente pelo CLI. Revise e cite aqui os caminhos/seções e regras relevantes; referências externas mencionadas no texto precisam ser verificadas. Trechos extensos podem estar limitados com aviso: consulte o histórico integral antes de aprovar."),
     }
 }
 fn eligible(source:&Conversation)->bool{source.state!="working"&&source.state!="unknown"&&source.transferred_to.is_none()&&source.used_nonces.len()<chat_history::MAX_NONCES}
@@ -198,6 +198,16 @@ mod tests {
         let restored=Store::load(root.clone());let transferred=restored.get(&chat.id).unwrap();
         assert_eq!(transferred.interruptions.len(),1);assert_eq!(transferred.interruptions[0].send_nonce,send);
         assert_eq!(transferred.interruptions[0].approval_nonce,approval);assert_eq!(transferred.messages.len(),3);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn chat_transfer_discloses_disabled_instruction_hooks_for_cli_source(){
+        let root=std::env::temp_dir().join(format!("capy-transfer-guides-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
+        let source=store.create("Review loaded instructions".into(),cli(),"haiku".into()).unwrap();
+        let review=store.prepare_transfer(&source.id,api(),"model".into()).unwrap();
+        assert!(review.summary.guides.contains("Hooks foram desativados nesta execução"));
+        assert!(review.summary.guides.contains("não tem evidência dos CLAUDE.md/imports"));
+        assert!(review.summary.guides.contains("Revise e cite aqui os caminhos/seções"));
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]

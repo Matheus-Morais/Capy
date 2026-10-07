@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
+import {randomUUID} from 'node:crypto';
 
 export function instructionProof({panel,root,project,profile,check,waitFor,sameFolder,taskHistory}){
   const files=[
@@ -42,6 +43,13 @@ export function instructionProof({panel,root,project,profile,check,waitFor,sameF
     check('native_guides_cancel_review_sends_no_new_turn_or_destination',(await panel.invoke('list_tasks')).length===1&&(await panel.invoke('list_handoffs')).length===0&&before.rows.filter(row=>row.type==='user').length===after.rows.filter(row=>row.type==='user').length);
     const current=await settings();
     check('native_guides_preserve_profile_settings_bytes',originalSettings===null?current===null:current?.equals(originalSettings));
+    const cache=join(profile.configDir,'capy-guides');await mkdir(cache,{recursive:true});
+    const stale=randomUUID(),temp=randomUUID(),unrelated=`unrelated-${randomUUID()}.md`;
+    const staleFiles=[`${stale}.json`,`${stale}.status.json`,`${stale}.lock`,`.${stale}.json.${temp}.pending`,`.${stale}.status.json.${temp}.pending`];
+    for(const file of staleFiles)await writeFile(join(cache,file),'fixture');
+    await writeFile(join(cache,unrelated),'preserve');
+    await waitFor(async()=>Promise.all(staleFiles.map(file=>readFile(join(cache,file)).then(()=>false).catch(error=>error.code==='ENOENT'))).then(results=>results.every(Boolean)),'limpeza de cache de sessão obsoleta',15_000);
+    check('native_guides_prune_stale_session_and_status_temporaries_preserving_unrelated_files',await readFile(join(cache,unrelated),'utf8')==='preserve'&&await readFile(join(cache,'.store.lock')).then(()=>true).catch(()=>false));
     assert.ok(snapshot.guides.length>=3);
   }
   return {prepare,verify};
