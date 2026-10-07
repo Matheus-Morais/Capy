@@ -1,8 +1,17 @@
 import type { Session, Snapshot, QuotaRow, Intervention, Subscription, AccountProfile, AccountIdentity, QuotaRule, ChatTransferReview, HandoffSummary, ChatConversation } from './bridge';
+import type {ExitReview} from './exit-review';
 
 export const escape = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 export const defaultThresholds = () => [50,60,70,80,90].map(percent => ({percent,enabled:true}));
 export const billingLabel = (billing: string) => billing === 'subscription' ? 'Assinatura Claude' : billing === 'api' ? 'API · cobrança por uso' : 'Cobrança não confirmada';
+export function exitConfirmation(review:ExitReview):string {
+  const resources=review.resources.map(resource=>
+    `${resource.kind==='chat'?'Chat em envio':'Terminal integrado'}: ${resource.label}\nSessão: ${resource.id}\n${resource.provider} · ${resource.account} · ${resource.model} · ${billingLabel(resource.billing)}${resource.cwd?`\nPasta: ${resource.cwd}`:''}`);
+  const effects=[];
+  if(review.resources.some(resource=>resource.kind==='chat'))effects.push('Sair interrompe os envios de chat. O resultado pode ficar indisponível e o consumo pode ter ocorrido. A Capy não reenviará mensagens automaticamente.');
+  if(review.resources.some(resource=>resource.kind==='terminal'))effects.push('Sair fecha estes terminais integrados. O histórico do CLI permanece; a conclusão do trabalho não é garantida.');
+  return [...resources,...effects,'Deseja sair da Capy?'].join('\n\n');
+}
 export const summaryLabels:Record<keyof HandoffSummary,string>={objective:'Objetivo',decisions:'Decisões e regras',state:'Estado atual',files:'Arquivos alterados',tests:'Testes e resultados',nextSteps:'Próximos passos',guides:'Planos e arquivos .md usados'};
 export function chatRecoveryForm(chat:ChatConversation):string{
   if(chat.state!=='unknown')return '';

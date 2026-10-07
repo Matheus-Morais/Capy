@@ -126,7 +126,8 @@ pub async fn send_chat(app:tauri::AppHandle,request:Send)->Result<Conversation,S
         if before.revision!=request.revision{return Err("A conversa mudou. Atualize antes de enviar.".into());}
         let cwd=store.workspace(&before.id)?;
         let transport=verify_target(&app,&before.target,Some(&cwd))?;
-        let started=store.begin(&request.id,request.revision,request.nonce.clone(),request.model,request.text.clone())?;
+        let started={let exit=app.state::<crate::exit_review::Service>();let _admission=exit.admit()?;
+            store.begin(&request.id,request.revision,request.nonce.clone(),request.model,request.text.clone())?};
         execute_started(&app,&store,started,transport,&request.text)
     }).await.map_err(|_|"O envio foi interrompido; revise o histórico antes de continuar.".to_owned())?
 }
@@ -154,7 +155,8 @@ pub async fn approve_chat_transfer(app:tauri::AppHandle,source_id:String,nonce:S
         let store=app.state::<Arc<chat_history::Store>>().inner().clone();let review=store.transfer_review(&source_id)?;
         verify_target(&app,&review.source_target,Some(&store.workspace(&source_id)?))?;
         let transport=verify_target(&app,&review.destination,None)?;
-        let started=store.approve_transfer(&source_id,&nonce,summary,reviewed,billing_confirmed,&review.source_target,&review.destination)?;
+        let started={let exit=app.state::<crate::exit_review::Service>();let _admission=exit.admit()?;
+            store.approve_transfer(&source_id,&nonce,summary,reviewed,billing_confirmed,&review.source_target,&review.destination)?};
         let source=store.get(&source_id)?;crate::chat_presence::publish(&app,&source);
         let text=started.messages[0].text.clone();execute_started(&app,&store,started,transport,&text)
     }).await.map_err(|_|"Transferência interrompida; revise o histórico. Nenhum envio será repetido automaticamente.".to_owned())?

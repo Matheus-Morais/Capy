@@ -42,6 +42,12 @@ Reusar monitor, snapshot/eventos Tauri, pedidos Codex, fontes de quotas e arte S
 
 ## Checks
 
+Saída normal — decisão antes da implementação: preparar revisão em memória com nonce UUID, validade de 60s e lista ordenada de chats working (UUID/versão/nonce do envio/conta/modelo/cobrança) e terminais integrados ativos (UUID/pasta/conta/modelo). A aprovação exige confirmação, nonce atual e lista idêntica; mudança exige nova revisão. Uma trava comum protege admissão de envios/transferências/lançamentos e aprovação da saída; após aprovar, impedir novos trabalhos. Cancelar invalida somente a revisão atual. Erro ao ler recursos impede saída automática. Terminais externos e sessões alheias não entram na lista. Avisar que o resultado de chats interrompidos pode ficar indisponível e o consumo pode ter ocorrido. Alternativa rejeitada: confirmação booleana genérica ou contagem de terminais, pois omite chats e permite aprovar uma lista antiga.
+
+Provas deste trecho: `exit_review_requires_exact_fresh_single_approval`, `exit_review_blocks_admission_after_approval_and_serializes_new_work`, `exit_resources_include_only_working_owned_chats_and_active_terminals`; teste JS `exit confirmation names exact resources and distinguishes uncertain consumption`; runner nativo `--exit-review` com histórico próprio fixture, sem chamada de IA, para cancelamento, identidade exibida e rejeição após mudança do envio. Encerramento forçado da árvore CLI permanece comprovado pelo teste Windows de job; fixture de estado não prova consumo ou interrupção do provedor real.
+
+Saída dos terminais — porta descoberta: depois da aprovação exata, liberar explicitamente writer/master de cada ConPTY próprio, mantendo o leitor em thread separada para drenar a saída; a implementação instalada de portable-pty chama ClosePseudoConsole no Drop. Não terminar processos por nome/PID. Se a liberação falhar, informar erro e permitir preparar nova revisão. Prova: `terminal_native_close_releases_only_owned_pseudoconsole`; encerrar um PowerShell próprio de longa duração e preservar outro PowerShell independente. Referência primária: https://learn.microsoft.com/en-us/windows/console/closepseudoconsole. Alternativa rejeitada: confiar somente em ExitProcess/drop de Arc, pois as threads mantêm o master vivo e a liberação oficial não fica comprovada.
+
 ### S1 — Mascote · ~14 KB de fontes existentes · ~3.5k de leitura
 
 **C1** — Cumprimento acontece uma vez por abertura.
@@ -72,6 +78,8 @@ Proof: provas existentes `source-access`, `session-discovery`, `interventions-co
 
 **C9** — Controles oficiais de pausa/parada revalidam a sessão e exigem confirmação.
 Proof: teste nomeado do executor e prova em sessão própria, a registrar antes desta implementação.
+
+Saída normal em 2026-10-06: `exit_review_requires_exact_fresh_single_approval`, `exit_review_blocks_admission_after_approval_and_serializes_new_work`, `exit_review_expiry_includes_time_waiting_for_admission`, `exit_resources_include_only_working_owned_chats_and_active_terminals` e `terminal_native_close_releases_only_owned_pseudoconsole` passaram. Runner `--exit-review` passou em 27 checks com diálogo real e estado persistido próprio, sem envio a provedor. Confirmação foi ligada à lista exata e tem validade de 60s incluindo espera/conferência; admissão é serializada com a aprovação. Os terminais próprios são liberados explicitamente somente depois de aprovar. Não conclui C9: pausa/parada de turnos interativos reais e saída durante geração real ainda exigem prova própria. Alcance em `.checks/multifunction.visual.md`.
 
 ### S3 — Contas, quotas e continuidade · ~30 KB existentes · ~8k de leitura
 

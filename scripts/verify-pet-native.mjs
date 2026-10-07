@@ -11,6 +11,11 @@ const workspace=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
 const exe=join(workspace,'src-tauri','target','release','capy.exe');
 await stat(exe);await mkdir(root,{recursive:true});
+let exitFixture;
+if(process.argv.includes('--exit-review')){
+  assert.ok(!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery'].includes(arg)),'Exit state fixture must run separately from provider calls');
+  exitFixture={id:randomUUID(),title:'Own exit state fixture',target:{kind:'api',profileId:randomUUID(),provider:'OpenAI',account:'Own exit fixture',billing:'api',credentialRevision:randomUUID()},model:'fixture-model',messages:[],revision:0,state:'idle',activeNonce:null,usedNonces:[],lastError:null,cliStarted:false,cliAttempted:false,processPolicy:null,recoveryReview:null,interruptions:[],transferredTo:null};
+}
 const server=createServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 let port=server.address().port;await new Promise(resolve=>server.close(resolve));
 let child=spawn(exe,['--visual-test',root],{
@@ -39,10 +44,12 @@ async function waitFor(fn,description,timeout=10_000){
   throw new Error(`${description}: ${last?.message??'tempo excedido'}`);
 }
 async function connect(target){
-  const socket=new WebSocket(target.webSocketDebuggerUrl);let sequence=0;const pending=new Map();
+  const socket=new WebSocket(target.webSocketDebuggerUrl);let sequence=0;const pending=new Map();const dialogs=[];
   await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});});
   socket.addEventListener('message',event=>{
-    const message=JSON.parse(event.data);const request=pending.get(message.id);if(!request)return;
+    const message=JSON.parse(event.data);
+    if(message.method==='Page.javascriptDialogOpening')dialogs.push(message.params);
+    const request=pending.get(message.id);if(!request)return;
     pending.delete(message.id);clearTimeout(request.timer);
     if(message.error)request.reject(new Error(message.error.message));else request.resolve(message.result);
   });
@@ -61,7 +68,7 @@ async function connect(target){
     const result=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
     await writeFile(join(root,`${name}.png`),Buffer.from(result.data,'base64'));
   };
-  const connection={call,evaluate,invoke,screenshot,close:()=>socket.close()};connections.push(connection);return connection;
+  const connection={call,evaluate,invoke,screenshot,takeDialog:()=>dialogs.shift(),close:()=>socket.close()};connections.push(connection);return connection;
 }
 const ownTarget=(values,path)=>values.find(target=>target.type==='page'
   && /^https?:\/\/tauri\.localhost\//.test(target.url)
@@ -85,6 +92,49 @@ try{
   await panel.evaluate(`document.querySelector('.chat-workbench > details').open=true;document.querySelector('#chatCreateForm').closest('details').open=true;document.querySelector('.chat-workbench').scrollIntoView({block:'start'})`);
   check('native_chat_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
   await panel.screenshot('chat');
+  if(exitFixture){
+    for(const connection of connections)connection.close();
+    child.kill();await new Promise(resolve=>child.once('exit',resolve));
+    const chatRoot=join(root,'chat');await mkdir(chatRoot,{recursive:true});
+    await writeFile(join(chatRoot,'index.json'),JSON.stringify([exitFixture.id]));
+    await writeFile(join(chatRoot,`${exitFixture.id}.json`),JSON.stringify(exitFixture));
+    const exitServer=createServer();await new Promise(resolve=>exitServer.listen(0,'127.0.0.1',resolve));
+    port=exitServer.address().port;await new Promise(resolve=>exitServer.close(resolve));
+    childExited=false;launchError=undefined;
+    child=spawn(exe,['--visual-test',root],{windowsHide:true,stdio:'ignore',env:{...process.env,
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:`--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1`,WEBVIEW2_USER_DATA_FOLDER:join(root,'webview-exit')}});
+    child.on('exit',()=>childExited=true);child.on('error',error=>{launchError=error;childExited=true;});
+    pet=await connect(await waitFor(async()=>ownTarget(await targets(),'/index.html')??ownTarget(await targets(),'/'),'Mascote com histórico próprio de saída'));
+    panel=await connect(await waitFor(async()=>ownTarget(await targets(),'/panel.html'),'Painel com histórico próprio de saída'));
+    await waitFor(()=>panel.evaluate(`!!document.querySelector('#chatCreateForm') && !!document.querySelector('#startTask')`),'Controles após carregar fixture de saída');
+    await panel.invoke('show_panel');
+    const sendNonce=randomUUID();const path=join(root,'chat',`${exitFixture.id}.json`);
+    Object.assign(exitFixture,{state:'working',revision:1,activeNonce:sendNonce,usedNonces:[sendNonce],messages:[{role:'user',text:'Own persisted state fixture; no provider dispatched.'}]});
+    await writeFile(path,JSON.stringify(exitFixture));
+    await panel.call('Page.enable');
+    const review=await panel.invoke('prepare_exit_review');
+    check('native_exit_review_pins_exact_chat_send_and_billing',review.resources.length===1&&review.resources[0].id===exitFixture.id&&review.resources[0].revision===1&&review.resources[0].sendNonce===sendNonce&&review.resources[0].billing==='api');
+    check('native_exit_review_rejects_missing_consent',await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('confirm_exit',{nonce:${JSON.stringify(review.nonce)},confirmed:false}).then(()=>false,()=>true)`));
+    await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('request_exit').catch(error=>{window.__capyExitError=String(error);});true`);
+    const dialog=await waitFor(()=>panel.takeDialog(),'Confirmação de saída real do WebView');const prompt=dialog.message;
+    await writeFile(join(root,'exit-confirmation.json'),JSON.stringify({resources:review.resources,type:dialog.type,message:prompt},null,2));
+    check('native_exit_prompt_names_exact_chat_and_uncertain_consumption',dialog.type==='confirm'&&prompt.includes(exitFixture.id)&&prompt.includes('Own exit fixture')&&prompt.includes('API · cobrança por uso')&&prompt.includes('consumo pode ter ocorrido')&&prompt.includes('não reenviará'));
+    await panel.call('Page.handleJavaScriptDialog',{accept:false});
+    await delay(100);
+    check('native_exit_cancel_keeps_chat_and_application_unchanged',(await panel.invoke('list_chats'))[0].state==='working'&&!childExited);
+    const canceled=await panel.invoke('prepare_exit_review');await panel.invoke('cancel_exit_review',{nonce:canceled.nonce});
+    check('native_exit_canceled_nonce_cannot_close_application',await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('confirm_exit',{nonce:${JSON.stringify(canceled.nonce)},confirmed:true}).then(()=>false,()=>true)`));
+    const stale=await panel.invoke('prepare_exit_review');
+    Object.assign(exitFixture,{revision:2,activeNonce:randomUUID()});exitFixture.usedNonces.push(exitFixture.activeNonce);
+    await writeFile(path,JSON.stringify(exitFixture));
+    check('native_exit_review_rejects_changed_send_identity',await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('confirm_exit',{nonce:${JSON.stringify(stale.nonce)},confirmed:true}).then(()=>false,()=>true)`));
+    check('native_exit_stale_approval_does_not_close_application',!childExited&&(await panel.invoke('list_chats'))[0].activeNonce===exitFixture.activeNonce);
+    const invalid={...exitFixture,futureField:'preserve me'};await writeFile(path,JSON.stringify(invalid));
+    const unreadable=await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('request_exit').then(()=>false,()=>true)`);
+    await waitFor(()=>panel.evaluate(`!document.querySelector('#error')?.hidden&&document.querySelector('#error')?.textContent.includes('Histórico incompatível')`),'Erro de conferência de saída visível');
+    check('native_exit_unreadable_history_blocks_exit_and_shows_reason',unreadable&&!childExited&&JSON.parse(await readFile(path,'utf8')).futureField==='preserve me');
+    Object.assign(exitFixture,{state:'failed',activeNonce:null,lastError:'Own state fixture ended; no provider call occurred.'});await writeFile(path,JSON.stringify(exitFixture));
+  }
   if(process.argv.includes('--live-chat')||process.argv.includes('--live-transfer')||process.argv.includes('--live-recovery')){
     await panel.invoke('demo_action',{action:'scenario',id:'',answer:'real'});
     const identity=await panel.invoke('profile_identity',{id:'claude-default',cwd:null});
@@ -227,6 +277,18 @@ try{
   await pet.invoke('show_panel');
   await waitFor(()=>pet.evaluate(`!document.querySelector('#pet').classList.contains('g-wave')`),'Painel marca pedidos como vistos');
   check('native_panel_acknowledges_attention',true);
+  if(exitFixture){
+    const review=await panel.invoke('prepare_exit_review');
+    check('native_exit_completed_fixture_has_no_active_resource',review.resources.length===0);
+    Object.assign(exitFixture,{state:'working',revision:3,activeNonce:randomUUID()});exitFixture.usedNonces.push(exitFixture.activeNonce);
+    await writeFile(join(root,'chat',`${exitFixture.id}.json`),JSON.stringify(exitFixture));
+    await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('request_exit').catch(error=>{window.__capyExitError=String(error);});true`);
+    const dialog=await waitFor(()=>panel.takeDialog(),'Aprovação de saída real do WebView');
+    check('native_exit_fresh_dialog_still_names_exact_active_chat',dialog.message.includes(exitFixture.id)&&dialog.type==='confirm');
+    await panel.call('Page.handleJavaScriptDialog',{accept:true});
+    const start=Date.now();while(!childExited&&Date.now()-start<10_000)await delay(100);
+    check('native_exit_fresh_approval_closes_own_application',childExited);
+  }
 }catch(error){failure=error;}
 finally{
   for(const connection of connections)connection.close();

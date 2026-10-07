@@ -11,6 +11,7 @@ mod chat_recovery;
 mod chat_commands;
 mod chat_presence;
 mod chat_transfer;
+mod exit_review;
 mod antigravity;
 mod claude_activity;
 mod demo;
@@ -288,6 +289,7 @@ async fn start_task(app:tauri::AppHandle,request:tasks::Start)->Result<tasks::Ta
     tauri::async_runtime::spawn_blocking(move||{
         let task=store.prepare(&profile,request)?;
         let id=task.id.clone();
+        let exit=app.state::<exit_review::Service>();let _admission=exit.admit()?;
         store.launch(task,&profile,&terminal,move|chunk|{let _=output_app.emit("terminal-output",chunk);},move||{let _=exit_app.emit("terminal-exited",&id);})
     }).await.map_err(|_|"Não foi possível preparar a tarefa.".to_owned())?
 }
@@ -303,9 +305,36 @@ fn terminal_interrupt(service:State<'_,Arc<terminal::Service>>,id:String,confirm
 }
 #[tauri::command]
 fn terminal_model_picker(service:State<'_,Arc<terminal::Service>>,id:String)->Result<(),String>{service.input(&id,"\u{1b}p")}
+fn exit_resources(app:&tauri::AppHandle)->Result<Vec<exit_review::Resource>,String>{
+    let active=app.state::<Arc<terminal::Service>>().active_ids()?;
+    let tasks=if active.is_empty(){Vec::new()}else{app.state::<Arc<tasks::Store>>().list()?};
+    let chats=app.state::<Arc<chat_history::Store>>().list().map_err(|error|format!("Histórico incompatível ou indisponível. A saída foi bloqueada; os arquivos foram preservados. {error}"))?;
+    exit_review::resources(chats,tasks,active)
+}
 #[tauri::command]
-fn confirm_exit(app:tauri::AppHandle,confirmed:bool)->Result<(),String>{
-    if !confirmed{return Err("Saída não confirmada.".into());}app.exit(0);Ok(())
+fn prepare_exit_review(app:tauri::AppHandle)->Result<exit_review::Review,String>{
+    app.state::<exit_review::Service>().prepare(quotas::now_ms(),||exit_resources(&app))
+}
+#[tauri::command]
+fn cancel_exit_review(app:tauri::AppHandle,nonce:String)->Result<(),String>{app.state::<exit_review::Service>().cancel(&nonce)}
+#[tauri::command]
+fn confirm_exit(app:tauri::AppHandle,nonce:String,confirmed:bool)->Result<(),String>{
+    app.state::<exit_review::Service>().approve(&nonce,confirmed,quotas::now_ms(),||exit_resources(&app))?;
+    if let Err(error)=app.state::<Arc<terminal::Service>>().close_all(){
+        app.state::<exit_review::Service>().reopen_after_close_failure()?;return Err(error);
+    }
+    if let Err(error)=persist_pet(&app){eprintln!("Position save: {error}");}
+    app.exit(0);Ok(())
+}
+#[tauri::command]
+fn request_exit(app:tauri::AppHandle)->Result<(),String>{
+    let review=match prepare_exit_review(app.clone()){
+        Ok(review)=>review,
+        Err(error)=>{show_panel(app.clone())?;app.emit("exit-review-error",&error).map_err(|emit|emit.to_string())?;return Err(error);}
+    };
+    if review.resources.is_empty(){return confirm_exit(app,review.nonce,true);}
+    show_panel(app.clone())?;
+    app.emit("confirm-exit",review).map_err(|error|error.to_string())
 }
 #[tauri::command]
 fn list_handoffs(store:State<'_,Arc<handoff::Store>>)->Result<Vec<handoff::Review>,String>{store.list()}
@@ -330,6 +359,7 @@ async fn approve_handoff(app:tauri::AppHandle,nonce:String,summary:handoff::Summ
     let terminal=app.state::<Arc<terminal::Service>>().inner().clone();
     let output_app=app.clone();let exit_app=app.clone();
     tauri::async_runtime::spawn_blocking(move||{
+        let exit=app.state::<exit_review::Service>();let _admission=exit.admit()?;
         review.summary=summary.clone();
         let request=store.approve(&nonce,summary,billing_confirmed,&task,&source,&destination,mode)?;
         let result=(||{
@@ -351,6 +381,7 @@ async fn resume_task(app:tauri::AppHandle,id:String)->Result<(),String>{
         if discovery::scan(&sources).sessions.iter().any(|s|s.id==format!("claude:{}",task.id)) {return Err("Esta conversa já está aberta. Use o terminal integrado ou o terminal original.".into());}
         let identity=profiles::identity(&profile,Some(&task.cwd))?;
         if identity.account!=task.account||identity.billing!=task.billing{return Err("A conta ou cobrança mudou. Verifique antes de continuar.".into());}
+        let exit=app.state::<exit_review::Service>();let _admission=exit.admit()?;
         store.resume_external(&task,&profile)
     }).await.map_err(|_|"Não foi possível abrir a conversa.".to_owned())?
 }
@@ -508,18 +539,7 @@ fn tray_action(app: &tauri::AppHandle, id: &str) -> Result<(), String> {
         }
         "summary" => show_summary(app),
         "panel" => show_panel(app.clone()),
-        "quit" => {
-            if app.state::<Arc<terminal::Service>>().active()>0 {
-                show_panel(app.clone())?;
-                app.emit("confirm-exit",true).map_err(|e|e.to_string())?;
-                return Ok(());
-            }
-            if let Err(e) = persist_pet(app) {
-                eprintln!("Position save: {e}");
-            }
-            app.exit(0);
-            Ok(())
-        }
+        "quit" => request_exit(app.clone()),
         _ => Err("Ação desconhecida".into()),
     }
 }
@@ -618,6 +638,7 @@ fn main() {
             ready: Mutex::new(HashSet::new()),
             ui_errors: Mutex::new(Vec::new()),
         })
+        .manage(exit_review::Service::default())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Err(e) = show_pet(app) {
                 eprintln!("Show Capy: {e}");
@@ -657,6 +678,9 @@ fn main() {
             terminal_model_picker,
             resume_task,
             confirm_exit,
+            prepare_exit_review,
+            cancel_exit_review,
+            request_exit,
             list_handoffs,
             prepare_handoff,
             approve_handoff,

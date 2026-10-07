@@ -21,8 +21,8 @@ impl History {
     }
 }
 struct Entry {
-    master:Mutex<Box<dyn MasterPty+Send>>,
-    writer:Mutex<Box<dyn Write+Send>>,
+    master:Mutex<Option<Box<dyn MasterPty+Send>>>,
+    writer:Mutex<Option<Box<dyn Write+Send>>>,
     history:Mutex<History>,
     exited:AtomicBool,
 }
@@ -38,7 +38,7 @@ impl Service {
         let writer=pair.master.take_writer().map_err(|_|"Entrada do terminal indisponível.")?;
         let mut child=pair.slave.spawn_command(command).map_err(|_|"O CLI não pôde iniciar no terminal integrado.")?;
         drop(pair.slave);
-        let entry=Arc::new(Entry{master:Mutex::new(pair.master),writer:Mutex::new(writer),history:Mutex::new(History::default()),exited:AtomicBool::new(false)});
+        let entry=Arc::new(Entry{master:Mutex::new(Some(pair.master)),writer:Mutex::new(Some(writer)),history:Mutex::new(History::default()),exited:AtomicBool::new(false)});
         entries.insert(id.clone(),entry.clone());drop(entries);
         let output_entry=entry.clone();
         std::thread::spawn(move||{
@@ -57,23 +57,57 @@ impl Service {
         let entry=self.entry(id)?;
         if entry.exited.load(Ordering::Acquire){return Err("Este CLI já encerrou.".into());}
         let mut writer=entry.writer.lock().map_err(|_|"Entrada do terminal indisponível.")?;
+        let writer=writer.as_mut().ok_or("Este terminal foi fechado.")?;
         writer.write_all(data.as_bytes()).and_then(|_|writer.flush()).map_err(|_|"Não foi possível enviar ao terminal.".into())
     }
     pub fn resize(&self,id:&str,cols:u16,rows:u16)->Result<(),String>{
         if !(10..=400).contains(&cols)||!(2..=200).contains(&rows){return Err("Dimensão de terminal inválida.".into());}
         let entry=self.entry(id)?;
-        let result=entry.master.lock().map_err(|_|"Terminal indisponível.")?.resize(PtySize{rows,cols,pixel_width:0,pixel_height:0}).map_err(|_|"Não foi possível redimensionar o terminal.".into());result
+        let master=entry.master.lock().map_err(|_|"Terminal indisponível.")?;
+        master.as_ref().ok_or("Este terminal foi fechado.")?.resize(PtySize{rows,cols,pixel_width:0,pixel_height:0}).map_err(|_|"Não foi possível redimensionar o terminal.".into())
     }
     pub fn replay(&self,id:&str)->Result<Replay,String>{
         let entry=self.entry(id)?;
         let chunks=entry.history.lock().map_err(|_|"Histórico indisponível.")?.chunks.iter().cloned().collect();
         Ok(Replay{chunks,exited:entry.exited.load(Ordering::Acquire)})
     }
-    pub fn active(&self)->usize{self.entries.lock().map(|entries|entries.values().filter(|e|!e.exited.load(Ordering::Acquire)).count()).unwrap_or(0)}
+    pub fn active_ids(&self)->Result<Vec<String>,String>{
+        let entries=self.entries.lock().map_err(|_|"Terminais indisponíveis; a saída não pôde ser conferida.")?;
+        let mut ids:Vec<_>=entries.iter().filter(|(_,entry)|!entry.exited.load(Ordering::Acquire)).map(|(id,_)|id.clone()).collect();ids.sort();Ok(ids)
+    }
+    pub fn close_all(&self)->Result<(),String>{
+        let entries:Vec<_>=self.entries.lock().map_err(|_|"Terminais indisponíveis.")?.values().cloned().collect();
+        for entry in entries {
+            let writer=entry.writer.lock().map_err(|_|"A entrada de um terminal não pôde ser fechada.")?.take();drop(writer);
+            let master=entry.master.lock().map_err(|_|"Um terminal não pôde ser fechado.")?.take();drop(master);
+        }
+        Ok(())
+    }
 }
 #[cfg(test)]
 mod tests{
     use super::*;
+    #[test]
+    fn terminal_native_close_releases_only_owned_pseudoconsole(){
+        let service=Service::default();let id=uuid::Uuid::new_v4().to_string();
+        let mut command=CommandBuilder::new("powershell.exe");command.args(["-NoProfile","-Command","Write-Output 'CAPY_PTY_CLOSE_PROOF'; Start-Sleep -Seconds 30"]);
+        let (sender,receiver)=std::sync::mpsc::channel();service.start(id.clone(),command,move|chunk|{let _=sender.send(chunk);},||{}).unwrap();
+        let started=std::time::Instant::now();let mut bytes=Vec::new();let mut cursor_answered=false;
+        while started.elapsed()<std::time::Duration::from_secs(10){
+            if let Ok(chunk)=receiver.recv_timeout(std::time::Duration::from_millis(100)){assert_eq!(chunk.task_id,id);bytes.extend(chunk.data);}
+            if !cursor_answered&&bytes.windows(4).any(|window|window==b"\x1b[6n"){service.input(&id,"\x1b[1;1R").unwrap();cursor_answered=true;}
+            if String::from_utf8_lossy(&bytes).contains("CAPY_PTY_CLOSE_PROOF"){break;}
+        }
+        let observed=String::from_utf8_lossy(&bytes).contains("CAPY_PTY_CLOSE_PROOF");
+        let active=service.active_ids().unwrap();
+        let mut unrelated=std::process::Command::new("powershell.exe").args(["-NoProfile","-Command","Start-Sleep -Seconds 30"]).spawn().unwrap();
+        let closed=service.close_all();let started=std::time::Instant::now();
+        while !service.active_ids().unwrap().is_empty()&&started.elapsed()<std::time::Duration::from_secs(10){std::thread::sleep(std::time::Duration::from_millis(50));}
+        let own_closed=service.active_ids().unwrap().is_empty();let unrelated_alive=unrelated.try_wait().unwrap().is_none();
+        let _=unrelated.kill();let _=unrelated.wait();
+        assert!(observed);assert_eq!(active,vec![id.clone()]);assert!(closed.is_ok());assert!(own_closed);assert!(unrelated_alive);
+        assert!(service.input(&id,"test").is_err());assert!(service.resize(&id,80,24).is_err());assert!(service.close_all().is_ok());
+    }
     #[test]
     fn terminal_history_is_bounded_and_sequences_are_monotonic(){
         let mut history=History::default();

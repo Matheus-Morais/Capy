@@ -4,7 +4,8 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { native, listProfiles, profileIdentity, showError, type AccountProfile, type AccountIdentity } from './bridge';
-import { billingLabel, escape } from './presentation';
+import { billingLabel, escape, exitConfirmation } from './presentation';
+import type {ExitReview} from './exit-review';
 
 interface Task { id:string; profileId:string; account:string|null; billing:string; model:string; cwd:string; prompt:string; mode:string; createdAt:number }
 interface Chunk { taskId:string; sequence:number; data:number[] }
@@ -111,7 +112,12 @@ export async function initializeTasks():Promise<void>{
   if(!native){form.querySelectorAll<HTMLInputElement|HTMLButtonElement|HTMLSelectElement|HTMLTextAreaElement>('input,button,select,textarea').forEach(element=>element.disabled=true);return;}
   await listen<Chunk>('terminal-output',event=>{if(event.payload.taskId!==attached?.id)return;if(replaying)queued.push(event.payload);else consume(event.payload);});
   await listen<string>('terminal-exited',event=>{if(event.payload===attached?.id){terminalExited=true;document.getElementById('terminalNotice')!.textContent='O CLI encerrou; isso não confirma conclusão da tarefa.';(document.getElementById('interruptTerminal') as HTMLButtonElement).disabled=true;(document.getElementById('terminalModel') as HTMLButtonElement).disabled=true;}});
-  await listen('confirm-exit',()=>{if(window.confirm('Há terminais integrados ativos. Sair da Capy fecha esses terminais. Suas conversas continuam salvas no Claude. Deseja sair?'))void invoke('confirm_exit',{confirmed:true}).catch(showError);});
+  await listen<ExitReview>('confirm-exit',event=>{
+    const review=event.payload;
+    if(window.confirm(exitConfirmation(review)))void invoke('confirm_exit',{nonce:review.nonce,confirmed:true}).catch(showError);
+    else void invoke('cancel_exit_review',{nonce:review.nonce}).catch(showError);
+  });
+  await listen<string>('exit-review-error',event=>showError(event.payload));
   new ResizeObserver(resize).observe(document.getElementById('terminalViewport')!);
   updateProfiles(await listProfiles());await refresh();setInterval(()=>void refresh().catch(showError),5000);
 }
