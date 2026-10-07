@@ -39,6 +39,12 @@ impl Service {
         if guard.closing{return Err("A Capy está encerrando. Nenhum novo trabalho foi iniciado.".into());}
         Ok(Admission{_guard:guard})
     }
+    pub fn send_terminal_input(&self,send:impl FnOnce()->Result<(),String>)->Result<(),String>{
+        let mut state=self.state.lock().map_err(|_|"Controle de saída indisponível.")?;
+        if state.closing{return Err("A Capy está encerrando. Nenhuma entrada foi enviada ao terminal.".into());}
+        state.pending=None;
+        send()
+    }
     pub fn prepare(&self,now:u64,snapshot:impl FnOnce()->Result<Vec<Resource>,String>)->Result<Review,String>{
         let started=std::time::Instant::now();
         let mut state=self.state.lock().map_err(|_|"Controle de saída indisponível.")?;
@@ -121,6 +127,44 @@ mod tests {
         let worker=std::thread::spawn(move||worker_service.approve(&review.nonce,true,0,||{std::thread::sleep(std::time::Duration::from_millis(30));sender.send(()).unwrap();Ok(vec![])}));
         std::thread::sleep(std::time::Duration::from_millis(30));drop(admission);
         receiver.recv().unwrap();assert!(worker.join().unwrap().is_err());assert!(service.admit().is_ok());
+    }
+    #[test]
+    fn exit_review_terminal_input_invalidates_approval_even_after_partial_write_failure(){
+        let service=Service::default();let active=vec![item()];let mut sent=Vec::new();
+        let first=service.prepare(0,||Ok(active.clone())).unwrap();
+        service.send_terminal_input(||{sent.push("own prompt");Ok(())}).unwrap();
+        assert_eq!(sent,vec!["own prompt"]);
+        assert!(service.approve(&first.nonce,true,1,||Ok(active.clone())).is_err());
+        let second=service.prepare(2,||Ok(active.clone())).unwrap();
+        assert!(service.send_terminal_input(||{sent.push("partial input");Err("Write failed".into())}).is_err());
+        assert_eq!(sent,vec!["own prompt","partial input"]);
+        assert!(service.approve(&second.nonce,true,3,||Ok(active.clone())).is_err());
+        let final_review=service.prepare(4,||Ok(active.clone())).unwrap();
+        service.approve(&final_review.nonce,true,5,||Ok(active)).unwrap();
+        assert!(service.send_terminal_input(||{sent.push("must not send");Ok(())}).is_err());
+        assert_eq!(sent,vec!["own prompt","partial input"]);
+    }
+    #[test]
+    fn exit_review_serializes_terminal_input_with_final_approval(){
+        let service=std::sync::Arc::new(Service::default());let active=vec![item()];
+        let review=service.prepare(0,||Ok(active.clone())).unwrap();
+        let (snapshot_sender,snapshot_receiver)=std::sync::mpsc::channel();
+        let (release_sender,release_receiver)=std::sync::mpsc::channel();
+        let approval_service=service.clone();
+        let approval=std::thread::spawn(move||approval_service.approve(&review.nonce,true,1,||{
+            snapshot_sender.send(()).unwrap();release_receiver.recv().unwrap();Ok(active)
+        }));
+        snapshot_receiver.recv().unwrap();
+        let (attempt_sender,attempt_receiver)=std::sync::mpsc::channel();
+        let (finished_sender,finished_receiver)=std::sync::mpsc::channel();
+        let (sent_sender,sent_receiver)=std::sync::mpsc::channel();let input_service=service.clone();
+        let input=std::thread::spawn(move||{attempt_sender.send(()).unwrap();let result=input_service.send_terminal_input(||{sent_sender.send("must not send").unwrap();Ok(())});finished_sender.send(()).unwrap();result});
+        attempt_receiver.recv().unwrap();
+        let during_snapshot=finished_receiver.recv_timeout(std::time::Duration::from_millis(50));
+        release_sender.send(()).unwrap();
+        assert!(approval.join().unwrap().is_ok());assert!(input.join().unwrap().is_err());
+        assert!(matches!(during_snapshot,Err(std::sync::mpsc::RecvTimeoutError::Timeout)));
+        assert!(matches!(sent_receiver.try_recv(),Err(std::sync::mpsc::TryRecvError::Disconnected)));
     }
     #[test]
     fn exit_resources_include_only_working_owned_chats_and_active_terminals(){

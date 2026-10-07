@@ -298,15 +298,19 @@ async fn start_task(app:tauri::AppHandle,request:tasks::Start)->Result<tasks::Ta
 #[tauri::command]
 fn terminal_replay(service:State<'_,Arc<terminal::Service>>,id:String)->Result<terminal::Replay,String>{service.replay(&id)}
 #[tauri::command]
-fn terminal_input(service:State<'_,Arc<terminal::Service>>,id:String,data:String)->Result<(),String>{service.input(&id,&data)}
+fn terminal_input(service:State<'_,Arc<terminal::Service>>,exit:State<'_,exit_review::Service>,id:String,data:String)->Result<(),String>{
+    exit.send_terminal_input(||service.input(&id,&data))
+}
 #[tauri::command]
 fn terminal_resize(service:State<'_,Arc<terminal::Service>>,id:String,cols:u16,rows:u16)->Result<(),String>{service.resize(&id,cols,rows)}
 #[tauri::command]
-fn terminal_interrupt(service:State<'_,Arc<terminal::Service>>,id:String,confirmed:bool)->Result<(),String>{
-    if !confirmed{return Err("Confirme a interrupção da sessão selecionada.".into());}service.input(&id,"\u{1b}")
+fn terminal_interrupt(service:State<'_,Arc<terminal::Service>>,exit:State<'_,exit_review::Service>,id:String,confirmed:bool)->Result<(),String>{
+    if !confirmed{return Err("Confirme a interrupção da sessão selecionada.".into());}exit.send_terminal_input(||service.input(&id,"\u{1b}"))
 }
 #[tauri::command]
-fn terminal_model_picker(service:State<'_,Arc<terminal::Service>>,id:String)->Result<(),String>{service.input(&id,"\u{1b}p")}
+fn terminal_model_picker(service:State<'_,Arc<terminal::Service>>,exit:State<'_,exit_review::Service>,id:String)->Result<(),String>{
+    exit.send_terminal_input(||service.input(&id,"\u{1b}p"))
+}
 fn exit_resources(app:&tauri::AppHandle)->Result<Vec<exit_review::Resource>,String>{
     let active=app.state::<Arc<terminal::Service>>().active_ids()?;
     let tasks=if active.is_empty(){Vec::new()}else{app.state::<Arc<tasks::Store>>().list()?};

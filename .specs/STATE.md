@@ -5,10 +5,10 @@
 ## Handoff
 
 - **Feature**: Capy multifuncional (`.design/multifunction.md`, `.checks/multifunction.md`)
-- **Phase / Task**: Execute / C15 — isolate chat instruction capture and make evidence visible in transfer review
-- **Completed**: Live Claude 2.1.293 subscription proof and native UI flow passed: the release Capy hook captured the exact temporary workspace CLAUDE.md, returned its marker, recorded status without failure, removed its process lease, and rendered path/text in the actual transfer review (29 checks). Backend transfer test confirms collection warnings. Rust 123 passed/2 ignored; JS 34 passed; final desktop build passed; native smoke 16 passed after runner startup-order fix.
-- **In-progress**: Independent requirement-by-requirement C1–C19 review and any remaining locally executable gaps. The Computer Use native pipe was unavailable; the project's own CDP runner provided the UI evidence. Real API provider/service, external Codex dispatch, and other account/provider live proofs remain unavailable.
-- **Next step**: Validate the captured references in the native review flow, then continue the acceptance checklist and independent final review
+- **Phase / Task**: Execute / C9 — serialize terminal input with final exit approval
+- **Completed**: C15 native capture and transfer review passed in 29 checks. C9 terminal input, model picker and confirmed interruption now invalidate pending exit review and share its approval lock; approved exit never executes the input callback. Two new Rust tests passed; full suite 125 passed/2 live opt-in ignored, strengthened concurrency test passed separately; desktop build passed. Native `--exit-review` passed 36 checks without provider calls in `scratch/capy-visual-2388c2f5-a366-4131-aa25-0f25e637cfca/report.json`, including all three Tauri routes and conservative failure invalidation.
+- **In-progress**: Independent review of this C9 guard, then requirement-by-requirement C1–C19 audit and remaining locally executable gaps. This guard proves Capy-controlled input ordering; autonomous provider activity, other providers/accounts and the final complete review remain open.
+- **Next step**: Independently verify the C9 terminal admission change and continue the complete acceptance audit
 - **Blockers**: no real API provider/service; real tests remain limited to authorized Claude subscription scratch sessions; other-account and external Codex dispatch proof remain unavailable
 - **Uncommitted files**: user-owned `.checks/interventions-codex.round2.verified.md`, `.checks/interventions-codex.round3.verified.md`, `.checks/interventions-codex.verified.md`, `releases/0.4.0-alpha.1/Capy.exe.sha256`
 - **Branch**: master

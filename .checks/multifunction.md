@@ -89,6 +89,18 @@ Saída normal em 2026-10-06: `exit_review_requires_exact_fresh_single_approval`,
 
 Prova real amostrada de controles em `.checks/live-task-controls.verified.md`: verificador independente repetiu 42 checks contra três turnos Claude Haiku próprios. Cancelar preservou geração; aprovar interrupção usou Esc oficial, confirmou `Interrupted` e manteve saída parcial; cancelar saída preservou o processo; aprovar saída identificou e encerrou o terminal/CLI exatos. Tokens oficiais crescentes comprovaram geração, sem inferir atividade pelo PID/silêncio; histórico não mostrou ferramentas. C9 permanece parcial quanto a provedores/contas/superfícies não amostrados, pausa onde houver suporte e a ligação atômica entre atividade e o instante final da confirmação de saída. Ctrl+Z não é oferecido neste fluxo Windows.
 
+Entrada de terminal e saída (2026-10-07): `terminal_input`, `terminal_model_picker` e `terminal_interrupt` confirmado agora usam a mesma trava da aprovação de saída. Antes de tentar escrever, invalidam a revisão pendente, pois uma falha de escrita pode ter enviado parte dos bytes. A aprovação bem-sucedida impede o callback de envio; uma entrada concorrente aguarda a conferência final. Critérios deste trecho: revisão anterior inutilizável após entrada ou falha parcial; zero bytes enviados depois da aprovação; conferência e escrita serializadas; os três comandos Tauri ligados à guarda. `exit_review_terminal_input_invalidates_approval_even_after_partial_write_failure` e `exit_review_serializes_terminal_input_with_final_approval` passaram. Suíte Rust: 125 aprovados/2 provas live optativas ignoradas; teste reforçado de concorrência repetido e aprovado; build desktop passou. Runner `--exit-review` passou em 36 checks em `scratch/capy-visual-2388c2f5-a366-4131-aa25-0f25e637cfca/report.json`, incluindo tentativa nos três comandos contra UUIDs próprios inexistentes, invalidação da aprovação e preservação do chat/aplicação. Não chamou provedores nem enviou bytes a terminal real: prova a ligação Tauri e a falha conservadora; as provas anteriores cobrem o terminal real. Esta guarda fecha a entrada controlada pela Capy; não equivale a observar atomicamente toda mudança autônoma de atividade do provedor. C9 completo e revisão final permanecem abertos.
+
+Cobertura da guarda de entrada (cada assertion mapeia aos critérios acima):
+
+| Critério | Evidência e valor esperado |
+| --- | --- |
+| Entrada invalida revisão | `src-tauri/src/exit_review.rs:137`: `assert!(service.approve(&first.nonce,true,1,||Ok(active.clone())).is_err())` |
+| Falha parcial invalida revisão e preserva envio observado | `src-tauri/src/exit_review.rs:140`: `assert_eq!(sent,vec!["own prompt","partial input"])`; linha 141 rejeita a aprovação anterior |
+| Nenhum envio após aprovar | `src-tauri/src/exit_review.rs:145`: `assert_eq!(sent,vec!["own prompt","partial input"])`, sem `must not send` |
+| Conferência serializada com entrada | `src-tauri/src/exit_review.rs:166`: `assert!(matches!(during_snapshot,Err(std::sync::mpsc::RecvTimeoutError::Timeout)))`; linha 167 confirma canal de envio desconectado sem bytes |
+| Três comandos Tauri usam a guarda | `scripts/verify-pet-native.mjs:268`: cada `confirm_exit` anterior rejeita com `Solicite a saída novamente`, após erro exato de terminal inexistente na linha 267; linha 269 preserva nonce/chat/aplicação |
+
 ### S3 — Contas, quotas e continuidade · ~30 KB existentes · ~8k de leitura
 
 **C10** — Contas Claude existentes e login em perfil isolado não sobrescrevem credenciais de outra conta.

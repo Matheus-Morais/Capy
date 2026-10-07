@@ -258,6 +258,16 @@ try{
     check('native_exit_cancel_keeps_chat_and_application_unchanged',(await panel.invoke('list_chats'))[0].state==='working'&&!childExited);
     const canceled=await panel.invoke('prepare_exit_review');await panel.invoke('cancel_exit_review',{nonce:canceled.nonce});
     check('native_exit_canceled_nonce_cannot_close_application',await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('confirm_exit',{nonce:${JSON.stringify(canceled.nonce)},confirmed:true}).then(()=>false,()=>true)`));
+    for(const [command,args] of [
+      ['terminal_input',{id:randomUUID(),data:'Own nonexistent terminal fixture'}],
+      ['terminal_model_picker',{id:randomUUID()}],
+      ['terminal_interrupt',{id:randomUUID(),confirmed:true}],
+    ]){
+      const inputReview=await panel.invoke('prepare_exit_review');
+      check(`native_exit_${command}_rejects_unowned_terminal`,await panel.evaluate(`window.__TAURI_INTERNALS__.invoke(${JSON.stringify(command)},${JSON.stringify(args)}).then(()=>false,error=>String(error).includes('Terminal não encontrado'))`));
+      check(`native_exit_${command}_invalidates_prior_approval_before_write`,await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('confirm_exit',{nonce:${JSON.stringify(inputReview.nonce)},confirmed:true}).then(()=>false,error=>String(error).includes('Solicite a saída novamente'))`));
+      check(`native_exit_${command}_failure_keeps_own_chat_and_application`,!childExited&&(await panel.invoke('list_chats'))[0].activeNonce===sendNonce);
+    }
     const stale=await panel.invoke('prepare_exit_review');
     Object.assign(exitFixture,{revision:2,activeNonce:randomUUID()});exitFixture.usedNonces.push(exitFixture.activeNonce);
     await writeFile(path,JSON.stringify(exitFixture));
