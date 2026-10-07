@@ -150,7 +150,7 @@ html:has(.pet-window),.pet-window { background:transparent; overflow:hidden; use
 #terminalSection { scroll-margin-top:8px; }
 .terminal-heading h2 { font-size:14px; margin:0; }
 .terminal-heading button { font-size:12px; }
-#terminalViewport { height:340px; padding:10px; background:#272b24; margin-top:12px; border-radius:5px; }
+#terminalViewport { height:min(70vh,600px); padding:10px; background:#272b24; margin-top:12px; border-radius:5px; }
 select:focus-visible,textarea:focus-visible,summary:focus-visible { outline:3px solid var(--alert); outline-offset:3px; }
 .routing-rule label,.fallback-row label { display:grid; gap:5px; margin-bottom:10px; font-size:12px; }
 .routing-rule input,.routing-rule select { padding:7px; border:1px solid #b9b09b; border-radius:5px; background:var(--paper); color:inherit; width:100%; }

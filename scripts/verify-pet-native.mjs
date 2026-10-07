@@ -8,6 +8,7 @@ import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
 import {verifyLiveTaskControls} from './verify-live-task-controls.mjs';
+import {verifyLiveTaskModel} from './verify-live-task-model.mjs';
 
 const workspace=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
@@ -15,7 +16,9 @@ const exe=join(workspace,'src-tauri','target','release','capy.exe');
 await stat(exe);await mkdir(root,{recursive:true});
 let exitFixture;
 const liveTaskControls=process.argv.includes('--live-task-controls');
-const liveTaskMode=process.argv.includes('--live-task')||liveTaskControls;
+const liveTaskModel=process.argv.includes('--live-task-model');
+assert.ok(!(liveTaskControls&&liveTaskModel),'Model and interruption proofs run separately');
+const liveTaskMode=process.argv.includes('--live-task')||liveTaskControls||liveTaskModel;
 const corruptProfiles=process.argv.includes('--profiles-corrupt');
 const incompatibleProfiles='[{"futureProfileVersion":2,"opaque":"preserve exact bytes"}]\r\n';
 if(corruptProfiles){
@@ -184,6 +187,7 @@ try{
     await panel.invoke('terminal_input',{id:liveTask.id,data:'\u001b'});
     await waitFor(async()=>!/Select.*model|Selecion.*modelo/i.test(await screen()),'Seletor fecha sem novo envio');
     await writeFile(join(root,'task-receipt.json'),JSON.stringify({task:liveTask,process:liveTaskProcess,historyPath:history.path,response:history.response},null,2));
+    if(liveTaskModel)await verifyLiveTaskModel({panel,task:liveTask,profile:liveTaskProfile,root,check,waitFor,taskHistory});
   }
   if(exitFixture){
     for(const connection of connections)connection.close();
@@ -380,6 +384,7 @@ try{
     await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('request_exit').catch(error=>{window.__capyExitError=String(error);});true`);
     const dialog=await waitFor(()=>panel.takeDialog(),'Confirmação de saída do terminal Claude real');
     check('native_task_exit_dialog_names_exact_session',dialog.type==='confirm'&&dialog.message.includes(liveTask.id)&&dialog.message.includes('fecha estes terminais integrados'));
+    if(liveTaskModel)check('native_model_switch_exit_dialog_labels_launch_model',dialog.message.includes('modelo inicial: haiku'));
     await panel.call('Page.handleJavaScriptDialog',{accept:true});
     const started=Date.now();while(!childExited&&Date.now()-started<10_000)await delay(100);check('native_task_approved_exit_closes_own_application',childExited);
     let ownClosed=false,current;const processDeadline=Date.now()+10_000;

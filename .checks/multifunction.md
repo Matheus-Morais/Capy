@@ -110,6 +110,10 @@ Proof: `cargo test --manifest-path src-tauri/Cargo.toml handoff_summary_cites_ac
 **C16** — Troca manual de modelo/conta/IA usa operação oficial suportada ou nova sessão com resumo.
 Proof: prova em sessão própria de cada operação disponibilizada.
 
+Troca real no terminal — decisão antes do runner em 2026-10-07: `--live-task-model` reaproveita o formulário/turno Haiku e abre o seletor oficial; selecionar Sonnet somente depois de observar a linha selecionada, com a tecla oficial `s` (somente esta sessão). Exigir resposta assistant posterior no JSONL do mesmo UUID/pasta, com modelo Sonnet e marcador do novo prompt; bytes de settings.json do perfil devem permanecer intactos. Enter e `/model sonnet` não são usados porque salvam o modelo padrão do usuário. Nenhuma conta/modelo de sessão externa muda. Fonte oficial: https://code.claude.com/docs/en/model-config.
+
+Porta descoberta na prova: o registro da tarefa conserva o modelo de lançamento; depois de uma troca oficial, esse dado não prova o modelo atual. Título/lista da tarefa e confirmação de saída identificam explicitamente `modelo inicial`, sem inventar um modelo atual. O atual é controlado pelo CLI. Alternativa rejeitada: apresentar Haiku como atual após uma resposta Sonnet confirmada ou reescrever o registro a partir do texto do seletor. Prova: receipt Sonnet no mesmo UUID, teste `exit confirmation names exact resources and distinguishes uncertain consumption` e assertions nativas dos rótulos.
+
 ### S4 — Iniciar, chat e origem · ~15 KB de fontes existentes · ~4k de leitura
 
 **C17** — Tarefa escolhe pasta/provedor/conta/modelo/instrução e abre CLI externo padrão ou terminal integrado.

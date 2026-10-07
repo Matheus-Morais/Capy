@@ -6,7 +6,7 @@ export const defaultThresholds = () => [50,60,70,80,90].map(percent => ({percent
 export const billingLabel = (billing: string) => billing === 'subscription' ? 'Assinatura Claude' : billing === 'api' ? 'API · cobrança por uso' : 'Cobrança não confirmada';
 export function exitConfirmation(review:ExitReview):string {
   const resources=review.resources.map(resource=>
-    `${resource.kind==='chat'?'Chat em envio':'Terminal integrado'}: ${resource.label}\nSessão: ${resource.id}\n${resource.provider} · ${resource.account} · ${resource.model} · ${billingLabel(resource.billing)}${resource.cwd?`\nPasta: ${resource.cwd}`:''}`);
+    `${resource.kind==='chat'?'Chat em envio':'Terminal integrado'}: ${resource.label}\nSessão: ${resource.id}\n${resource.provider} · ${resource.account} · ${resource.kind==='terminal'?'modelo inicial: ':''}${resource.model} · ${billingLabel(resource.billing)}${resource.cwd?`\nPasta: ${resource.cwd}`:''}`);
   const effects=[];
   if(review.resources.some(resource=>resource.kind==='chat'))effects.push('Sair interrompe os envios de chat. O resultado pode ficar indisponível e o consumo pode ter ocorrido. A Capy não reenviará mensagens automaticamente.');
   if(review.resources.some(resource=>resource.kind==='terminal'))effects.push('Sair fecha estes terminais integrados. O histórico do CLI permanece; a conclusão do trabalho não é garantida.');

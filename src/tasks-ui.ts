@@ -66,7 +66,7 @@ export async function initializeTasks():Promise<void>{
     const token=++attachment;
     attached=task;lastSequence=0;queued=[];replaying=true;terminalExited=false;
     section.hidden=false;
-    document.getElementById('terminalTitle')!.textContent=`Claude · ${task.model}`;
+    document.getElementById('terminalTitle')!.textContent=`Claude · modelo inicial: ${task.model}`;
     document.getElementById('terminalIdentity')!.textContent=`${task.cwd} · ${task.account??'conta do perfil'} · ${billingLabel(task.billing)} · sessão ${task.id}`;
     if(!opened){term.open(document.getElementById('terminalViewport')!);opened=true;}else term.reset();
     try{
@@ -106,7 +106,7 @@ export async function initializeTasks():Promise<void>{
   const refresh=async()=>{
     tasks=await invoke<Task[]>('list_tasks');const signature=JSON.stringify(tasks.map(t=>t.id));
     if(taskSignature===signature)return;taskSignature=signature;
-    document.getElementById('managedTasks')!.innerHTML=tasks.slice(-20).reverse().map(task=>`<div class="managed-task"><h3>${escape(task.cwd.split(/[\\/]/).filter(Boolean).pop()??task.cwd)} · ${escape(task.model)}</h3><p>${escape(task.account??'Conta do perfil')} · ${escape(billingLabel(task.billing))} · ${task.mode==='embedded'?'Terminal integrado':'CLI externo'}</p><p class="session-id">${escape(task.id)}</p><div class="actions">${task.mode==='embedded'?`<button data-task-action="view" data-task-id="${task.id}">Ver terminal integrado</button>`:''}<button data-task-action="resume" data-task-id="${task.id}">Retomar conversa encerrada</button></div><details><summary>Continuar em outra conta ou modelo</summary><form data-prepare-handoff="${task.id}"><label>Conta de destino<select name="destination" required>${profiles.map(p=>`<option value="${escape(p.id)}">${escape(p.label)}</option>`).join('')}</select></label><label>Modelo de destino<input name="model" value="${escape(task.model)}" required maxlength="128"></label><button type="submit">Preparar resumo para revisão</button></form></details></div>`).join('');
+    document.getElementById('managedTasks')!.innerHTML=tasks.slice(-20).reverse().map(task=>`<div class="managed-task"><h3>${escape(task.cwd.split(/[\\/]/).filter(Boolean).pop()??task.cwd)} · modelo inicial: ${escape(task.model)}</h3><p>${escape(task.account??'Conta do perfil')} · ${escape(billingLabel(task.billing))} · ${task.mode==='embedded'?'Terminal integrado':'CLI externo'}</p><p class="session-id">${escape(task.id)}</p><div class="actions">${task.mode==='embedded'?`<button data-task-action="view" data-task-id="${task.id}">Ver terminal integrado</button>`:''}<button data-task-action="resume" data-task-id="${task.id}">Retomar conversa encerrada</button></div><details><summary>Continuar em outra conta ou modelo</summary><form data-prepare-handoff="${task.id}"><label>Conta de destino<select name="destination" required>${profiles.map(p=>`<option value="${escape(p.id)}">${escape(p.label)}</option>`).join('')}</select></label><label>Modelo de destino<input name="model" value="${escape(task.model)}" required maxlength="128"></label><button type="submit">Preparar resumo para revisão</button></form></details></div>`).join('');
     if(!cwd.value&&tasks.length)cwd.value=tasks[tasks.length-1].cwd;
   };
   if(!native){form.querySelectorAll<HTMLInputElement|HTMLButtonElement|HTMLSelectElement|HTMLTextAreaElement>('input,button,select,textarea').forEach(element=>element.disabled=true);return;}

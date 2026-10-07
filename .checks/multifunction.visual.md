@@ -1,5 +1,13 @@
 # Prova nativa parcial da Capy multifuncional
 
+## Troca efetiva no terminal — 2026-10-07
+
+`node scripts/verify-pet-native.mjs --live-task-model` passou em 35 checks na build atual: `scratch/capy-visual-74b0a439-5162-480c-9a68-ddd6c6b55ea4/report.json`, `model-switch-receipt.json`, `model-sonnet-selected.png` e `model-switch-result.png`. O primeiro turno foi confirmado em Haiku; o seletor oficial foi aberto pelo botão da Capy, a linha Sonnet foi observada selecionada e a tecla `s` aplicou a escolha somente à sessão. Uma resposta assistant posterior trouxe o marcador próprio e `message.model=claude-sonnet-5-5` no mesmo UUID/pasta. Os bytes de settings.json permaneceram iguais; nenhuma ferramenta apareceu no histórico observado. A conta/cobrança por assinatura permaneceu a mesma. Fonte: https://code.claude.com/docs/en/model-config.
+
+A captura final foi aberta e inspecionada. Título/lista e confirmação de saída agora identificam o modelo do registro da tarefa como `modelo inicial`; não o apresentam como o atual depois da troca no CLI. O terminal passa a usar altura proporcional à janela, limitada a 600px: a altura fixa anterior cortava o seletor e uma repetição da prova não conseguiu observar Sonnet selecionado. As assertions de visibilidade/seleção foram mantidas. A execução anterior em `scratch/capy-visual-b7ad6745-0fdb-41fd-b332-0f0ae368f372` passou em 33 checks antes de corrigir os rótulos; não é a validação final destes rótulos.
+
+31 JS e builds frontend/desktop passaram. Backend Rust não mudou. Revisão independente da troca e prova de CLI externo continuam pendentes. A revisão independente dos controles de geração aprovou 42 checks nativos e 31 JS em `.checks/live-task-controls.verified.md`; não encerra C9 dos demais provedores/superfícies ou a revisão final do plano.
+
 ## Controles reais durante geração — 2026-10-07
 
 `node scripts/verify-pet-native.mjs --live-task-controls` passou em 42 checks na build desktop atual. Evidências privadas: `scratch/capy-visual-8fc15b67-5448-40c1-9296-53d9ad33b263/report.json`, `interrupt-active-receipt.json`, `interrupt-result.txt`, `exit-active-receipt.json`, `exit-before-approval.txt` e `task-exit.json`. Cada resposta longa é ligada ao prompt no histórico do UUID/pasta próprios e ao PID/data de criação do CLI oficial. Duas amostras registram aumento do contador oficial de tokens de saída durante o turno; não inferem geração de um processo vivo. O CLI 2.1.292 recolhe o texto até interromper/terminar; a transcrição não mostrou os trechos em geração. A prova não simula o estado `working`.

@@ -9,6 +9,7 @@ test('exit confirmation names exact resources and distinguishes uncertain consum
   const text=exitConfirmation(review);
   assert.match(text,/Sessão: own-chat/);assert.match(text,/Sessão: own-terminal/);assert.match(text,/Pasta: C:\\OwnProject/);
   assert.match(text,/Claude · Fixture · haiku · Assinatura Claude/);assert.match(text,/consumo pode ter ocorrido/);assert.match(text,/não reenviará mensagens automaticamente/);
+  assert.match(text,/Claude · Fixture · modelo inicial: haiku · Assinatura Claude/);
   assert.match(text,/fecha estes terminais integrados/);assert.doesNotMatch(text,/concluído|concluída/);
   assert.doesNotMatch(exitConfirmation({...review,resources:[terminal]}),/consumo pode ter ocorrido/);
   assert.doesNotMatch(exitConfirmation({...review,resources:[chat]}),/fecha estes terminais/);
