@@ -127,6 +127,18 @@ Proof: `cargo test --manifest-path src-tauri/Cargo.toml routing`
 
 Lacuna local constatada na revisão de 2026-10-07: `src-tauri/src/monitor.rs:83` percorre somente tarefas para preparar revisões por quota; `src-tauri/src/chat_commands.rs:142` prepara transferência de chat somente quando chamada manualmente. O chat próprio ainda precisa receber a cadeia por conta já aprovada, com gatilhos independentes, amostra/identidade recentes, espera pelo fim do turno e aviso de ausência de alternativa. Reusar a revisão de chat existente, sem envio automático; não substituir revisão manual já preparada e não recriar a mesma revisão cancelada até a origem mudar. A interface precisa receber a nova revisão mesmo sem mudança da versão do histórico. Essa lacuna não depende de um serviço de API real para implementação/prova local; prova real ficará limitada aos provedores/contas disponíveis.
 
+Continuidade automática do chat — passo 1/3 concluído: o Store prepara uma revisão com versão/identidade/modelo revalidados sob a trava do histórico, sem iniciar envio. Conserva uma revisão existente da mesma origem, inclusive manual. Cancelar grava `dismissed=true` atomicamente no arquivo próprio, ocultando a revisão e rejeitando aprovação; a automação não reapresenta essa revisão após reinício. Outro turno permite novo resumo e preparação manual explícita continua disponível. `automatic`/`dismissed` ausentes em registros antigos assumem false; metadados de revisão desconhecidos são recusados e preservados. Os dois testes `chat_automatic_review*` e nove `chat_transfer*` passaram. Ligação ao monitor/UI e verificador independente permanecem próximos passos.
+
+| Critério do passo 1 | Assertion de produção/teste |
+| --- | --- |
+| Identidades/modelo/versão exatos | `src-tauri/src/chat_transfer.rs:219`: sourceId, sourceTarget, destination e model iguais aos esperados; linha 218 confere sourceRevision e automatic |
+| Nenhum envio ou destino ao preparar | `src-tauri/src/chat_transfer.rs:220`: uma conversa; linhas 221–222: completed, duas mensagens, activeNonce ausente e usedNonces inalterados |
+| Revisão manual/existente preservada | `src-tauri/src/chat_transfer.rs:224` e `:230`: bytes idênticos; nonce manual conservado |
+| Cancelamento sobrevive reinício | `src-tauri/src/chat_transfer.rs:225` e `:226`: revisão ativa/automática ausente; linha 227 recusa aprovação cancelada |
+| Nova origem permite revisão | `src-tauri/src/chat_transfer.rs:234`: nonce novo e sourceRevision da conversa após outro turno |
+| Drift, trabalho ou incerteza não prepara | `src-tauri/src/chat_transfer.rs:245`: revision/account/billing/model/state divergentes retornam None; linhas 249–252 recusam snapshot antigo, working e unknown |
+| Registro incompatível preservado | `src-tauri/src/chat_transfer.rs:254`: erro e bytes idênticos |
+
 **C14** — Cada transferência tem resumo revisável e aprovação única; mudança de cobrança identificada exige confirmação.
 Proof: `cargo test --manifest-path src-tauri/Cargo.toml handoff_rejects_billing_identity_and_turn_drift_without_consuming_review`; `handoff_approval_is_single_use_and_persists_across_restart`; `handoff_failure_restores_edited_summary_with_fresh_required_approval`; `handoff_cancellation_suppresses_only_the_same_source_boundary`; fluxo próprio Tauri aprovado em `scratch/capy-visual-06a4baff-3da6-4d00-9c7b-22bc177a9845/report.json` (40 checks), com resumo editado, `idle_prompt` real, destino Haiku/assinatura, replay recusado e saída aprovando/encerrando os dois UUIDs/processos próprios.
 

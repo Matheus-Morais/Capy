@@ -3,12 +3,16 @@ use serde::{Deserialize,Serialize};
 use std::{collections::HashSet,path::Path};
 
 #[derive(Clone,Deserialize,Serialize)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
 pub struct Review {
     pub nonce:String,pub source_id:String,pub source_revision:u64,pub source_target:Target,
     pub destination:Target,pub model:String,pub summary:Summary,
     #[serde(default)]
     pub uncertain_messages:Vec<usize>,
+    #[serde(default)]
+    pub automatic:bool,
+    #[serde(default)]
+    pub dismissed:bool,
 }
 #[derive(Deserialize,Serialize)]
 #[serde(deny_unknown_fields)]
@@ -97,7 +101,7 @@ impl Store {
         if review.source_id!=source.id||!crate::discovery::uuid(&review.nonce)||!chat_history::valid_target(&review.source_target)
             ||!chat_history::valid_target(&review.destination)||!crate::chat_api::valid_model(&review.model){return Err("Revisão de chat incompatível; o arquivo foi preservado.".into());}
         review.summary.validate()?;
-        Ok((eligible(source)&&source.revision==review.source_revision&&source.target==review.source_target
+        Ok((!review.dismissed&&eligible(source)&&source.revision==review.source_revision&&source.target==review.source_target
             &&review.uncertain_messages==uncertain_messages(source)&&!source.used_nonces.contains(&review.nonce)).then_some(review))
     }
     pub fn transfer_reviews(&self)->Result<Vec<Review>,String>{
@@ -108,13 +112,14 @@ impl Store {
         if reviews.len()>64{return Err("Limite de 64 revisões de chat. Cancele uma revisão antes de preparar outra.".into());}
         Ok(reviews)
     }
+    pub fn active_transfer_review(&self,source_id:&str)->Result<Option<Review>,String>{self.review_for(&self.get(source_id)?)}
     pub fn transfer_review(&self,source_id:&str)->Result<Review,String>{
         self.available()?;let source=self.get(source_id)?;
         let review:Review=settings::read_json_limit(&self.root.join(format!("{source_id}.review.json")),2_097_152)?;
         if review.source_id!=source_id||!crate::discovery::uuid(&review.nonce)||!chat_history::valid_target(&review.source_target)
             ||!chat_history::valid_target(&review.destination)||!crate::chat_api::valid_model(&review.model){return Err("Revisão incompatível; o arquivo foi preservado.".into());}
         review.summary.validate()?;
-        if !eligible(&source)||source.used_nonces.contains(&review.nonce)||source.revision!=review.source_revision||source.target!=review.source_target
+        if review.dismissed||!eligible(&source)||source.used_nonces.contains(&review.nonce)||source.revision!=review.source_revision||source.target!=review.source_target
             ||review.uncertain_messages!=uncertain_messages(&source){return Err("A revisão expirou ou já foi usada; prepare um novo resumo.".into());}
         Ok(review)
     }
@@ -123,18 +128,33 @@ impl Store {
         self.prepare_transfer_with_guides(source_id,destination,model,None)
     }
     pub fn prepare_transfer_with_guides(&self,source_id:&str,destination:Target,model:String,loaded_guides:Option<&str>)->Result<Review,String>{
+        self.prepare_review(source_id,destination,model,loaded_guides,None)?.ok_or("Não foi possível preparar a revisão.".into())
+    }
+    pub fn prepare_automatic_transfer(&self,expected:&Conversation,destination:Target,model:String,loaded_guides:Option<&str>)->Result<Option<Review>,String>{
+        self.prepare_review(&expected.id,destination,model,loaded_guides,Some(expected))
+    }
+    fn prepare_review(&self,source_id:&str,destination:Target,model:String,loaded_guides:Option<&str>,expected:Option<&Conversation>)->Result<Option<Review>,String>{
         self.available()?;let ids=self.ids.lock().map_err(|_|"Conversas indisponíveis.")?;
         self.consistent()?;
         if !ids.iter().any(|id|id==source_id){return Err("Conversa não encontrada.".into());}
+        let source=self.read(source_id)?;
+        if let Some(expected)=expected{
+            if source.revision!=expected.revision||source.target!=expected.target||source.state!=expected.state||source.model!=expected.model
+                ||!eligible(&source)||source.messages.is_empty(){return Ok(None);}
+        }
+        if !eligible(&source)||!chat_history::valid_target(&destination)||!crate::chat_api::valid_model(&model){return Err("Aguarde um fim de turno confirmado e escolha um destino válido antes de transferir.".into());}
+        self.review_for(&source)?;
+        let path=self.root.join(format!("{source_id}.review.json"));
+        if expected.is_some()&&path.exists(){
+            let current:Review=settings::read_json_limit(&path,2_097_152)?;
+            if current.source_revision==source.revision&&current.source_target==source.target{return Ok(None);}
+        }
         let mut active=0;
         for id in ids.iter().filter(|id|id.as_str()!=source_id){if self.review_for(&self.read(id)?)?.is_some(){active+=1;}}
         if active>=64{return Err("Limite de 64 revisões de chat. Cancele uma revisão antes de preparar outra.".into());}
-        let source=self.read(source_id)?;
-        if !eligible(&source)||!chat_history::valid_target(&destination)||!crate::chat_api::valid_model(&model){return Err("Aguarde um fim de turno confirmado e escolha um destino válido antes de transferir.".into());}
-        self.review_for(&source)?;
-        let review=Review{nonce:uuid::Uuid::new_v4().to_string(),source_id:source.id.clone(),source_revision:source.revision,source_target:source.target.clone(),destination,model,summary:summary(self,&source,loaded_guides),uncertain_messages:uncertain_messages(&source)};
+        let review=Review{nonce:uuid::Uuid::new_v4().to_string(),source_id:source.id.clone(),source_revision:source.revision,source_target:source.target.clone(),destination,model,summary:summary(self,&source,loaded_guides),uncertain_messages:uncertain_messages(&source),automatic:expected.is_some(),dismissed:false};
         review.summary.validate()?;
-        settings::write_json_limit(&self.root.join(format!("{source_id}.review.json")),&review,2_097_152)?;Ok(review)
+        settings::write_json_limit(&path,&review,2_097_152)?;Ok(Some(review))
     }
     pub fn approve_transfer(&self,source_id:&str,nonce:&str,edited:Summary,reviewed:bool,billing_confirmed:bool,current_source:&Target,current_destination:&Target)->Result<Conversation,String>{
         let review=self.transfer_review(source_id)?;edited.validate()?;
@@ -145,7 +165,7 @@ impl Store {
         self.available()?;let mut ids=self.ids.lock().map_err(|_|"Conversas indisponíveis.")?;
         self.consistent()?;
         let latest:Review=settings::read_json_limit(&self.root.join(format!("{source_id}.review.json")),2_097_152)?;
-        if latest.nonce!=nonce{return Err("Uma nova revisão substituiu esta aprovação.".into());}
+        if latest.nonce!=nonce||latest.dismissed{return Err("Uma nova revisão substituiu ou cancelou esta aprovação.".into());}
         let mut source=self.read(source_id)?;
         let before_source=source.clone();
         if !eligible(&source)||source.revision!=review.source_revision||source.target!=review.source_target||source.used_nonces.iter().any(|n|n==nonce)
@@ -172,9 +192,12 @@ impl Store {
         if review.nonce!=nonce{return Err("A revisão mudou; atualize antes de cancelar.".into());}
         let _ids=self.ids.lock().map_err(|_|"Conversas indisponíveis.")?;
         self.consistent()?;
-        let current:Review=settings::read_json_limit(&self.root.join(format!("{source_id}.review.json")),2_097_152)?;
+        let mut current:Review=settings::read_json_limit(&self.root.join(format!("{source_id}.review.json")),2_097_152)?;
         if current.nonce!=nonce{return Err("A revisão mudou; atualize antes de cancelar.".into());}
-        std::fs::remove_file(self.root.join(format!("{source_id}.review.json"))).map_err(|_|"Não foi possível cancelar a revisão.".into())
+        let source=self.read(source_id)?;
+        if !eligible(&source)||source.revision!=current.source_revision||source.target!=current.source_target{return Err("A origem mudou; atualize antes de cancelar.".into());}
+        current.dismissed=true;
+        settings::write_json_limit(&self.root.join(format!("{source_id}.review.json")),&current,2_097_152)
     }
 }
 
@@ -183,6 +206,54 @@ mod tests {
     use super::*;
     fn cli()->Target{Target{kind:"claudeCli".into(),profile_id:"claude-test".into(),provider:"Claude".into(),account:"test@example.invalid".into(),billing:"subscription".into(),credential_revision:None}}
     fn api()->Target{Target{kind:"api".into(),profile_id:uuid::Uuid::new_v4().to_string(),provider:"OpenAI".into(),account:"Local key".into(),billing:"api".into(),credential_revision:Some(uuid::Uuid::new_v4().to_string())}}
+    fn completed(store:&Store)->Conversation{
+        let source=store.create("Own automatic review".into(),cli(),"haiku".into()).unwrap();
+        let nonce=uuid::Uuid::new_v4().to_string();store.begin(&source.id,0,nonce.clone(),"haiku".into(),"Own instruction".into()).unwrap();
+        store.finish(&source.id,&nonce,Ok(crate::chat_api::Reply{text:"Own answer".into(),completed:true,note:None}),true).unwrap()
+    }
+    #[test]
+    fn chat_automatic_review_never_sends_preserves_manual_and_keeps_cancel_across_restart(){
+        let root=std::env::temp_dir().join(format!("capy-auto-review-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());let source=completed(&store);
+        let review=store.prepare_automatic_transfer(&source,cli(),"sonnet".into(),Some("Captured own guide")).unwrap().unwrap();
+        assert!(review.automatic);assert!(!review.dismissed);assert_eq!(review.source_revision,source.revision);
+        assert_eq!(review.source_id,source.id);assert!(review.source_target==source.target);assert!(review.destination==cli());assert_eq!(review.model,"sonnet");
+        assert!(review.summary.guides.contains("Captured own guide"));assert_eq!(store.list().unwrap().len(),1);
+        let unchanged=store.get(&source.id).unwrap();assert_eq!(unchanged.state,"completed");assert_eq!(unchanged.messages.len(),2);assert!(unchanged.active_nonce.is_none());
+        assert_eq!(unchanged.used_nonces,source.used_nonces);
+        let path=root.join(format!("{}.review.json",source.id));let bytes=std::fs::read(&path).unwrap();
+        assert!(store.prepare_automatic_transfer(&source,api(),"model".into(),None).unwrap().is_none());assert_eq!(std::fs::read(&path).unwrap(),bytes);
+        store.cancel_transfer(&source.id,&review.nonce).unwrap();assert!(store.active_transfer_review(&source.id).unwrap().is_none());
+        let restored=Store::load(root.clone());assert!(restored.prepare_automatic_transfer(&source,cli(),"sonnet".into(),None).unwrap().is_none());
+        assert!(restored.approve_transfer(&source.id,&review.nonce,review.summary,true,false,&source.target,&cli()).is_err());
+        let manual=restored.prepare_transfer(&source.id,api(),"model".into()).unwrap();assert!(!manual.automatic);
+        let bytes=std::fs::read(&path).unwrap();assert!(restored.prepare_automatic_transfer(&source,cli(),"sonnet".into(),None).unwrap().is_none());
+        assert_eq!(std::fs::read(&path).unwrap(),bytes);assert_eq!(restored.transfer_review(&source.id).unwrap().nonce,manual.nonce);
+        restored.cancel_transfer(&source.id,&manual.nonce).unwrap();
+        let nonce=uuid::Uuid::new_v4().to_string();restored.begin(&source.id,source.revision,nonce.clone(),"haiku".into(),"New own turn".into()).unwrap();
+        let next=restored.finish(&source.id,&nonce,Ok(crate::chat_api::Reply{text:"New own answer".into(),completed:true,note:None}),true).unwrap();
+        let next_review=restored.prepare_automatic_transfer(&next,cli(),"sonnet".into(),None).unwrap().unwrap();assert_ne!(next_review.nonce,manual.nonce);assert_eq!(next_review.source_revision,next.revision);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn chat_automatic_review_revalidates_source_and_preserves_incompatible_review(){
+        let root=std::env::temp_dir().join(format!("capy-auto-drift-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());let source=completed(&store);
+        for field in ["revision","account","billing","model","state"]{
+            let mut expected=source.clone();match field{
+                "revision"=>expected.revision+=1,"account"=>expected.target.account="different@example.invalid".into(),
+                "billing"=>expected.target.billing="api".into(),"model"=>expected.model="sonnet".into(),_=>expected.state="failed".into(),
+            }
+            assert!(store.prepare_automatic_transfer(&expected,cli(),"sonnet".into(),None).unwrap().is_none(),"{field}");
+            assert!(!root.join(format!("{}.review.json",source.id)).exists());
+        }
+        let nonce=uuid::Uuid::new_v4().to_string();let working=store.begin(&source.id,source.revision,nonce,"haiku".into(),"Own pending turn".into()).unwrap();
+        assert!(store.prepare_automatic_transfer(&source,cli(),"sonnet".into(),None).unwrap().is_none());
+        assert!(store.prepare_automatic_transfer(&working,cli(),"sonnet".into(),None).unwrap().is_none());
+        store.recover_interrupted().unwrap();let unknown=store.get(&source.id).unwrap();
+        assert!(store.prepare_automatic_transfer(&unknown,cli(),"sonnet".into(),None).unwrap().is_none());
+        let other=completed(&store);let path=root.join(format!("{}.review.json",other.id));let bytes=b"{\"futureReviewVersion\":2}";
+        std::fs::write(&path,bytes).unwrap();assert!(store.prepare_automatic_transfer(&other,cli(),"sonnet".into(),None).is_err());assert_eq!(std::fs::read(&path).unwrap(),bytes);
+        assert_eq!(store.list().unwrap().len(),2);std::fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn chat_transfer_keeps_lost_results_after_success_and_edited_summary(){
         let root=std::env::temp_dir().join(format!("capy-transfer-gaps-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());

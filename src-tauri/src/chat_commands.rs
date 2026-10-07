@@ -134,9 +134,7 @@ pub async fn send_chat(app:tauri::AppHandle,request:Send)->Result<Conversation,S
 
 #[tauri::command]
 pub fn chat_transfer_review(store:State<'_,Arc<chat_history::Store>>,source_id:String)->Result<Option<crate::chat_transfer::Review>,String>{
-    store.get(&source_id)?;
-    if !store.root.join(format!("{source_id}.review.json")).exists(){return Ok(None);}
-    store.transfer_review(&source_id).map(Some)
+    store.active_transfer_review(&source_id)
 }
 #[tauri::command]
 pub async fn prepare_chat_transfer(app:tauri::AppHandle,source_id:String,request:Create)->Result<crate::chat_transfer::Review,String>{
