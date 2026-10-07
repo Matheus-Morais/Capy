@@ -51,6 +51,10 @@ fn contract(provider: &str, model: &str, messages: &[Message]) -> Result<Contrac
 
 pub fn send(provider: &str, model: &str, key: &str, messages: &[Message]) -> Result<Reply, String> {
     let contract = contract(provider, model, messages)?;
+    send_contract(provider, key, &contract)
+}
+
+fn send_contract(provider: &str, key: &str, contract: &Contract) -> Result<Reply, String> {
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(180))
         .connect_timeout(Duration::from_secs(20))
@@ -130,6 +134,99 @@ fn parse(provider: &str, value: &Value) -> Result<Reply, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::{io::{Read, Write}, net::TcpListener, thread, time::Duration};
+
+    fn mock_provider(status: u16, response: &str) -> (String, thread::JoinHandle<Vec<String>>) {
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let response = response.as_bytes().to_vec();
+        let worker = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+            let mut request = Vec::new();
+            let mut buffer = [0u8; 4096];
+            let mut body_length = None;
+            loop {
+                let count = stream.read(&mut buffer).unwrap_or(0);
+                if count == 0 { break; }
+                request.extend_from_slice(&buffer[..count]);
+                if body_length.is_none() {
+                    if let Some(end) = request.windows(4).position(|part| part == b"\r\n\r\n") {
+                        let headers = String::from_utf8_lossy(&request[..end]);
+                        let length = headers.lines().find_map(|line| {
+                            line.to_ascii_lowercase().strip_prefix("content-length:")
+                                .and_then(|value| value.trim().parse::<usize>().ok())
+                        }).unwrap_or(0);
+                        body_length = Some((end + 4, length));
+                    }
+                }
+                if body_length.is_some_and(|(start, length)| request.len() >= start + length) { break; }
+            }
+            let reason = if status == 200 { "OK" } else { "Service Unavailable" };
+            let headers = format!(
+                "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                response.len()
+            );
+            stream.write_all(headers.as_bytes()).unwrap();
+            stream.write_all(&response).unwrap();
+            drop(stream);
+            listener.set_nonblocking(true).unwrap();
+            let mut requests = vec![String::from_utf8_lossy(&request).into_owned()];
+            let deadline = std::time::Instant::now() + Duration::from_millis(300);
+            while std::time::Instant::now() < deadline {
+                match listener.accept() {
+                    Ok((mut retry, _)) => {
+                        let mut bytes = Vec::new();
+                        let _ = retry.read_to_end(&mut bytes);
+                        requests.push(String::from_utf8_lossy(&bytes).into_owned());
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(_) => break,
+                }
+            }
+            requests
+        });
+        (format!("http://{address}/mock"), worker)
+    }
+
+    fn local_contract(endpoint: String) -> Contract {
+        let history = [Message { role: "user".into(), text: "literal marker ação_日本語🦫".into() }];
+        let mut contract = contract("OpenAI", "chosen-model", &history).unwrap();
+        contract.endpoint = endpoint;
+        contract
+    }
+
+    #[test]
+    fn chat_api_http_success_preserves_identity_headers_and_literal_payload() {
+        let response = r#"{"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"mock reply"}]}]}"#;
+        let (endpoint, server) = mock_provider(200, response);
+        let result = send_contract("OpenAI", "fixture-key", &local_contract(endpoint)).unwrap();
+        let requests = server.join().unwrap();
+        assert_eq!(result.text, "mock reply");
+        assert!(result.completed);
+        assert_eq!(requests.len(), 1);
+        let (headers, body) = requests[0].split_once("\r\n\r\n").unwrap();
+        assert!(headers.to_ascii_lowercase().contains("authorization: bearer fixture-key"));
+        let body: Value = serde_json::from_str(body).unwrap();
+        assert_eq!(body["model"], "chosen-model");
+        assert_eq!(body["input"][0]["content"], "literal marker ação_日本語🦫");
+    }
+
+    #[test]
+    fn chat_api_http_failure_is_single_shot_and_never_retried() {
+        let (endpoint, server) = mock_provider(503, "{}");
+        let error = match send_contract("OpenAI", "fixture-key", &local_contract(endpoint)) {
+            Ok(_) => panic!("provider failure must remain an error"),
+            Err(error) => error,
+        };
+        let requests = server.join().unwrap();
+        assert!(error.contains("HTTP 503"));
+        assert_eq!(requests.len(), 1);
+        assert!(requests[0].to_ascii_lowercase().starts_with("post /mock http/1.1"));
+    }
+
     #[test]
     fn chat_api_contracts_pin_provider_endpoint_no_fallback() {
         let history = vec![Message{role:"user".into(),text:"hello".into()},Message{role:"assistant".into(),text:"world".into()}];
