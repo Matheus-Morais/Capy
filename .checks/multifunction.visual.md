@@ -1,5 +1,7 @@
 # Prova nativa parcial da Capy multifuncional
 
+Verificação independente desta rodada: `.checks/live-task-model.round2.verified.md` aprovou 36 checks nativos/32 JS, com renderer totalmente dentro do frame; `.checks/live-task-external.verified.md` aprovou 25 checks nativos, argumento literal e sobrevivência dos processos externos após saída. Ambos os runners encerraram seus processos próprios. Smoke posterior passou em 20 checks sem erros de frontend. Esses relatórios não encerram o checklist multifuncional completo.
+
 ## Revisão do layout e launcher externo — 2026-10-07
 
 A primeira revisão independente da troca confirmou o comportamento, mas reprovou o layout: o renderer do xterm ultrapassava o fundo do terminal. O padding foi separado em `.terminal-frame`, mantendo o viewport sem padding. A prova do autor passou em 36 checks em `scratch/capy-visual-c1164bc5-e21b-44ff-b325-e3f9fae1f799/report.json`, incluindo limites do renderer dentro do viewport; `model-switch-result.png` foi aberto e inspecionado. Repetição independente pendente; o relatório inicial `.checks/live-task-model.verified.md` conserva a reprovação.
