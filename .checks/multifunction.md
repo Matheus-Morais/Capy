@@ -101,6 +101,8 @@ Cobertura da guarda de entrada (cada assertion mapeia aos critérios acima):
 | Conferência serializada com entrada | `src-tauri/src/exit_review.rs:166`: `assert!(matches!(during_snapshot,Err(std::sync::mpsc::RecvTimeoutError::Timeout)))`; linha 167 confirma canal de envio desconectado sem bytes |
 | Três comandos Tauri usam a guarda | `scripts/verify-pet-native.mjs:268`: cada `confirm_exit` anterior rejeita com `Solicite a saída novamente`, após erro exato de terminal inexistente na linha 267; linha 269 preserva nonce/chat/aplicação |
 
+Revisão independente de `df5da08`: `.checks/exit-terminal-admission.verified.md` reprova a cobertura, apesar do código correto observado. O mutante que libera a trava antes de `send()` sobreviveu aos seis testes: faltava a ordem escrita-em-andamento → revisão. Correção de cobertura: `exit_review_waits_for_in_progress_terminal_write_before_new_review_and_approval` mantém o callback bloqueado e exige que a preparação aguarde seu término; `src-tauri/src/exit_review.rs:195` exige timeout da observação durante a escrita, e linha 196 exige que o snapshot observe escrita concluída e a aprovação bloqueie admissões posteriores. Os sete testes `exit_review` passaram, sem mudanças adicionais ao código de produção. O aprendizado foi registrado pelo script em `.specs/lessons.json` como candidato, fundamentado no mutante da revisão. A repetição independente do sensor ainda é necessária antes de encerrar este trecho.
+
 ### S3 — Contas, quotas e continuidade · ~30 KB existentes · ~8k de leitura
 
 **C10** — Contas Claude existentes e login em perfil isolado não sobrescrevem credenciais de outra conta.

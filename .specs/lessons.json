@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 2,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "surviving_mutant::prove terminal input and exit review serialization with both input first and approval first blocked callbacks",
+      "text": "Prove terminal input and exit review serialization with both input-first and approval-first blocked callbacks.",
+      "signal": "surviving_mutant",
+      "scope": "terminal-exit",
+      "status": "candidate",
+      "features": [
+        "exit-terminal-admission"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".checks/exit-terminal-admission.verified.md:35 (terminal-exit)"
+      ],
+      "created": "2026-10-07T20:10:04Z",
+      "last_seen": "2026-10-07T20:10:04Z"
+    }
+  ]
+}

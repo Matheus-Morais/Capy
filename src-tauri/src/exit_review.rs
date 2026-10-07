@@ -167,6 +167,35 @@ mod tests {
         assert!(matches!(sent_receiver.try_recv(),Err(std::sync::mpsc::TryRecvError::Disconnected)));
     }
     #[test]
+    fn exit_review_waits_for_in_progress_terminal_write_before_new_review_and_approval(){
+        let service=std::sync::Arc::new(Service::default());
+        let finished=std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let (started_sender,started_receiver)=std::sync::mpsc::channel();
+        let (release_sender,release_receiver)=std::sync::mpsc::channel();
+        let input_service=service.clone();let input_finished=finished.clone();
+        let input=std::thread::spawn(move||input_service.send_terminal_input(||{
+            started_sender.send(()).unwrap();release_receiver.recv().unwrap();
+            input_finished.store(true,std::sync::atomic::Ordering::Release);Ok(())
+        }));
+        started_receiver.recv().unwrap();
+        let (attempt_sender,attempt_receiver)=std::sync::mpsc::channel();
+        let (snapshot_sender,snapshot_receiver)=std::sync::mpsc::channel();
+        let approval_service=service.clone();let approval_finished=finished.clone();
+        let approval=std::thread::spawn(move||{
+            attempt_sender.send(()).unwrap();
+            let review=approval_service.prepare(0,||{
+                snapshot_sender.send(approval_finished.load(std::sync::atomic::Ordering::Acquire)).unwrap();Ok(vec![])
+            })?;
+            approval_service.approve(&review.nonce,true,1,||Ok(vec![]))
+        });
+        attempt_receiver.recv().unwrap();
+        let during_write=snapshot_receiver.recv_timeout(std::time::Duration::from_millis(50));
+        release_sender.send(()).unwrap();
+        assert!(input.join().unwrap().is_ok());assert!(approval.join().unwrap().is_ok());
+        assert!(matches!(during_write,Err(std::sync::mpsc::RecvTimeoutError::Timeout)));
+        assert!(snapshot_receiver.recv().unwrap());assert!(service.admit().is_err());
+    }
+    #[test]
     fn exit_resources_include_only_working_owned_chats_and_active_terminals(){
         let root=std::env::temp_dir().join(format!("capy-exit-{}",uuid::Uuid::new_v4()));let store=crate::chat_history::Store::load(root.clone());
         let target=crate::chat_history::Target{kind:"claudeCli".into(),profile_id:"own".into(),provider:"Claude".into(),account:"Fixture".into(),billing:"subscription".into(),credential_revision:None};
