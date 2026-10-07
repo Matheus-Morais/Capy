@@ -177,6 +177,8 @@ Porta de apresentação do terminal: ao anexar a sessão selecionada, deslocar a
 
 Prova integrada passou em 29 checks com `--live-task`: formulário preservou conta/cobrança, pasta/UUID, Haiku e instrução; histórico assistant do UUID exato confirmou resposta real sem ferramentas observadas. Terminal apareceu sem rolagem manual, seletor oficial abriu/fechou e saída revisada encerrou aplicação/processo Claude próprios. Evidências e falhas anteriores em `.checks/multifunction.visual.md`. C17 continua aberto para o CLI externo; C9/C16 continuam abertos para parada durante geração e troca efetiva no terminal.
 
+CLI externo validado em `node scripts/verify-pet-native.mjs --live-task-external`: 25 checks passaram em `scratch/capy-visual-c254071a-2664-4fe0-aae3-43306e7ba85b`. Recibo assistant Haiku confirma instrução, UUID `9c3e84c4-7187-4e8c-b4f2-99953b6b4d38` e projeto próprios. Formulário escolheu explicitamente o modo externo padrão; nenhum ConPTY/ferramenta foi observado. A saída aprovada fechou somente a Capy; launcher e CLI próprios permaneceram ativos e foram limpos depois por PID, caminho e criação revalidados. Detalhes em `.checks/multifunction.visual.md`.
+
 **C18** — Chat próprio oferece CLI/assinatura compatível e API com cobrança identificada; falhas não criam cobrança alternativa silenciosa.
 Proof: `chat_cli_request_uses_exact_session_and_subscription_env`; `chat_api_contracts_pin_provider_endpoint_no_fallback`; `chat_send_is_single_flight_revision_and_result_success`; `chat_transfer_requires_revision_identity_billing_single_nonce`; prova própria de ambos os fluxos ainda pendente.
 

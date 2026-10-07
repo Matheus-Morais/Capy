@@ -176,3 +176,7 @@ Handoff complementar: mesmo com arquivos observados, o campo de referências ago
 ## Troca real de modelo no terminal — 2026-10-07
 
 `node scripts/verify-pet-native.mjs --live-task-model` passou em 36 checks. A prova usou somente uma tarefa própria por assinatura no projeto `scratch/capy-visual-fcd572a3-f875-4e75-ab25-f0258a47028e`; o seletor oficial exibiu Sonnet antes da seleção e o recibo posterior confirma resposta assistant `claude-sonnet-5-5` no mesmo UUID `fb643a55-9283-4184-9889-e6380b8d3083` e pasta, após início em Haiku. Configuração do usuário permaneceu inalterada; nenhuma chamada de ferramenta foi observada. A revisão e saída identificam o modelo de lançamento sem alegar o modelo atual. Capturas: `model-sonnet-selected.png`, `model-switch-result.png`; recibo: `model-switch-receipt.json`.
+
+## Tarefa no terminal externo padrão — 2026-10-07
+
+`node scripts/verify-pet-native.mjs --live-task-external` passou em 25 checks. Recibo próprio em `scratch/capy-visual-c254071a-2664-4fe0-aae3-43306e7ba85b/external-task-receipt.json`: Claude Haiku respondeu no UUID `9c3e84c4-7187-4e8c-b4f2-99953b6b4d38`, no diretório próprio, com instrução literal. Formulário selecionou o modo externo padrão; sem ferramenta observada e sem ConPTY. Aprovada a saída da aplicação; o CLI e seu launcher sobreviveram ao encerramento da Capy, foram revalidados por identidade/caminho/criação e limpos pelo runner. Perfil por assinatura `claude-default`; nenhuma outra sessão foi alvo. Capy reaberta depois da prova.
