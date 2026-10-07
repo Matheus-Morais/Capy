@@ -107,6 +107,7 @@ export interface ChatTransferReview {
   nonce:string; sourceId:string; sourceRevision:number; sourceTarget:ChatTarget;
   destination:ChatTarget; model:string; summary:HandoffSummary;
   uncertainMessages?:number[];
+  automatic?:boolean;
 }
 export async function chatTransferReview(sourceId:string):Promise<ChatTransferReview|null>{return native?invoke('chat_transfer_review',{sourceId}):null;}
 export async function prepareChatTransfer(sourceId:string,request:CreateChat):Promise<ChatTransferReview>{

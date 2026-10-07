@@ -23,7 +23,7 @@ export function chatRecoveryForm(chat:ChatConversation):string{
     <button type="submit">Confirmar revisão sem reenviar</button></form>`:'<button type="button" data-prepare-chat-recovery>Conferir conta e preparar revisão</button>'}`;
 }
 export function chatTransferForm(review:ChatTransferReview):string{
-  return `<form data-chat-review="${escape(review.nonce)}"><h2>Revisar transferência</h2>
+  return `<form data-chat-review="${escape(review.nonce)}"><h2>${review.automatic?'Percentual de troca atingido':'Revisar transferência'}</h2>
     <p>Origem: ${escape(review.sourceTarget.provider)} · ${escape(review.sourceTarget.account)} · ${escape(billingLabel(review.sourceTarget.billing))}.</p>
     <p><strong>Destino: ${escape(review.destination.provider)} · ${escape(review.destination.account)} · ${escape(review.model)} · ${escape(billingLabel(review.destination.billing))}.</strong></p>
     <p>A aprovação cria uma nova conversa e envia o resumo revisado ao destino. Confira as referências e registre o que precisa continuar.</p>

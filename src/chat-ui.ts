@@ -1,6 +1,6 @@
 import { listen } from '@tauri-apps/api/event';
 import { native,listProfiles,profileIdentity,listApiAccounts,addApiAccount,listChats,createChat,sendChat,
-  type ApiAccount,type ChatConversation,type CreateChat } from './bridge';
+  type ApiAccount,type ChatConversation,type CreateChat,type Snapshot } from './bridge';
 import { escape,billingLabel } from './presentation';
 import { initializeChatTransfers } from './chat-transfer-ui';
 import { initializeChatRecovery } from './chat-recovery-ui';
@@ -114,6 +114,7 @@ export async function initializeChat():Promise<void>{
       .finally(()=>{sending=false;const message=notice.textContent;render();notice.textContent=message;});
   });
   await listen<ChatConversation>('chat-updated',event=>update(event.payload));
+  await listen<Snapshot>('demo-updated',event=>{if(event.payload.scenario==='real')transfers.sync(event.payload.chatTransfers??[]);});
   await listen<string>('chat-selected',event=>{
     const epoch=++openEpoch;
     void listChats().then(values=>{

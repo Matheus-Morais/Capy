@@ -18,6 +18,16 @@ const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
 const exe=join(workspace,'src-tauri','target','release','capy.exe');
 await stat(exe);await mkdir(root,{recursive:true});
 let exitFixture;
+const automaticChatReview=process.argv.includes('--automatic-chat-review');
+assert.ok(!automaticChatReview||!process.argv.some(arg=>arg.startsWith('--live-')||['--exit-review','--profiles-corrupt','--quota-settings'].includes(arg)),'Automatic chat UI proof uses only synthetic own records, without provider calls');
+let automaticFixture;
+if(automaticChatReview){
+  const target={kind:'claudeCli',profileId:'own-quota-fixture',provider:'Claude',account:'Own synthetic source',billing:'subscription',credentialRevision:null};
+  const sendNonce=randomUUID();
+  automaticFixture={id:randomUUID(),title:'Own synthetic quota chat',target,model:'haiku',messages:[{role:'user',text:'Synthetic UI fixture; no provider dispatched.'},{role:'assistant',text:'Synthetic stored result for UI proof.'}],revision:2,state:'completed',activeNonce:null,usedNonces:[sendNonce],lastError:null,cliStarted:false,cliAttempted:false,processPolicy:null,recoveryReview:null,interruptions:[],transferredTo:null};
+  await mkdir(join(root,'chat'));await writeFile(join(root,'chat','index.json'),JSON.stringify([automaticFixture.id]));
+  await writeFile(join(root,'chat',`${automaticFixture.id}.json`),JSON.stringify(automaticFixture));
+}
 const liveTaskControls=process.argv.includes('--live-task-controls');
 const liveTaskModel=process.argv.includes('--live-task-model');
 const liveTaskGuides=process.argv.includes('--live-task-guides');
@@ -154,12 +164,38 @@ try{
   check('native_panel_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
   await panel.screenshot('panel');
   await waitFor(()=>panel.evaluate(`!!document.querySelector('#chatCreateForm') && !!document.querySelector('#chatSendForm')`),'Controles de chat');
-  check('native_chat_commands_start_with_empty_own_history',(await panel.invoke('list_chats')).length===0);
+  if(automaticFixture){const rows=await panel.invoke('list_chats');check('native_automatic_chat_own_synthetic_record_loaded',rows.length===1&&rows[0].id===automaticFixture.id&&rows[0].revision===2);}
+  else check('native_chat_commands_start_with_empty_own_history',(await panel.invoke('list_chats')).length===0);
   check('native_chat_create_requires_account_verification',await panel.evaluate(`document.querySelector('#chatCreateForm button[type="submit"]').disabled`));
   check('native_chat_key_is_password_without_autocomplete',await panel.evaluate(`(()=>{const key=document.querySelector('#chatApiForm input[name="key"]');return key.type==='password' && key.autocomplete==='off' && key.value==='';})()`));
   await panel.evaluate(`document.querySelector('.chat-workbench > details').open=true;document.querySelector('#chatCreateForm').closest('details').open=true;document.querySelector('.chat-workbench').scrollIntoView({block:'start'})`);
   check('native_chat_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
   await panel.screenshot('chat');
+  if(automaticFixture){
+    await panel.invoke('demo_action',{action:'scenario',id:'',answer:'real'});
+    await waitFor(async()=>(await panel.invoke('demo_snapshot')).sessions.some(session=>session.id===`chat:${automaticFixture.id}`),'Monitor registra a origem sintética própria');
+    await panel.invoke('open_source',{id:`chat:${automaticFixture.id}`});
+    await waitFor(()=>panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(automaticFixture.id)} && !document.querySelector('#chatReview form')`),'Seleção exata antes da revisão automática');
+    const summary={objective:'Own synthetic quota objective',decisions:'Review this local UI fixture.',state:'Synthetic source record. No provider was called.',files:'No files changed by a provider.',tests:'Synthetic UI proof only.',nextSteps:'Cancel without sending.',guides:'No provider instructions were loaded in this fixture.'};
+    const review={nonce:randomUUID(),sourceId:automaticFixture.id,sourceRevision:automaticFixture.revision,sourceTarget:automaticFixture.target,destination:{...automaticFixture.target,profileId:'own-destination-fixture',account:'Own synthetic destination'},model:'sonnet',summary,uncertainMessages:[],automatic:true,dismissed:false};
+    const reviewPath=join(root,'chat',`${automaticFixture.id}.review.json`);await writeFile(reviewPath,JSON.stringify(review));
+    await waitFor(()=>panel.evaluate(`document.querySelector('#chatReview form')?.dataset.chatReview===${JSON.stringify(review.nonce)}`),'Revisão adicionada pelo snapshot sem mudança do histórico',15_000);
+    check('native_automatic_chat_review_visible_without_history_revision_change',(await panel.invoke('list_chats'))[0].revision===2&&await panel.evaluate(`document.querySelector('#chatReview h2').textContent==='Percentual de troca atingido'`));
+    check('native_automatic_chat_review_names_destination_and_requires_fresh_consent',await panel.evaluate(`(()=>{const view=document.querySelector('#chatReview'),consent=view.querySelector('[name="reviewed"]');return view.textContent.includes('Own synthetic destination')&&view.textContent.includes('sonnet')&&consent.required&&!consent.checked;})()`));
+    const draft=`OWN_EDITED_QUOTA_SUMMARY_${randomUUID()}`;await panel.evaluate(`document.querySelector('#chatReview textarea[name="objective"]').value=${JSON.stringify(draft)}`);
+    await panel.invoke('save_preferences',{value:{sounds:true,reduceMotion:false,quotaRules:[]}});
+    await waitFor(()=>panel.evaluate(`document.querySelector('#petSounds').checked`),'Snapshot repetido processado pela interface');
+    check('native_automatic_chat_same_review_preserves_edited_summary',await panel.evaluate(`document.querySelector('#chatReview textarea[name="objective"]').value===${JSON.stringify(draft)}`));
+    await panel.invoke('save_preferences',{value:{sounds:false,reduceMotion:false,quotaRules:[]}});
+    await panel.evaluate(`document.querySelector('#chatReview').scrollIntoView({block:'start'})`);
+    await panel.screenshot('automatic-chat-review');
+    await panel.evaluate(`document.querySelector('[data-cancel-chat-transfer]').click()`);
+    await waitFor(()=>panel.evaluate(`document.querySelector('#chatReview').hidden && document.querySelector('#chatNotice').textContent.includes('cancelada')`),'Cancelamento nativo da revisão');
+    const canceled=JSON.parse(await readFile(reviewPath,'utf8'));const rows=await panel.invoke('list_chats');
+    check('native_automatic_chat_cancel_persists_tombstone_and_never_creates_destination',canceled.dismissed===true&&rows.length===1&&rows[0].revision===2&&rows[0].messages.length===2&&rows[0].activeNonce===null);
+    check('native_automatic_chat_canceled_review_returns_none',await panel.invoke('chat_transfer_review',{sourceId:automaticFixture.id})===null);
+    check('native_automatic_chat_canceled_approval_never_dispatches',await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('approve_chat_transfer',${JSON.stringify({sourceId:automaticFixture.id,nonce:review.nonce,summary,reviewed:true,billingConfirmed:false})}).then(()=>false,error=>String(error).includes('expirou'))`));
+  }
   if(corruptProfiles){
     await waitFor(()=>panel.evaluate(`document.querySelector('#accountList').textContent.includes('preservado')`),'Erro de perfis visível');
     check('native_profiles_incompatible_bytes_preserved',await readFile(join(root,'profiles.json'),'utf8')===incompatibleProfiles);

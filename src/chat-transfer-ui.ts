@@ -31,7 +31,13 @@ export function initializeChatTransfers(host:HTMLElement,context:()=>{chat:ChatC
     busy=true;button.disabled=true;const selected=review;
     void cancelChatTransfer(selected.sourceId,selected.nonce).then(()=>{render(null);notice.textContent='Transferência cancelada; nenhum resumo foi enviado.';}).catch(error).finally(()=>{busy=false;button.disabled=false;});
   });
-  return {refresh(){
+  return {sync(reviews:ChatTransferReview[]){
+    if(busy)return;
+    const {chat}=context();if(!chat)return;
+    const value=reviews.find(value=>value.sourceId===chat.id&&value.sourceRevision===chat.revision)??null;
+    if(value?.nonce===review?.nonce)return;
+    ++epoch;render(value);
+  },refresh(){
     const {chat,request}=context();prepare.disabled=busy||!request||!chat||['working','unknown','transferred'].includes(chat.state);
     const next=chat?`${chat.id}:${chat.revision}`:'';if(next===signature)return;signature=next;
     const current=++epoch;render(null);if(!chat||['working','unknown','transferred'].includes(chat.state))return;
