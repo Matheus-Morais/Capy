@@ -21,13 +21,13 @@ export async function verifyLiveTaskModel({panel,task,profile,root,check,waitFor
   await panel.invoke('terminal_input',{id:task.id,data:'s'});
   await waitFor(async()=>!/Select.*model/i.test(await screen()),'Escolha oficial somente nesta sessão');
   const marker=`PROBE_${randomUUID().replaceAll('-','')}`;
-  const prompt=`Responda literalmente a palavra ${marker}, sem qualquer outra palavra. Não use ferramentas.`;
+  const prompt=`Responda somente com o texto literal: ${marker}.`;
   await panel.invoke('terminal_input',{id:task.id,data:prompt});
   await waitFor(async()=> (await screen()).includes(marker.slice(0,20)),'Novo prompt na mesma sessão');
   await panel.invoke('terminal_input',{id:task.id,data:'\r'});
   const receipt=await waitFor(async()=>{
     const history=await taskHistory(task,profile);
-    const response=history?.rows.find(row=>row.type==='assistant'&&row.sessionId===task.id&&row.message?.model?.toLowerCase().includes('sonnet')&&row.message?.content?.some(part=>part.type==='text'&&part.text.includes(marker)));
+    const response=history?.rows.find(row=>row.type==='assistant'&&row.sessionId===task.id&&row.message?.model?.toLowerCase().includes('sonnet')&&row.message?.content?.some(part=>part.type==='text'&&part.text.trim()===marker));
     return response?{history,response}:null;
   },'Resposta Sonnet confirmada no UUID exato',60_000);
   check('native_model_switch_provider_receipt_confirms_same_uuid_and_sonnet',receipt.response.sessionId===task.id&&receipt.response.message.model.toLowerCase().includes('sonnet'));

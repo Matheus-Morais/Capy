@@ -44,7 +44,7 @@ foreach($item in $expected){
   async function verify(){
     const project=join(root,'own-external-project');await mkdir(project);
     const marker=`PROBE_${randomUUID().replaceAll('-','')}`;
-    const prompt=`Responda literalmente a palavra ${marker}, sem qualquer outra palavra. Não use ferramentas nem altere arquivos.`;
+    const prompt=`Responda somente com o texto literal: ${marker}.`;
     profile=(await panel.invoke('list_profiles')).find(value=>value.id==='claude-default');assert.ok(profile);
     const identity=await panel.invoke('profile_identity',{id:profile.id,cwd:project});
     check('native_external_task_pins_subscription',identity.loggedIn&&identity.billing==='subscription'&&!!identity.account);
@@ -58,7 +58,7 @@ foreach($item in $expected){
     await writeFile(join(root,'external-processes.json'),JSON.stringify({task,owned},null,2));
     const receipt=await waitFor(async()=>{
       const history=await taskHistory(task,profile);
-      const response=history?.rows.find(row=>row.type==='assistant'&&row.sessionId===task.id&&row.message?.model?.toLowerCase().includes('haiku')&&row.message?.content?.some(part=>part.type==='text'&&part.text.includes(marker)));
+      const response=history?.rows.find(row=>row.type==='assistant'&&row.sessionId===task.id&&row.message?.model?.toLowerCase().includes('haiku')&&row.message?.content?.some(part=>part.type==='text'&&part.text.trim()===marker));
       return response?{history,response}:null;
     },'Resposta real do CLI externo próprio (se houver confiança de pasta, não aprovar automaticamente)',60_000);
     const user=receipt.history.rows.find(row=>row.type==='user'&&row.sessionId===task.id&&JSON.stringify(row.message?.content).includes(prompt));

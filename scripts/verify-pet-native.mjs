@@ -11,6 +11,7 @@ import {verifyLiveTaskControls} from './verify-live-task-controls.mjs';
 import {verifyLiveTaskModel} from './verify-live-task-model.mjs';
 import {externalTaskProof} from './verify-live-task-external.mjs';
 import {instructionProof} from './verify-live-task-guides.mjs';
+import {taskHandoffProof} from './verify-live-task-handoff.mjs';
 
 const workspace=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
@@ -20,8 +21,9 @@ let exitFixture;
 const liveTaskControls=process.argv.includes('--live-task-controls');
 const liveTaskModel=process.argv.includes('--live-task-model');
 const liveTaskGuides=process.argv.includes('--live-task-guides');
-assert.ok([liveTaskControls,liveTaskModel,liveTaskGuides].filter(Boolean).length<=1,'Model, guides and interruption proofs run separately');
-const liveTaskMode=process.argv.includes('--live-task')||liveTaskControls||liveTaskModel||liveTaskGuides;
+const liveTaskHandoff=process.argv.includes('--live-task-handoff');
+assert.ok([liveTaskControls,liveTaskModel,liveTaskGuides,liveTaskHandoff].filter(Boolean).length<=1,'Model, guides, handoff and interruption proofs run separately');
+const liveTaskMode=process.argv.includes('--live-task')||liveTaskControls||liveTaskModel||liveTaskGuides||liveTaskHandoff;
 const liveTaskExternal=process.argv.includes('--live-task-external');
 assert.ok(!(liveTaskExternal&&(liveTaskMode||process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review','--profiles-corrupt'].includes(arg)))),'External task proof runs separately');
 let externalProof;
@@ -41,7 +43,7 @@ if(corruptProfiles){
   assert.ok(!liveTaskMode&&!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)),'Incompatible profiles proof must run without provider calls');
   await writeFile(join(root,'profiles.json'),incompatibleProfiles);
 }
-let liveTask,liveTaskProfile,liveTaskProcess,liveTaskPanel;
+let liveTask,liveTaskProfile,liveTaskProcess,liveTaskPanel,liveTaskHandoffTask,liveTaskHandoffProcess;
 if(liveTaskMode)assert.ok(!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery','--exit-review'].includes(arg)),'Interactive task proof must run separately');
 if(process.argv.includes('--exit-review')){
   assert.ok(!process.argv.some(arg=>['--live-chat','--live-transfer','--live-recovery'].includes(arg)),'Exit state fixture must run separately from provider calls');
@@ -51,6 +53,7 @@ const server=createServer();await new Promise(resolve=>server.listen(0,'127.0.0.
 let port=server.address().port;await new Promise(resolve=>server.close(resolve));
 let child=spawn(exe,['--visual-test',root],{
   windowsHide:true,stdio:'ignore',env:{...process.env,
+    ...((liveTaskMode||liveTaskExternal)?{CAPY_VISUAL_TEST_NO_TOOLS:'1'}:{}),
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:`--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1`,
     WEBVIEW2_USER_DATA_FOLDER:join(root,'webview'),
   },
@@ -166,7 +169,7 @@ try{
   if(liveTaskMode){
     liveTaskPanel=panel;
     const project=join(root,'own-task-project');await mkdir(project);
-    const marker=`CAPY_TASK_${randomUUID()}`;const instruction=`Responda apenas ${marker}. Não use ferramentas nem altere arquivos.`;
+    const marker=`CAPY_TASK_${randomUUID()}`;const instruction=`Responda somente com o texto literal: ${marker}.`;
     const profiles=await panel.invoke('list_profiles');liveTaskProfile=profiles.find(profile=>profile.id==='claude-default');assert.ok(liveTaskProfile);
     const guideProof=liveTaskGuides?instructionProof({panel,root,project,profile:liveTaskProfile,check,waitFor,sameFolder,taskHistory}):null;
     await guideProof?.prepare();
@@ -189,7 +192,7 @@ try{
         if(/❯\s*(?:\d+[.)]\s*)?Yes,\s*I\s*trust\s*this\s*folder/i.test(text)){await panel.invoke('terminal_input',{id:liveTask.id,data:'\r'});trusted=true;}
       }
       const history=await taskHistory(liveTask,liveTaskProfile);
-      const response=history?.rows.find(row=>row.type==='assistant'&&row.sessionId===liveTask.id&&row.message?.content?.some(part=>part.type==='text'&&part.text.includes(marker)));
+      const response=history?.rows.find(row=>row.type==='assistant'&&row.sessionId===liveTask.id&&row.message?.content?.some(part=>part.type==='text'&&part.text.trim()===marker));
       return response?{...history,response}:null;
     },'Resposta real no histórico do UUID exato',60_000);
     const user=history.rows.find(row=>row.type==='user'&&row.sessionId===liveTask.id&&row.isSidechain!==true);
@@ -200,11 +203,18 @@ try{
     await panel.evaluate(`document.querySelector('#terminalSection').scrollIntoView({block:'start'});true`);await panel.screenshot('task-terminal');
     check('native_task_terminal_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
     await guideProof?.verify(liveTask);
+    if(liveTaskHandoff){
+      const handoffProof=taskHandoffProof({panel,root,task:liveTask,profile:liveTaskProfile,check,waitFor,taskHistory,taskProcess,sameFolder});
+      liveTaskHandoffTask=await handoffProof.verify();
+      liveTaskHandoffProcess=await waitFor(()=>taskProcess(liveTaskHandoffTask,liveTaskProfile),'Processo oficial da continuação integrada');
+      check('native_handoff_destination_has_live_official_claude_process',liveTaskHandoffProcess.path.toLowerCase().endsWith('claude.exe'));
+    }
     await panel.evaluate(`document.querySelector('#terminalSection').scrollIntoView({block:'start'});true`);
+    const modelControlTask=liveTaskHandoffTask??liveTask;
     await panel.evaluate(`document.querySelector('#terminalModel').click();true`);
     await waitFor(async()=>/Select.*model|Selecion.*modelo/i.test(await screen()),'Seletor oficial de modelo aberto');
     check('native_task_model_control_opens_official_picker',true);await panel.screenshot('task-model-picker');
-    await panel.invoke('terminal_input',{id:liveTask.id,data:'\u001b'});
+    await panel.invoke('terminal_input',{id:modelControlTask.id,data:'\u001b'});
     await waitFor(async()=>!/Select.*model|Selecion.*modelo/i.test(await screen()),'Seletor fecha sem novo envio');
     await writeFile(join(root,'task-receipt.json'),JSON.stringify({task:liveTask,process:liveTaskProcess,historyPath:history.path,response:history.response},null,2));
     if(liveTaskModel)await verifyLiveTaskModel({panel,task:liveTask,profile:liveTaskProfile,root,check,waitFor,taskHistory});
@@ -402,17 +412,21 @@ try{
       await verifyLiveTaskControls({panel,task:liveTask,profile:liveTaskProfile,process:liveTaskProcess,root,check,waitFor,taskHistory,processInfo});
     }
     await panel.call('Page.enable');const review=await panel.invoke('prepare_exit_review');
-    check('native_task_exit_review_matches_only_owned_real_terminal',review.resources.length===1&&review.resources[0].kind==='terminal'&&review.resources[0].id===liveTask.id&&sameFolder(review.resources[0].cwd,liveTask.cwd)&&review.resources[0].account===liveTask.account);
+    const expectedTasks=[liveTask,...(liveTaskHandoffTask?[liveTaskHandoffTask]:[])];
+    check(liveTaskHandoffTask?'native_handoff_exit_review_matches_both_owned_terminals':'native_task_exit_review_matches_only_owned_real_terminal',review.resources.length===expectedTasks.length&&expectedTasks.every(task=>review.resources.some(resource=>resource.kind==='terminal'&&resource.id===task.id&&sameFolder(resource.cwd,task.cwd)&&resource.account===task.account)));
     await panel.evaluate(`window.__TAURI_INTERNALS__.invoke('request_exit').catch(error=>{window.__capyExitError=String(error);});true`);
     const dialog=await waitFor(()=>panel.takeDialog(),'Confirmação de saída do terminal Claude real');
-    check('native_task_exit_dialog_names_exact_session',dialog.type==='confirm'&&dialog.message.includes(liveTask.id)&&dialog.message.includes('fecha estes terminais integrados'));
+    check(liveTaskHandoffTask?'native_handoff_exit_dialog_names_both_exact_sessions':'native_task_exit_dialog_names_exact_session',dialog.type==='confirm'&&expectedTasks.every(task=>dialog.message.includes(task.id))&&dialog.message.includes('fecha estes terminais integrados'));
     if(liveTaskModel)check('native_model_switch_exit_dialog_labels_launch_model',dialog.message.includes('modelo inicial: haiku'));
     await panel.call('Page.handleJavaScriptDialog',{accept:true});
     const started=Date.now();while(!childExited&&Date.now()-started<10_000)await delay(100);check('native_task_approved_exit_closes_own_application',childExited);
-    let ownClosed=false,current;const processDeadline=Date.now()+10_000;
-    while(Date.now()<processDeadline){current=await processInfo(liveTaskProcess.pid);if(!current||current.started!==liveTaskProcess.started){ownClosed=true;break;}await delay(100);}
-    await writeFile(join(root,'task-exit.json'),JSON.stringify({originalProcess:liveTaskProcess,remainingProcess:current,ownClosed,appClosed:childExited},null,2));
-    check('native_task_approved_exit_closes_exact_claude_process',ownClosed);
+    const ownProcesses=[liveTaskProcess,...(liveTaskHandoffProcess?[liveTaskHandoffProcess]:[])];const closed=[];const processDeadline=Date.now()+10_000;
+    while(Date.now()<processDeadline){
+      for(const process of ownProcesses){if(closed.some(item=>item.pid===process.pid))continue;const current=await processInfo(process.pid);if(!current||current.started!==process.started)closed.push({pid:process.pid,started:process.started});}
+      if(closed.length===ownProcesses.length)break;await delay(100);
+    }
+    await writeFile(join(root,'task-exit.json'),JSON.stringify({originalProcesses:ownProcesses,closed,appClosed:childExited},null,2));
+    check(liveTaskHandoffTask?'native_handoff_approved_exit_closes_both_exact_claude_processes':'native_task_approved_exit_closes_exact_claude_process',closed.length===ownProcesses.length);
   }
   if(exitFixture){
     const review=await panel.invoke('prepare_exit_review');
