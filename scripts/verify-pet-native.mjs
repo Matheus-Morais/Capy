@@ -437,6 +437,15 @@ try{
     await externalProof.verify();
   }
   if(quotaSettings){
+    const preferencesPath=join(root,'preferences.json');
+    await waitFor(()=>panel.evaluate(`!!document.querySelector('#petSounds')`),'Controle nativo de sons');
+    check('native_sound_preference_defaults_disabled',await panel.evaluate(`!document.querySelector('#petSounds').checked`));
+    await panel.evaluate(`document.querySelector('#petSounds').click();true`);
+    await waitFor(async()=>JSON.parse(await readFile(preferencesPath,'utf8')).sounds===true,'preferência de som ligada persistida');
+    check('native_sound_preference_toggle_persists_enabled',JSON.parse(await readFile(preferencesPath,'utf8')).sounds===true);
+    await panel.evaluate(`document.querySelector('#petSounds').click();true`);
+    await waitFor(async()=>JSON.parse(await readFile(preferencesPath,'utf8')).sounds===false,'preferência de som desligada persistida');
+    check('native_sound_preference_toggle_persists_disabled',JSON.parse(await readFile(preferencesPath,'utf8')).sounds===false);
     const path=join(quotaProfile.configDir,'settings.json');const bridgePath=join(quotaProfile.configDir,'capy-quotas','bridge.json');
     await panel.invoke('connect_claude_quotas',{id:quotaProfile.id,enabled:true});
     const enabled=JSON.parse(await readFile(path,'utf8'));const active=await readFile(path);const backup=await readFile(bridgePath);

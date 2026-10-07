@@ -180,3 +180,7 @@ Handoff complementar: mesmo com arquivos observados, o campo de referências ago
 ## Tarefa no terminal externo padrão — 2026-10-07
 
 `node scripts/verify-pet-native.mjs --live-task-external` passou em 25 checks. Recibo próprio em `scratch/capy-visual-c254071a-2664-4fe0-aae3-43306e7ba85b/external-task-receipt.json`: Claude Haiku respondeu no UUID `9c3e84c4-7187-4e8c-b4f2-99953b6b4d38`, no diretório próprio, com instrução literal. Formulário selecionou o modo externo padrão; sem ferramenta observada e sem ConPTY. Aprovada a saída da aplicação; o CLI e seu launcher sobreviveram ao encerramento da Capy, foram revalidados por identidade/caminho/criação e limpos pelo runner. Perfil por assinatura `claude-default`; nenhuma outra sessão foi alvo. Capy reaberta depois da prova.
+
+## Preferência nativa de sons — 2026-10-07
+
+`node scripts/verify-pet-native.mjs --quota-settings` passou em 30 checks, sem API/provedor, no perfil scratch `scratch/capy-visual-5b51ace5-02b7-41e6-bca8-ac451b5be0c6`. A checkbox iniciou desmarcada, ligar gravou `sounds: true` e desligar gravou `sounds: false` em `preferences.json`; os demais checks de preservação de configuração/bridge de quotas passaram na mesma execução. A prova Rust `preferences_roundtrip_defaults_and_validation` confirma reload dos valores e default desligado. Capy reaberta após o runner.

@@ -69,7 +69,9 @@ Proof: inspeção visual/funcional nativa registrada em `.checks/multifunction.v
 Proof: inspeção visual/funcional nativa registrada em `.checks/multifunction.visual.md`.
 
 **C7** — Sons opcionais são desligados por padrão e preferência persiste.
-Proof: teste nomeado de preferências e prova nativa, a registrar antes de implementar a persistência.
+Proof: `settings::tests::preferences_roundtrip_defaults_and_validation`; `node scripts/verify-pet-native.mjs --quota-settings`.
+
+Prova nativa: `--quota-settings` passou em 30 checks no root temporário `scratch/capy-visual-5b51ace5-02b7-41e6-bca8-ac451b5be0c6`, sem chamadas a provedor. A checkbox iniciou desmarcada; clique para ligar e desligar persistiu `sounds` em `preferences.json`, retornando a `false`. O teste Rust já confirma default desligado e roundtrip/reload ligado, com validação. Build atual reaberta.
 
 ### S2 — Sessões e intervenções · ~110 KB existentes · ~28k de leitura
 
