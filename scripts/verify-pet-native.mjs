@@ -266,7 +266,14 @@ try{
     await panel.invoke('demo_action',{action:'scenario',id:'',answer:'real'});
     const identity=await panel.invoke('profile_identity',{id:'claude-default',cwd:null});
     check('native_live_chat_pins_subscription_before_any_send',identity.loggedIn&&identity.billing==='subscription'&&!!identity.account);
+    const sourceSwitchProof=process.argv.includes('--live-chat')&&!process.argv.includes('--live-transfer')&&!process.argv.includes('--live-recovery');
+    const alternateChat=sourceSwitchProof?await panel.invoke('create_chat',{request:{title:'Own alternate chat fixture',kind:'claudeCli',profileId:'claude-default',model:'haiku',expectedAccount:identity.account,expectedBilling:'subscription',credentialRevision:null}}):null;
     const chat=await panel.invoke('create_chat',{request:{title:'Own native chat proof',kind:'claudeCli',profileId:'claude-default',model:'sonnet',expectedAccount:identity.account,expectedBilling:'subscription',credentialRevision:null}});
+    if(alternateChat){
+      await panel.invoke('open_source',{id:`chat:${alternateChat.id}`});
+      await waitFor(()=>panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(alternateChat.id)}`),'Conversa ociosa própria exata selecionada');
+      check('native_live_chat_opens_alternate_owned_uuid_before_send',alternateChat.id!==chat.id&&(await panel.invoke('list_chats')).find(value=>value.id===alternateChat.id)?.messages.length===0);
+    }
     const firstMarker=process.argv.includes('--live-recovery')?`CAPY_RECOVERY_${randomUUID()}`:'CAPY_NATIVE_CHAT_PROOF';
     await panel.evaluate(`window.__capyChatProof=window.__TAURI_INTERNALS__.invoke('send_chat',{request:${JSON.stringify({id:chat.id,revision:chat.revision,nonce:randomUUID(),model:'sonnet',text:`Memorize este marcador para a próxima mensagem: ${firstMarker}. Responda apenas esse marcador. Não use ferramentas.`})}}); window.__capyChatProof.then(result=>{window.__capyChatProofResult=result;},error=>{window.__capyChatProofError=String(error);}); true`);
     await waitFor(()=>pet.evaluate(`document.querySelector('#pet').classList.contains('s-working')`),'Chat real mostra trabalho',30_000);
@@ -276,7 +283,12 @@ try{
     check('native_live_chat_provider_result_matches_exact_conversation',result.id===chat.id&&result.state==='completed'&&result.messages.at(-1)?.text.includes(firstMarker));
     await panel.invoke('open_source',{id:`chat:${chat.id}`});
     await waitFor(()=>panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(chat.id)}`),'Card abre a conversa exata');
-    check('native_live_chat_source_selects_exact_uuid',true);
+    const openedChats=await panel.invoke('list_chats');
+    if(alternateChat){
+      check('native_live_chat_switches_to_exact_reply_uuid_without_touching_alternate',await panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(chat.id)}`)&&chat.id!==alternateChat.id&&openedChats.find(value=>value.id===chat.id)?.messages.at(-1)?.text.includes(firstMarker)&&openedChats.find(value=>value.id===alternateChat.id)?.messages.length===0);
+      const staleSourceRejected=await panel.invoke('open_source',{id:`chat:${randomUUID()}`}).then(()=>false,()=>true);
+      check('native_live_chat_stale_source_cannot_switch_selection',staleSourceRejected&&await panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(chat.id)}`));
+    }else check('native_live_chat_source_selects_exact_uuid',await panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(chat.id)}`));
     await waitFor(()=>pet.evaluate(`!document.querySelector('#pet').classList.contains('g-celebrate')`),'Comemoração termina no ciclo da mascote',5_000);
     await delay(1000);
     check('native_live_chat_completion_does_not_loop',await pet.evaluate(`!document.querySelector('#pet').classList.contains('g-celebrate')`));
