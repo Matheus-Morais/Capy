@@ -191,33 +191,66 @@ mod tests {
         (format!("http://{address}/mock"), worker)
     }
 
-    fn local_contract(endpoint: String) -> Contract {
+    fn local_contract(provider: &str, endpoint: String) -> Contract {
         let history = [Message { role: "user".into(), text: "literal marker ação_日本語🦫".into() }];
-        let mut contract = contract("OpenAI", "chosen-model", &history).unwrap();
+        let mut contract = contract(provider, "chosen-model", &history).unwrap();
         contract.endpoint = endpoint;
         contract
     }
 
     #[test]
-    fn chat_api_http_success_preserves_identity_headers_and_literal_payload() {
-        let response = r#"{"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"mock reply"}]}]}"#;
-        let (endpoint, server) = mock_provider(200, response);
-        let result = send_contract("OpenAI", "fixture-key", &local_contract(endpoint)).unwrap();
-        let requests = server.join().unwrap();
-        assert_eq!(result.text, "mock reply");
-        assert!(result.completed);
-        assert_eq!(requests.len(), 1);
-        let (headers, body) = requests[0].split_once("\r\n\r\n").unwrap();
-        assert!(headers.to_ascii_lowercase().contains("authorization: bearer fixture-key"));
-        let body: Value = serde_json::from_str(body).unwrap();
-        assert_eq!(body["model"], "chosen-model");
-        assert_eq!(body["input"][0]["content"], "literal marker ação_日本語🦫");
+    fn chat_api_http_success_preserves_provider_identity_headers_and_literal_payload() {
+        let cases = [
+            (
+                "OpenAI",
+                r#"{"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"mock reply"}]}]}"#,
+                "authorization: bearer fixture-key",
+            ),
+            (
+                "Anthropic",
+                r#"{"type":"message","role":"assistant","content":[{"type":"text","text":"mock reply"}],"stop_reason":"end_turn"}"#,
+                "x-api-key: fixture-key",
+            ),
+            (
+                "Gemini",
+                r#"{"candidates":[{"content":{"parts":[{"text":"mock reply"}]},"finishReason":"STOP"}]}"#,
+                "x-goog-api-key: fixture-key",
+            ),
+        ];
+        for (provider, response, expected_auth) in cases {
+            let (endpoint, server) = mock_provider(200, response);
+            let result = send_contract(provider, "fixture-key", &local_contract(provider, endpoint)).unwrap();
+            let requests = server.join().unwrap();
+            assert_eq!(result.text, "mock reply", "{provider}");
+            assert!(result.completed, "{provider}");
+            assert_eq!(requests.len(), 1, "{provider}");
+            let (headers, body) = requests[0].split_once("\r\n\r\n").unwrap();
+            let headers = headers.to_ascii_lowercase();
+            assert!(headers.contains(expected_auth), "{provider} auth header");
+            let body: Value = serde_json::from_str(body).unwrap();
+            match provider {
+                "OpenAI" => {
+                    assert_eq!(body["model"], "chosen-model");
+                    assert_eq!(body["input"][0]["content"], "literal marker ação_日本語🦫");
+                }
+                "Anthropic" => {
+                    assert!(headers.contains("anthropic-version: 2023-06-01"));
+                    assert_eq!(body["model"], "chosen-model");
+                    assert_eq!(body["messages"][0]["content"], "literal marker ação_日本語🦫");
+                }
+                "Gemini" => {
+                    assert!(requests[0].to_ascii_lowercase().starts_with("post /mock http/1.1"));
+                    assert_eq!(body["contents"][0]["parts"][0]["text"], "literal marker ação_日本語🦫");
+                }
+                _ => unreachable!(),
+            }
+        }
     }
 
     #[test]
     fn chat_api_http_failure_is_single_shot_and_never_retried() {
         let (endpoint, server) = mock_provider(503, "{}");
-        let error = match send_contract("OpenAI", "fixture-key", &local_contract(endpoint)) {
+        let error = match send_contract("OpenAI", "fixture-key", &local_contract("OpenAI", endpoint)) {
             Ok(_) => panic!("provider failure must remain an error"),
             Err(error) => error,
         };
