@@ -90,7 +90,12 @@ fn restore_pet(app: &tauri::AppHandle) -> Result<(), String> {
     let point = geometry::restored_position(saved, &areas, area(&primary), size.width, size.height);
     pet.set_position(PhysicalPosition::new(point.x, point.y))
         .map_err(|e| e.to_string())?;
-    pet.show().map_err(|e| e.to_string())
+    let _ = pet.set_always_on_top(true);
+    let _ = pet.unminimize();
+    pet.show().map_err(|e| e.to_string())?;
+    let _ = app.emit("pet-visibility", true);
+    let _ = pet.set_focus();
+    Ok(())
 }
 fn persist_pet(app: &tauri::AppHandle) -> Result<(), String> {
     let position = window(app, "pet")?
@@ -160,6 +165,8 @@ fn show_pet(app: &tauri::AppHandle) -> Result<(), String> {
     );
     pet.set_position(PhysicalPosition::new(clamped.x, clamped.y))
         .map_err(|e| e.to_string())?;
+    let _ = pet.set_always_on_top(true);
+    let _ = pet.unminimize();
     pet.show().map_err(|e| e.to_string())?;
     app.emit("pet-visibility",true).map_err(|e|e.to_string())?;
     pet.set_focus().map_err(|e| e.to_string())
@@ -553,6 +560,18 @@ fn tray_action(app: &tauri::AppHandle, id: &str) -> Result<(), String> {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--version" || a == "-v") {
+        println!("Capy {}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
+    if args.iter().any(|a| a == "--help" || a == "-h") {
+        println!("Capy {} - Seu companheiro de trabalho", env!("CARGO_PKG_VERSION"));
+        println!("Uso: capy.exe [opções]");
+        println!("Opções:");
+        println!("  --version, -v        Exibe a versão");
+        println!("  --help, -h           Exibe esta ajuda");
+        return;
+    }
     if let Some(dir) = args.iter().position(|a| a == "--claude-statusline").and_then(|i| args.get(i+1)) {
         let _ = claude_quotas::hook(PathBuf::from(dir));
         return;
@@ -650,6 +669,9 @@ fn main() {
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Err(e) = show_pet(app) {
                 eprintln!("Show Capy: {e}");
+            }
+            if let Err(e) = show_summary(app) {
+                eprintln!("Show summary: {e}");
             }
         }))
         .invoke_handler(tauri::generate_handler![
