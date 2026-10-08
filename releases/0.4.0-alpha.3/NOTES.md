@@ -33,6 +33,11 @@ Versão com a evolução visual e comportamental completa da mascote Capy, mante
 5. **Arquivo Showcase Preservado**:
    - O arquivo [showcase.html](file:///C:/PProjetos/Capy/prototypes/showcase.html) permanece disponível na íntegra no repositório com o catálogo completo de todas as 5 versões, movimentos, acessórios e sintetizador sonoro.
 
+6. **Correções e Refinamentos Visuais**:
+   - **Posicionamento da Laranja**: Eliminada regra herdada do protótipo lateral que deslocava a laranja para o olho quando em repouso. A laranja agora permanece perfeitamente no topo da cabeça com balanço orgânico sincronizado.
+   - **Movimento Ocioso Expressivo**: Amplitude de respiração, balanço do corpo, piscadas e orelhinhas refinadas para movimento contínuo e perceptível a todo momento.
+   - **Status "Sessões Abertas" em Tooltip**: O box estático sobre a cabeça da Capy foi transformado em tooltip flutuante e atributo `title`, visível exclusivamente ao passar o cursor do mouse.
+
 ## Validação
 
 - `npm test`: 34 testes unitários e de integração aprovados (100% verde).

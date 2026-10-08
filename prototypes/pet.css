@@ -21,8 +21,8 @@ svg g { transform-box: view-box; }
   svg.p-lie #bodyPose { transform: translate(0px,8px) scale(1.04,.9) skewX(0deg); }
   svg.p-sit #shadow { transform: scale(.62,1); }
   svg.p-lie #shadow { transform: scale(1.05,1); }
-  svg.p-stand #orange { transform: translate(26px,38px) scale(1,1) skewX(0deg); }
-  svg.p-lie   #orange { transform: translate(30px,52px) scale(1,1) skewX(0deg); }
+  svg:not(#pet).p-stand #orange { transform: translate(26px,38px) scale(1,1) skewX(0deg); }
+  svg:not(#pet).p-lie   #orange { transform: translate(30px,52px) scale(1,1) skewX(0deg); }
 
   /* pernas e pés: sentada */
   svg.p-sit .lg-bf, svg.p-sit .lg-bn { opacity: 0; }

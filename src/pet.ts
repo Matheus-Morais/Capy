@@ -5,7 +5,6 @@ import artworkV1 from '../prototypes/front-pet.v1.svg?raw';
 import artworkV2 from '../prototypes/front-pet.v2.svg?raw';
 import artworkV3 from '../prototypes/front-pet.v3.svg?raw';
 import artworkV4 from '../prototypes/front-pet.v4.svg?raw';
-import '../prototypes/pet.css';
 import '../prototypes/front-pet.css';
 import './style.css';
 import { desktopCommand, native, showError, snapshot, subscribe, subscribeVisibility, type Snapshot } from './bridge';
@@ -135,7 +134,9 @@ function render(data: Snapshot) {
   if (!gesture) for (const value of ['hello', 'wave', 'click', 'celebrate']) pet.classList.remove(`g-${value}`);
   badge.hidden = !waiting;
   badge.textContent = String(waiting);
-  document.getElementById('petStatus')!.textContent = waiting ? `${waiting} precisam de você` : gesture === 'celebrate' ? state === 'working' ? 'Conclusão confirmada · outros agentes trabalhando' : 'Conclusão confirmada' : state === 'working' ? 'Agentes trabalhando' : state === 'idle' ? 'Sessões abertas' : 'Capy descansando';
+  const statusText = waiting ? `${waiting} precisam de você` : gesture === 'celebrate' ? state === 'working' ? 'Conclusão confirmada · outros agentes trabalhando' : 'Conclusão confirmada' : state === 'working' ? 'Agentes trabalhando' : state === 'idle' ? 'Sessões abertas' : 'Capy descansando';
+  document.getElementById('petStatus')!.textContent = statusText;
+  button.title = `Capy: ${statusText}\nClique para abrir. Arraste para mover.`;
   document.body.classList.toggle('reduce-motion', data.reduceMotion);
 }
 
