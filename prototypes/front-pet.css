@@ -1,4 +1,5 @@
 /* ===== Capy V5 - Estilos e Animações da Capivara Proporcional com Olhos Grandes Kawaii & Novos Comportamentos ===== */
+:root { --fur:#cf9565; --fur-dark:#b87d52; --muzzle:#a8693f; --foot:#8a5530; --belly:#e2b98f; --ink:#3a2214; --line:#5d3a22; --blush:#f2a1a1; --grass:#6f9a54; }
 
 #pet #rig { transform-origin: 135px 183px; }
 #pet #shadow { transform-origin: 135px 184px; transition: transform .3s ease-out; }
