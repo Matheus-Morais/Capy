@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {quotaBoard,usableQuota,resetCountdown,renderQuotaBoard} from '../src/quota-board.ts';
-import {fallbackMarkup} from '../src/presentation.ts';
+import {fallbackMarkup,quotaNotifications} from '../src/presentation.ts';
 
 const now=Date.UTC(2026,9,8,19);
 const row={provider:'Claude',account:'own@example.test',bucket:null,period:'five_hour',state:'fresh',observedAt:now,
@@ -11,6 +11,11 @@ test('unavailable saved fallback is preserved instead of selecting another accou
   const result=fallbackMarkup([{id:'other',label:'Another account'}],'saved-api-id','own-model');
   assert.match(result,/<option value="saved-api-id" selected disabled>/);
   assert.doesNotMatch(result,/value="other" selected/);
+});
+test('real quota alerts and routing never appear as simulation and remain available in real mode',()=>{
+  const data={scenario:'real',quotaAlerts:[{id:'own',provider:'Codex',account:'own@example.test',period:'primary',percent:50,resetsAt:now/1000+7200,createdAt:now}],routing:[{taskId:'own-task',state:'waitingTurn',message:'Waiting for real turn'}]};
+  assert.match(quotaNotifications(data,now),/own@example.test/);assert.match(quotaNotifications(data,now),/Waiting for real turn/);
+  for(const scenario of ['waiting','working','done','sleeping']) assert.equal(quotaNotifications({...data,scenario},now),'');
 });
 
 test('groups each identity separately and compares windows within an account',()=>{

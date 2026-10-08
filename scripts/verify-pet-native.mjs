@@ -194,6 +194,7 @@ try{
     check('native_quota_refresh_limits_repeated_requests',await panel.invoke('refresh_quotas').then(()=>false,error=>String(error).includes('15 segundos')));
     await panel.invoke('demo_action',{action:'scenario',id:'',answer:'waiting'});
     await waitFor(()=>panel.evaluate(`document.querySelectorAll('.quota-account').length===3`),'Volta à demonstração explicitamente identificada');
+    check('native_quota_real_alerts_do_not_leak_into_simulation',await panel.evaluate(`document.querySelector('#quotaAlerts').hidden && !document.querySelector('#quotaAlerts').textContent`));
   }
   await waitFor(()=>panel.evaluate(`!!document.querySelector('#chatCreateForm') && !!document.querySelector('#chatSendForm')`),'Controles de chat');
   if(automaticFixture){const rows=await panel.invoke('list_chats');check('native_automatic_chat_own_synthetic_record_loaded',rows.length===1&&rows[0].id===automaticFixture.id&&rows[0].revision===2);}

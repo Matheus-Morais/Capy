@@ -1,5 +1,5 @@
 import { savePreferences, dismissQuotaAlert, defaultPreferences, showError, type Snapshot, type Preferences, type QuotaRule, type AccountProfile, type ApiAccount } from './bridge';
-import { escape, defaultThresholds, ruleMarkup, fallbackMarkup } from './presentation';
+import { defaultThresholds, ruleMarkup, fallbackMarkup, quotaNotifications } from './presentation';
 
 let preferences: Preferences = defaultPreferences();
 let rules: QuotaRule[] = [];
@@ -212,7 +212,7 @@ export function renderPreferences(data: Snapshot): void {
       if (button) void dismissQuotaAlert(button.dataset.dismissAlert!).catch(showError);
     });
   }
-  const html=(data.quotaAlerts ?? []).filter(a=>a.resetsAt*1000>Date.now()).map(a=>`<p><span><strong>${escape(a.provider)} · ${escape(a.account)}</strong><br>Uso passou de ${a.percent}% · ${escape(a.period==='five_hour'?'5 horas':a.period==='seven_day'?'semanal':a.period==='primary'?'janela principal':'janela secundária')}</span><button data-dismiss-alert="${escape(a.id)}" aria-label="Dispensar aviso de ${a.percent}%">Dispensar</button></p>`).join('')+(data.routing??[]).map(r=>`<p><span>${escape(r.message)}<br>Sessão ${escape(r.taskId)}</span></p>`).join('');
+  const html=quotaNotifications(data);
   if (alerts.innerHTML!==html) alerts.innerHTML=html;
   alerts.hidden=!html;
 }

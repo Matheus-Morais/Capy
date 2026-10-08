@@ -2,6 +2,10 @@ import type { Session, Snapshot, QuotaRow, Intervention, Subscription, AccountPr
 import type {ExitReview} from './exit-review';
 
 export const escape = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+export function quotaNotifications(data: Pick<Snapshot,'scenario'|'quotaAlerts'|'routing'>, now=Date.now()): string {
+  if (data.scenario !== 'real') return '';
+  return (data.quotaAlerts ?? []).filter(a=>a.resetsAt*1000>now).map(a=>`<p><span><strong>${escape(a.provider)} · ${escape(a.account)}</strong><br>Uso passou de ${a.percent}% · ${escape(a.period==='five_hour'?'5 horas':a.period==='seven_day'?'semanal':a.period==='primary'?'janela principal':'janela secundária')}</span><button data-dismiss-alert="${escape(a.id)}" aria-label="Dispensar aviso de ${a.percent}%">Dispensar</button></p>`).join('')+(data.routing??[]).map(r=>`<p><span>${escape(r.message)}<br>Sessão ${escape(r.taskId)}</span></p>`).join('');
+}
 export const defaultThresholds = () => [50,60,70,80,90].map(percent => ({percent,enabled:true}));
 export const billingLabel = (billing: string) => billing === 'subscription' ? 'Assinatura Claude' : billing === 'api' ? 'API · cobrança por uso' : 'Cobrança não confirmada';
 export function exitConfirmation(review:ExitReview):string {
