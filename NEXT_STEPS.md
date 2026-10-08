@@ -1,5 +1,7 @@
 # Retomada do Capy
 
+Pedido confirmado em 2026-10-08: cotas como no Token-Watch, com visão das contas, alertas e troca de conta/IA. Implementação em `447c8ca` e `2200140`: painel de contas/janelas com saldo disponível e renovação, validade local e foco preservados, leitura das quatro janelas Antigravity, atualização em segundo plano, alternativas API no chat Claude com revisão e confirmação de cobrança. Fonte e checks: `.design/token-watch-quota.md` e `.checks/token-watch-quota.md`. Token-Watch foi consultado somente como referência. Codex real e seu alerta foram observados; Claude sem conexão e Antigravity vencido permanecem indisponíveis. Provas entre outras contas e APIs reais continuam abertas; não requerer contratação de serviço API para provar quotas da assinatura Claude.
+
 Atualizado em 2026-10-08: retomada reconciliou o PASS local C13 e os commits posteriores de skins/acessórios/janelas (0.4.0-alpha.3). Corrigidos início da mascote no código-fonte/dev, gesto perdido na troca de skin, animações banho/laranja durante ocultação ou movimento reduzido e dicas que anunciavam sucesso sem observação. 36 JS, 133 Rust/2 live ignorados, desktop build e smoke passaram; runner visual atual passou em 23 checks e revisão automática sintética em 29. Auditoria C1–C19 registrada em `.checks/multifunction.final-audit.md`; escopo completo permanece aberto pelas lacunas descritas ali. Executável corrigido: `src-tauri/target/release/capy.exe`; cópia empacotada alpha.3 anterior não foi substituída.
 
 ## Plano multifuncional em implementação
