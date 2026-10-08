@@ -6,6 +6,20 @@ use std::{
 use tauri::{Emitter, Manager};
 
 pub fn schedule(app: tauri::AppHandle) {
+    let agy_rows=Arc::new(Mutex::new(crate::antigravity_quotas::cached_rows()));
+    let agy_output=agy_rows.clone();let agy_app=app.clone();
+    std::thread::spawn(move||{
+        let mut cache=crate::antigravity_quotas::Cache::default();let mut revision=0;
+        loop {
+            let started=Instant::now();
+            if agy_app.state::<DesktopState>().demo.lock().map(|s|s.scenario=="real").unwrap_or(false) {
+                let next=agy_app.state::<crate::quota_refresh::Service>().revision();
+                let rows=cache.poll(next!=revision);revision=next;
+                if let Ok(mut output)=agy_output.lock(){*output=rows;}
+            }
+            std::thread::sleep(Duration::from_secs(5).saturating_sub(started.elapsed()));
+        }
+    });
     let quota_rows = Arc::new(Mutex::new(Vec::new()));
     let quota_output = quota_rows.clone();
     let quota_app = app.clone();
@@ -43,7 +57,7 @@ pub fn schedule(app: tauri::AppHandle) {
                     profile_signature = signature;
                 }
                 rows.extend(claude_rows.clone());
-                rows.extend(crate::antigravity_quotas::poll());
+                rows.extend(agy_rows.lock().map(|rows|rows.clone()).unwrap_or_default());
                 if let Ok(mut output) = quota_output.lock() {
                     *output = rows;
                 }

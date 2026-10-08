@@ -24,6 +24,7 @@ mod monitor;
 mod position;
 mod quotas;
 mod antigravity_quotas;
+mod agy_usage;
 mod quota_refresh;
 mod quota_policy;
 mod settings;

@@ -19,8 +19,9 @@ const exe=join(workspace,'src-tauri','target','release','capy.exe');
 await stat(exe);await mkdir(root,{recursive:true});
 let exitFixture;
 const automaticChatApiReview=process.argv.includes('--automatic-chat-api-review');
+const agyAutomatic=process.argv.includes('--agy-auto');
 const quotaDashboard=process.argv.includes('--quota-dashboard');
-assert.ok(!quotaDashboard||process.argv.length===3,'Quota dashboard proof runs separately, with read-only quota sources');
+assert.ok(!(quotaDashboard&&agyAutomatic)&&(!(quotaDashboard||agyAutomatic)||process.argv.length===3),'Quota dashboard/automatic agy proof runs separately, with read-only quota sources');
 const automaticChatReview=process.argv.includes('--automatic-chat-review')||automaticChatApiReview;
 assert.ok(!automaticChatReview||!process.argv.some(arg=>arg.startsWith('--live-')||['--exit-review','--profiles-corrupt','--quota-settings'].includes(arg)),'Automatic chat UI proof uses only synthetic own records, without provider calls');
 let automaticFixture;
@@ -177,9 +178,25 @@ try{
   await panel.evaluate(`document.querySelector('[data-quota-section="chatCreateForm"]').click()`);
   check('native_quota_switch_shortcut_opens_and_focuses_destination',await panel.evaluate(`document.querySelector('#chatCreateForm').closest('details').open && document.querySelector('#chatCreateForm').contains(document.activeElement)`));
   await panel.evaluate(`window.scrollTo(0,0)`);
-  if(quotaDashboard){
+  if(quotaDashboard||agyAutomatic){
+    const realStarted=Date.now();
     await panel.invoke('demo_action',{action:'scenario',id:'',answer:'real'});
-    const data=await waitFor(async()=>{const data=await panel.invoke('demo_snapshot');return data.quotas?.some(q=>q.provider==='Antigravity')?data:null;},'Fontes reais de cota aparecem',30_000);
+    let data=await waitFor(async()=>{const data=await panel.invoke('demo_snapshot');return data.quotas?.some(q=>q.provider==='Antigravity')?data:null;},'Fontes reais de cota aparecem',30_000);
+    if(agyAutomatic){
+      const started=Date.now();await panel.evaluate(`document.querySelector('[data-quota-section="accounts"]').click()`);
+      check('native_agy_query_keeps_account_navigation_responsive',Date.now()-started<5000&&await panel.evaluate(`document.querySelector('#accounts').contains(document.activeElement)`));
+      const observed=async(minimum)=>{
+        const value=await panel.invoke('demo_snapshot');const rows=value.quotas?.filter(q=>q.provider==='Antigravity')??[];
+        return rows.length===4&&rows.every(q=>q.account&&q.observedAt>minimum)&&rows.some(q=>q.state==='fresh'&&q.window&&q.message.includes('Consulta automática oficial agy /usage'))?value:null;
+      };
+      data=await waitFor(()=>observed(realStarted-1),'Consulta automática inicial agy identificada',60_000);
+      const first=data.quotas.find(q=>q.provider==='Antigravity').observedAt;
+      check('native_agy_initial_query_refreshes_identified_windows_without_manual_terminal',true);
+      data=await waitFor(()=>observed(first),'Segunda consulta periódica agy sem botão nem terminal',90_000);
+      check('native_agy_periodic_query_renews_observation_without_manual_action',true);
+      await waitFor(()=>panel.evaluate(`document.querySelector('#quotaRows').textContent.includes('Antigravity')&&[...document.querySelectorAll('#quotaRows [role="meter"]')].some(m=>m.getAttribute('aria-label').startsWith('Antigravity'))`),'Medidores reais agy visíveis');
+      await panel.evaluate(`window.scrollTo(0,0)`);
+    }
     await waitFor(()=>panel.evaluate(`document.querySelector('#refreshQuotas').hidden===false`),'Atualização de fontes reais visível');
     check('native_quota_real_board_never_keeps_demo_accounts',await panel.evaluate(`!document.querySelector('#quotaRows').textContent.includes('Conta pessoal')&&!document.querySelector('#quotaRows').textContent.includes('Conta trabalho')`));
     check('native_quota_real_board_includes_antigravity_source',await panel.evaluate(`document.querySelector('#quotaRows').textContent.includes('Antigravity')`));

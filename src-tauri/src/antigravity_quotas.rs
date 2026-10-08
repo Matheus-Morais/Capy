@@ -3,11 +3,44 @@ use serde_json::Value;
 use std::{fs::File, io::Read, path::Path, time::UNIX_EPOCH};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
-pub fn poll() -> Vec<Row> {
-    let path = std::env::var_os("AGY_STATUS_JSON").map(std::path::PathBuf::from)
-        .or_else(|| std::env::var_os("USERPROFILE").map(|home| std::path::PathBuf::from(home).join("scripts/agy-statusline-input.json")));
-    path.and_then(|path| read(&path, crate::quotas::now_ms())).unwrap_or_else(|| vec![unavailable(
+fn status_path() -> Option<std::path::PathBuf> {
+    std::env::var_os("AGY_STATUS_JSON").map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("USERPROFILE").map(|home| std::path::PathBuf::from(home).join("scripts/agy-statusline-input.json")))
+}
+pub fn cached_rows() -> Vec<Row> {
+    status_path().and_then(|path| read(&path, crate::quotas::now_ms())).unwrap_or_else(|| vec![unavailable(
         "Statusline local do Antigravity ausente ou incompatível. Nenhum saldo confirmado.")])
+}
+
+#[derive(Default)]
+pub struct Cache { attempted_at: Option<u64>, error: Option<&'static str> }
+impl Cache {
+    pub fn poll(&mut self, force: bool) -> Vec<Row> {
+        self.poll_with(crate::quotas::now_ms(),force,collect,cached_rows)
+    }
+    fn poll_with(&mut self,now:u64,force:bool,update:impl FnOnce()->Result<(),&'static str>,read:impl FnOnce()->Vec<Row>)->Vec<Row> {
+        if force || self.attempted_at.is_none_or(|at|now.checked_sub(at).is_none_or(|age|age>=60_000)) {
+            self.attempted_at=Some(now);self.error=update().err();
+        }
+        let mut rows=read();
+        for row in &mut rows {
+            if let Some(error)=self.error {row.message=format!("{error} {}",row.message);}
+            else if row.state=="fresh" {row.message="Consulta automática oficial agy /usage e statusline identificado. Atualiza a cada minuto.".into();}
+        }
+        rows
+    }
+}
+fn collect() -> Result<(),&'static str> {
+    let started=crate::quotas::now_ms();
+    crate::agy_usage::collect(||status_path().and_then(|path|read(&path,crate::quotas::now_ms()))
+        .is_some_and(|rows|rows.iter().all(|q|q.account.is_some() && q.observed_at.is_some_and(|at|at>=started))))?;
+    let rows=status_path().and_then(|path|read(&path,crate::quotas::now_ms()))
+        .ok_or("O agy respondeu, mas não exportou um statusline identificado compatível.")?;
+    let finished=crate::quotas::now_ms();
+    if !rows.iter().all(|q|q.account.is_some() && q.observed_at.is_some_and(|at|at>=started&&at<=finished)) {
+        return Err("O agy respondeu, mas o statusline não gerou uma observação nova. Verifique a configuração do export.");
+    }
+    Ok(())
 }
 
 fn unavailable(message: &str) -> Row {
@@ -50,7 +83,7 @@ fn parse(value: &Value, observed: u64, now: u64) -> Option<Vec<Row>> {
             let (state,message) = if disabled { ("unavailable","Esta janela está desabilitada na fonte.") }
                 else if !fresh { ("stale","A observação local expirou. Aguarde nova atualização do statusline do Antigravity.") }
                 else if window.is_none() { ("unavailable","Janela ausente, vencida ou incompatível. Saldo não estimado.") }
-                else { ("fresh","Statusline local do Antigravity; conta informada pela própria observação. Atualizar a Capy não renova este arquivo.") };
+                else { ("fresh","Statusline local do Antigravity; conta e horário informados pela própria observação.") };
             Row { provider:"Antigravity".into(),account:Some(account.into()),bucket:Some(bucket.into()),period:Some(period.into()),
                 window:if valid {window} else {None}, observed_at:Some(observed),state:state.into(),message:message.into() }
         }).collect())
@@ -86,5 +119,28 @@ mod tests {
         let path=dir.join("status.json");assert!(read(&path,now()).is_none());
         std::fs::write(&path,vec![b' ';65_537]).unwrap();assert!(read(&path,now()).is_none());
         std::fs::remove_file(path).unwrap();std::fs::remove_dir(dir).unwrap();
+    }
+    #[test] fn automatic_refresh_is_initial_periodic_and_forced() {
+        use std::cell::Cell;
+        let calls=Cell::new(0);let mut cache=Cache::default();
+        for (at,force,expected) in [(1000,false,1),(60_999,false,1),(61_000,false,2),(61_001,true,3),(61_002,false,3)] {
+            cache.poll_with(at,force,||{calls.set(calls.get()+1);Ok(())},Vec::new);
+            assert_eq!(calls.get(),expected);
+        }
+    }
+    #[test] fn automatic_failure_keeps_original_observation_and_expires() {
+        let mut cache=Cache::default();
+        for at in [now(),now()+120_001] {
+            let rows=cache.poll_with(at,true,||Err("Own refresh failure."),||parse(&sample(),now(),at).unwrap());
+            assert!(rows.iter().all(|q|q.observed_at==Some(now()) && q.message.contains("Own refresh failure.")));
+            assert_eq!(rows[0].window.is_some(),at==now());
+        }
+    }
+    #[test]
+    #[ignore="Read-only live agy /usage requires installed authenticated CLI and statusline export"]
+    fn agy_automatic_live_updates_identified_sample_without_terminal() {
+        let started=crate::quotas::now_ms();collect().unwrap();let rows=cached_rows();
+        assert_eq!(rows.len(),4);assert!(rows.iter().all(|q|q.account.is_some() && q.observed_at.is_some_and(|at|at>=started)));
+        assert!(rows.iter().any(|q|q.state=="fresh" && q.window.is_some()));
     }
 }

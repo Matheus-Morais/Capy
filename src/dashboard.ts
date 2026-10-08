@@ -129,7 +129,7 @@ document.getElementById('refreshQuotas')!.addEventListener('click', event => {
   const button = event.currentTarget as HTMLButtonElement;
   button.disabled = true;
   void desktopCommand('refresh_quotas').then(() => {
-    notice.textContent = 'Atualização solicitada. As fontes serão consultadas em segundo plano. Claude e Antigravity dependem de uma nova observação do statusline.';
+    notice.textContent = 'Atualização solicitada. As fontes serão consultadas em segundo plano. Antigravity consulta as cotas automaticamente; Claude depende de uma nova observação do statusline.';
   }).catch(showError).finally(() => setTimeout(() => { button.disabled = false; },15_000));
 });
 document.querySelectorAll<HTMLButtonElement>('[data-quota-section]').forEach(button => {
