@@ -1,4 +1,4 @@
-import { savePreferences, dismissQuotaAlert, defaultPreferences, showError, type Snapshot, type Preferences, type QuotaRule, type AccountProfile } from './bridge';
+import { savePreferences, dismissQuotaAlert, defaultPreferences, showError, type Snapshot, type Preferences, type QuotaRule, type AccountProfile, type ApiAccount } from './bridge';
 import { escape, defaultThresholds, ruleMarkup, fallbackMarkup } from './presentation';
 
 let preferences: Preferences = defaultPreferences();
@@ -6,11 +6,17 @@ let rules: QuotaRule[] = [];
 let signature = '\0';
 let initialized = false;
 let profiles:AccountProfile[]=[];
+let apiChoices:Pick<AccountProfile,'id'|'label'>[]=[];
+const destinations=()=>[...profiles.map(p=>({id:p.id,label:`Claude CLI · ${p.label}`})),...apiChoices];
 let latest:Snapshot|undefined;
 function initialize() {
   const controls = document.querySelector('.demo-controls');
   if (!controls || initialized) return;
   initialized = true;
+  window.addEventListener('capy-api-accounts',event=>{
+    const values=(event as CustomEvent<ApiAccount[]>).detail.filter(a=>a.configured).map(a=>({id:a.account.id,label:`API ${a.account.provider} · ${a.account.label} · cobrança por uso`}));
+    if(JSON.stringify(values)!==JSON.stringify(apiChoices)){apiChoices=values;signature='';if(latest)renderPreferences(latest);}
+  });
   window.addEventListener('capy-profiles',event=>{
     const values=(event as CustomEvent<AccountProfile[]>).detail;
     if(JSON.stringify(values)!==JSON.stringify(profiles)){profiles=values;signature='';if(latest)renderPreferences(latest);}
@@ -138,9 +144,14 @@ function initialize() {
     } catch {}
   });
   controls.insertAdjacentHTML('afterend', '<section class="preferences" id="quotaPreferences"><h2>Alertas por conta</h2><p>Cada percentual avisa uma vez por janela. Se vários forem ultrapassados juntos, mostramos o maior.</p><div id="quotaRuleForms"></div></section>');
+  document.getElementById('quotaPreferences')!.insertAdjacentHTML('beforeend','<p>Continuidade automática: sessões e chats Claude por assinatura. Alternativas API são usadas no chat e cobram por uso; a revisão exige confirmar a mudança de cobrança. A autenticação e o modelo API são conferidos pelo provedor ao enviar.</p>');
+  document.getElementById('quotaRuleForms')!.addEventListener('change',event=>{
+    const select=(event.target as Element).closest<HTMLSelectElement>('[data-destination-profile]');
+    if(select)select.closest('.fallback-row')!.querySelector<HTMLInputElement>('[data-destination-model]')!.value='';
+  });
   document.getElementById('quotaRuleForms')!.addEventListener('click', event => {
     const destination=(event.target as Element).closest('[data-add-destination]');
-    if(destination){destination.closest('form')!.querySelector('.fallback-chain')!.insertAdjacentHTML('beforeend',fallbackMarkup(profiles));return;}
+    if(destination){destination.closest('form')!.querySelector('.fallback-chain')!.insertAdjacentHTML('beforeend',fallbackMarkup(destinations(),'',profiles.length?'sonnet':''));return;}
     const chain=(event.target as Element).closest<HTMLButtonElement>('[data-chain]');
     if(chain){
       const row=chain.closest<HTMLElement>('.fallback-row')!;
@@ -188,7 +199,7 @@ export function renderPreferences(data: Snapshot): void {
     const next = JSON.stringify(rules);
     if (signature !== next) {
       signature = next;
-      forms.innerHTML = rules.length ? rules.map((rule,index)=>ruleMarkup(rule,index,profiles)).join('') : '<p>As contas aparecem quando a integração confirmar sua identidade.</p>';
+      forms.innerHTML = rules.length ? rules.map((rule,index)=>ruleMarkup(rule,index,destinations())).join('') : '<p>As contas aparecem quando a integração confirmar sua identidade.</p>';
     }
   }
   let alerts = document.getElementById('quotaAlerts');

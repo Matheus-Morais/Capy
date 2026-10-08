@@ -46,6 +46,7 @@ export async function initializeChat():Promise<void>{
     const [profileResult,apiResult]=await Promise.allSettled([listProfiles(),listApiAccounts()]);
     const profiles=profileResult.status==='fulfilled'?profileResult.value:[];
     apis=apiResult.status==='fulfilled'?apiResult.value:[];
+    window.dispatchEvent(new CustomEvent('capy-api-accounts',{detail:apis}));
     sourceWarning.textContent=[profileResult,apiResult].filter(result=>result.status==='rejected').map(result=>String(result.reason)).join(' ');
     target.innerHTML=profiles.map(p=>`<option value="claudeCli:${escape(p.id)}">CLI Claude · ${escape(p.label)}</option>`).join('')
       +apis.filter(a=>a.configured).map(a=>`<option value="api:${escape(a.account.id)}">API ${escape(a.account.provider)} · ${escape(a.account.label)}</option>`).join('');

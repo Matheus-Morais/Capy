@@ -15,7 +15,7 @@ OWN-WORLD: preservar SVG frontal aprovado, caramelo, aveia, castanho, oliva e â
 
 STORY: capivara sozinha, clique abre resumo, pedidos simulados mudam os estados, painel aprofunda a visão. Bandeja mostra, oculta e encerra.
 
-FIRST VIEWPORT: pet 200×180, summary 380×620 e panel 760×680 logical px. Só pet aparece inicialmente. O resumo mantém pendências primeiro e rodapé de acesso ao painel; o painel usa lista à esquerda e cotas/cenários à direita.
+FIRST VIEWPORT: pet 200×180, summary 380×620 e panel 760×680 logical px. Só pet aparece inicialmente. Resumo e painel começam pelas cotas agrupadas por conta, com medidores compactos e renovação; os alertas pendentes permanecem antes das cotas. O painel mantém sessões à esquerda e configurações à direita.
 
 FORM: brief-pinned-compact-companion; identidade e pose escolhidas pelo usuário, stack Rust/Tauri aprovada. A integração nativa altera presença e navegação de janelas, mantendo a linguagem visual.
 

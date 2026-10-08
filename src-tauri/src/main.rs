@@ -23,6 +23,8 @@ mod interventions;
 mod monitor;
 mod position;
 mod quotas;
+mod antigravity_quotas;
+mod quota_refresh;
 mod quota_policy;
 mod settings;
 mod profiles;
@@ -248,6 +250,8 @@ fn demo_snapshot(state: State<'_, DesktopState>) -> Result<demo::Snapshot, Strin
         .map(|s| s.clone())
         .map_err(|_| "Estado indisponível".into())
 }
+#[tauri::command]
+fn refresh_quotas(service: State<'_, quota_refresh::Service>) -> Result<(), String> { service.request() }
 #[tauri::command]
 fn save_preferences(app: tauri::AppHandle, value: settings::Preferences) -> Result<(), String> {
     app.state::<settings::Store>().save(value.clone())?;
@@ -666,6 +670,7 @@ fn main() {
             ui_errors: Mutex::new(Vec::new()),
         })
         .manage(exit_review::Service::default())
+        .manage(quota_refresh::Service::default())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Err(e) = show_pet(app) {
                 eprintln!("Show Capy: {e}");
@@ -691,6 +696,7 @@ fn main() {
             hide_window,
             move_pet,
             demo_snapshot,
+            refresh_quotas,
             demo_action,
             save_preferences,
             dismiss_quota_alert,

@@ -18,7 +18,10 @@ const root=join(workspace,'scratch',`capy-visual-${randomUUID()}`);
 const exe=join(workspace,'src-tauri','target','release','capy.exe');
 await stat(exe);await mkdir(root,{recursive:true});
 let exitFixture;
-const automaticChatReview=process.argv.includes('--automatic-chat-review');
+const automaticChatApiReview=process.argv.includes('--automatic-chat-api-review');
+const quotaDashboard=process.argv.includes('--quota-dashboard');
+assert.ok(!quotaDashboard||process.argv.length===3,'Quota dashboard proof runs separately, with read-only quota sources');
+const automaticChatReview=process.argv.includes('--automatic-chat-review')||automaticChatApiReview;
 assert.ok(!automaticChatReview||!process.argv.some(arg=>arg.startsWith('--live-')||['--exit-review','--profiles-corrupt','--quota-settings'].includes(arg)),'Automatic chat UI proof uses only synthetic own records, without provider calls');
 let automaticFixture;
 if(automaticChatReview){
@@ -164,6 +167,34 @@ try{
   await waitFor(()=>panel.evaluate(`!!document.querySelector('#startTask') && !!document.querySelector('#accountList')`),'Controles do painel');
   check('native_panel_no_horizontal_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
   await panel.screenshot('panel');
+  check('native_quota_board_precedes_session_grid',await panel.evaluate(`document.querySelector('.quotas').compareDocumentPosition(document.querySelector('.panel-grid')) & Node.DOCUMENT_POSITION_FOLLOWING`));
+  check('native_quota_board_groups_demo_accounts',await panel.evaluate(`document.querySelectorAll('.quota-account').length===3 && document.querySelectorAll('.quota-dial[role="meter"]').length===6 && document.querySelector('.simulation').textContent.includes('simulad')`));
+  check('native_quota_board_shows_window_countdowns',await panel.evaluate(`document.querySelector('#quotaRows').textContent.includes('Semanal') && document.querySelector('#quotaRows').textContent.includes('Renova em')`));
+  await panel.evaluate(`document.querySelector('[data-quota-section="accounts"]').click()`);
+  check('native_quota_accounts_shortcut_focuses_account_controls',await panel.evaluate(`document.querySelector('#accounts').contains(document.activeElement)`));
+  await panel.evaluate(`document.querySelector('[data-quota-section="quotaPreferences"]').click()`);
+  check('native_quota_alerts_shortcut_focuses_preferences',await panel.evaluate(`document.querySelector('#quotaPreferences')===document.activeElement || document.querySelector('#quotaPreferences').contains(document.activeElement)`));
+  await panel.evaluate(`document.querySelector('[data-quota-section="chatCreateForm"]').click()`);
+  check('native_quota_switch_shortcut_opens_and_focuses_destination',await panel.evaluate(`document.querySelector('#chatCreateForm').closest('details').open && document.querySelector('#chatCreateForm').contains(document.activeElement)`));
+  await panel.evaluate(`window.scrollTo(0,0)`);
+  if(quotaDashboard){
+    await panel.invoke('demo_action',{action:'scenario',id:'',answer:'real'});
+    const data=await waitFor(async()=>{const data=await panel.invoke('demo_snapshot');return data.quotas?.some(q=>q.provider==='Antigravity')?data:null;},'Fontes reais de cota aparecem',30_000);
+    await waitFor(()=>panel.evaluate(`document.querySelector('#refreshQuotas').hidden===false`),'Atualização de fontes reais visível');
+    check('native_quota_real_board_never_keeps_demo_accounts',await panel.evaluate(`!document.querySelector('#quotaRows').textContent.includes('Conta pessoal')&&!document.querySelector('#quotaRows').textContent.includes('Conta trabalho')`));
+    check('native_quota_real_board_includes_antigravity_source',await panel.evaluate(`document.querySelector('#quotaRows').textContent.includes('Antigravity')`));
+    const fresh=data.quotas.filter(q=>q.state==='fresh'&&q.account&&q.window&&q.observedAt!==null&&Date.now()-q.observedAt<=120000&&q.window.resetsAt*1000>Date.now());
+    check('native_quota_real_meters_match_observed_backend_balances',await panel.evaluate(`(()=>{const meters=[...document.querySelectorAll('#quotaRows [role="meter"]')];const rows=${JSON.stringify(fresh)};return meters.length===rows.length&&rows.every(row=>meters.some(meter=>meter.getAttribute('aria-label').includes(row.account)&&Number(meter.getAttribute('aria-valuenow'))===Number((100-row.window.usedPercent).toFixed(1))));})()`));
+    await writeFile(join(root,'quota-snapshot.json'),JSON.stringify(data.quotas,null,2));
+    await panel.screenshot('quota-real');
+    await panel.call('Emulation.setDeviceMetricsOverride',{width:540,height:680,deviceScaleFactor:1,mobile:false});
+    check('native_quota_real_board_at_minimum_panel_width_has_no_overflow',await panel.evaluate('document.documentElement.scrollWidth<=innerWidth'));
+    await panel.screenshot('quota-real-compact');await panel.call('Emulation.clearDeviceMetricsOverride');
+    await panel.invoke('refresh_quotas');
+    check('native_quota_refresh_limits_repeated_requests',await panel.invoke('refresh_quotas').then(()=>false,error=>String(error).includes('15 segundos')));
+    await panel.invoke('demo_action',{action:'scenario',id:'',answer:'waiting'});
+    await waitFor(()=>panel.evaluate(`document.querySelectorAll('.quota-account').length===3`),'Volta à demonstração explicitamente identificada');
+  }
   await waitFor(()=>panel.evaluate(`!!document.querySelector('#chatCreateForm') && !!document.querySelector('#chatSendForm')`),'Controles de chat');
   if(automaticFixture){const rows=await panel.invoke('list_chats');check('native_automatic_chat_own_synthetic_record_loaded',rows.length===1&&rows[0].id===automaticFixture.id&&rows[0].revision===2);}
   else check('native_chat_commands_start_with_empty_own_history',(await panel.invoke('list_chats')).length===0);
@@ -178,11 +209,13 @@ try{
     await panel.invoke('open_source',{id:`chat:${automaticFixture.id}`});
     await waitFor(()=>panel.evaluate(`document.querySelector('#chatSelection').value===${JSON.stringify(automaticFixture.id)} && !document.querySelector('#chatReview form')`),'Seleção exata antes da revisão automática');
     const summary={objective:'Own synthetic quota objective',decisions:'Review this local UI fixture.',state:'Synthetic source record. No provider was called.',files:'No files changed by a provider.',tests:'Synthetic UI proof only.',nextSteps:'Cancel without sending.',guides:'No provider instructions were loaded in this fixture.'};
-    const review={nonce:randomUUID(),sourceId:automaticFixture.id,sourceRevision:automaticFixture.revision,sourceTarget:automaticFixture.target,destination:{...automaticFixture.target,profileId:'own-destination-fixture',account:'Own synthetic destination'},model:'sonnet',summary,uncertainMessages:[],automatic:true,dismissed:false};
+    const destination=automaticChatApiReview?{kind:'api',profileId:randomUUID(),provider:'OpenAI',account:'Own synthetic destination',billing:'api',credentialRevision:randomUUID()}:{...automaticFixture.target,profileId:'own-destination-fixture',account:'Own synthetic destination'};
+    const review={nonce:randomUUID(),sourceId:automaticFixture.id,sourceRevision:automaticFixture.revision,sourceTarget:automaticFixture.target,destination,model:automaticChatApiReview?'own-model':'sonnet',summary,uncertainMessages:[],automatic:true,dismissed:false};
     const reviewPath=join(root,'chat',`${automaticFixture.id}.review.json`);await writeFile(reviewPath,JSON.stringify(review));
     await waitFor(()=>panel.evaluate(`document.querySelector('#chatReview form')?.dataset.chatReview===${JSON.stringify(review.nonce)}`),'Revisão adicionada pelo snapshot sem mudança do histórico',15_000);
     check('native_automatic_chat_review_visible_without_history_revision_change',(await panel.invoke('list_chats'))[0].revision===2&&await panel.evaluate(`document.querySelector('#chatReview h2').textContent==='Percentual de troca atingido'`));
-    check('native_automatic_chat_review_names_destination_and_requires_fresh_consent',await panel.evaluate(`(()=>{const view=document.querySelector('#chatReview'),consent=view.querySelector('[name="reviewed"]');return view.textContent.includes('Own synthetic destination')&&view.textContent.includes('sonnet')&&consent.required&&!consent.checked;})()`));
+    check('native_automatic_chat_review_names_destination_and_requires_fresh_consent',await panel.evaluate(`(()=>{const view=document.querySelector('#chatReview'),consent=view.querySelector('[name="reviewed"]');return view.textContent.includes('Own synthetic destination')&&view.textContent.includes(${JSON.stringify(review.model)})&&consent.required&&!consent.checked;})()`));
+    if(automaticChatApiReview)check('native_automatic_chat_api_review_requires_explicit_billing_change',await panel.evaluate(`(()=>{const view=document.querySelector('#chatReview'),consent=view.querySelector('[name="billingConfirmed"]');return view.textContent.includes('OpenAI')&&view.textContent.includes('cobrança por uso')&&consent.required&&!consent.checked;})()`));
     const draft=`OWN_EDITED_QUOTA_SUMMARY_${randomUUID()}`;await panel.evaluate(`document.querySelector('#chatReview textarea[name="objective"]').value=${JSON.stringify(draft)}`);
     await panel.invoke('save_preferences',{value:{sounds:true,reduceMotion:false,quotaRules:[]}});
     await waitFor(()=>panel.evaluate(`document.querySelector('#petSounds').checked`),'Snapshot repetido processado pela interface');
@@ -457,6 +490,7 @@ try{
   await waitFor(()=>summary.evaluate(`!!document.querySelector('[data-id]')`),'Cards do resumo');
   check('native_summary_no_horizontal_overflow',await summary.evaluate('document.documentElement.scrollWidth<=innerWidth'));
   await summary.screenshot('summary');
+  check('native_summary_quota_board_has_all_demo_accounts',await summary.evaluate(`document.querySelectorAll('.quota-account').length===3 && document.querySelectorAll('.quota-dial[role="meter"]').length===6`));
   await pet.invoke('hide_window',{label:'summary'});
 
   await waitFor(()=>pet.evaluate(`!document.querySelector('#pet').classList.contains('g-celebrate') && !document.querySelector('#pet').classList.contains('g-click')`),'Gesto finito encerra antes da prova de banho');

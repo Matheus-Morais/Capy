@@ -23,7 +23,11 @@ pub fn schedule(app: tauri::AppHandle) {
                 .map(|s| s.scenario == "real")
                 .unwrap_or(false);
             if real {
+                if quota_app.state::<crate::quota_refresh::Service>().take() {
+                    cache.refresh();last_claude=Instant::now()-Duration::from_secs(60);
+                }
                 let mut rows = cache.poll(&discovery::Sources::local());
+                rows.retain(|row| row.provider == "Codex");
                 let profiles = quota_app.state::<crate::profiles::Store>().list().unwrap_or_default();
                 let signature = serde_json::to_string(&profiles).unwrap_or_default();
                 if last_claude.elapsed() >= Duration::from_secs(60) || profile_signature != signature {
@@ -39,6 +43,7 @@ pub fn schedule(app: tauri::AppHandle) {
                     profile_signature = signature;
                 }
                 rows.extend(claude_rows.clone());
+                rows.extend(crate::antigravity_quotas::poll());
                 if let Ok(mut output) = quota_output.lock() {
                     *output = rows;
                 }
@@ -103,7 +108,14 @@ pub fn schedule(app: tauri::AppHandle) {
             }
             let handoffs=handoff_store.list().unwrap_or_default();
             if let Ok(profiles)=&profile_rows{
-                match crate::chat_routing::evaluate(&app.state::<Arc<crate::chat_history::Store>>(),profiles,&profile_store.chat_targets(now),&quotas,&prefs,now){
+                let mut chat_targets=profile_store.chat_targets(now);
+                if let Ok(accounts)=app.state::<Arc<crate::api_accounts::Store>>().list(){
+                    chat_targets.extend(accounts.into_iter().filter(|a|a.configured).map(|a|crate::chat_history::Target{
+                        kind:"api".into(),profile_id:a.account.id,provider:a.account.provider,account:a.account.label,
+                        billing:"api".into(),credential_revision:Some(a.account.revision),
+                    }));
+                }
+                match crate::chat_routing::evaluate(&app.state::<Arc<crate::chat_history::Store>>(),profiles,&chat_targets,&quotas,&prefs,now){
                     Ok(statuses)=>routing.extend(statuses),
                     Err(error)=>routing.push(crate::routing::Status{task_id:"chat".into(),state:"unavailable".into(),message:error}),
                 }

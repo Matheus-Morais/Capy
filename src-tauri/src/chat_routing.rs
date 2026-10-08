@@ -1,7 +1,7 @@
 use crate::{chat_history::{self,Store,Target},profiles::Profile,quotas::Row,routing::{self,Decision,Status},settings::Preferences};
 
 pub fn evaluate(store:&Store,profiles:&[Profile],targets:&[Target],quotas:&[Row],prefs:&Preferences,now:u64)->Result<Vec<Status>,String>{
-    let candidates=targets.iter().filter(|target|target.kind=="claudeCli"&&chat_history::valid_target(target)).map(|target|routing::Candidate{
+    let candidates=targets.iter().filter(|target|chat_history::valid_target(target)).map(|target|routing::Candidate{
         profile_id:target.profile_id.clone(),account:Some(target.account.clone()),provider:target.provider.clone(),ready:true,
     }).collect::<Vec<_>>();
     let mut statuses=Vec::new();
@@ -19,7 +19,7 @@ pub fn evaluate(store:&Store,profiles:&[Profile],targets:&[Target],quotas:&[Row]
             Decision::WaitingTurn=>statuses.push(Status{task_id:id,state:"waitingTurn".into(),message:"Percentual de troca atingido. Aguardando o fim confirmado do envio deste chat.".into()}),
             Decision::Exhausted=>statuses.push(Status{task_id:id,state:"exhausted".into(),message:"Nenhuma alternativa disponível na cadeia deste chat. Verifique o login e as quotas das contas de destino.".into()}),
             Decision::Review{destination}=>{
-                let Some(target)=targets.iter().find(|target|target.kind=="claudeCli"&&target.profile_id==destination.profile_id&&chat_history::valid_target(target))else{continue;};
+                let Some(target)=targets.iter().find(|target|target.profile_id==destination.profile_id&&chat_history::valid_target(target))else{continue;};
                 let result=(||{
                     let profile=profiles.iter().find(|profile|profile.id==source.target.profile_id).ok_or("Perfil de origem indisponível.")?;
                     let workspace=store.workspace(&source.id)?;
@@ -93,5 +93,28 @@ mod tests{
         let review=f.store.transfer_review(&f.source.id).unwrap();assert!(review.destination==f.targets[2]);assert_eq!(review.model,"haiku");
         let mut g=Fixture::new();g.targets.truncate(1);let statuses=g.evaluate(&[row(&g.source.target.account,300,95.0)],1000);
         assert_eq!(statuses.len(),1);assert_eq!(statuses[0].state,"exhausted");assert_eq!(statuses[0].task_id,format!("chat:{}",g.source.id));assert!(statuses[0].message.contains("Nenhuma alternativa"));assert!(g.store.transfer_reviews().unwrap().is_empty());
+    }
+    #[test]
+    fn chat_routing_reviews_other_ai_without_send_and_requires_billing_consent(){
+        for provider in ["OpenAI","Anthropic","Gemini"] {
+            let mut f=Fixture::new();
+            let target=Target{kind:"api".into(),profile_id:uuid::Uuid::new_v4().to_string(),provider:provider.into(),
+                account:"Own API fixture".into(),billing:"api".into(),credential_revision:Some(uuid::Uuid::new_v4().to_string())};
+            f.prefs.quota_rules[0].fallback=vec![crate::settings::Destination{profile_id:target.profile_id.clone(),model:"own-model".into()}];
+            f.targets.push(target.clone());f.evaluate(&[row(&f.source.target.account,300,95.0)],1000);
+            let review=f.store.transfer_review(&f.source.id).unwrap();assert!(review.automatic);assert!(review.destination==target);
+            assert_eq!(f.store.list().unwrap().len(),1);assert_eq!(f.store.get(&f.source.id).unwrap().messages.len(),2);
+            assert!(f.store.approve_transfer(&f.source.id,&review.nonce,review.summary.clone(),true,false,&f.source.target,&target).is_err());
+            assert_eq!(f.store.list().unwrap().len(),1);
+            let mut changed=target.clone();changed.credential_revision=Some(uuid::Uuid::new_v4().to_string());
+            assert!(f.store.approve_transfer(&f.source.id,&review.nonce,review.summary.clone(),true,true,&f.source.target,&changed).is_err());
+            assert_eq!(f.store.list().unwrap().len(),1);
+        }
+    }
+    #[test]
+    fn chat_routing_does_not_choose_an_unconfigured_api(){
+        let mut f=Fixture::new();f.prefs.quota_rules[0].fallback=vec![crate::settings::Destination{profile_id:uuid::Uuid::new_v4().to_string(),model:"own-model".into()}];
+        assert_eq!(f.evaluate(&[row(&f.source.target.account,300,95.0)],1000)[0].state,"exhausted");
+        assert!(f.store.transfer_reviews().unwrap().is_empty());
     }
 }

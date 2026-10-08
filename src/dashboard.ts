@@ -1,6 +1,7 @@
 import './style.css';
 import { action, desktopCommand, native, showError, snapshot, subscribe, respondIntervention, setInterventionSubscription, type Snapshot } from './bridge';
-import { escape, sessionRow, renderQuotas } from './presentation';
+import { escape, sessionRow } from './presentation';
+import { renderQuotaBoard } from './quota-board';
 import { pendingIntervention, interventionContext, captureInterventionAnswers, restoreInterventionAnswers } from './interventions-ui';
 import { runInterventionSubscriptionClick } from './intervention-subscription';
 import { renderPreferences } from './settings-ui';
@@ -39,8 +40,9 @@ function render(data: Snapshot) {
   }
   document.querySelector<HTMLElement>('.simulation')!.textContent = realMode ? 'Sessões reais · descoberta local experimental' : 'Demonstração · sessões, respostas e cotas simuladas';
   cancelQuotaExpiry?.();
-  cancelQuotaExpiry = renderQuotas(document.getElementById('quotaRows')!, realMode, data.quotas ?? []);
+  cancelQuotaExpiry = renderQuotaBoard(document.getElementById('quotaRows')!, realMode, data.quotas ?? []);
   document.querySelector<HTMLElement>('#quotaTitle span')!.textContent = realMode ? 'Fonte e atualização' : 'Simulação';
+  document.getElementById('refreshQuotas')!.hidden = !realMode;
   const integrations = document.getElementById('integrations')!;
   integrations.hidden = !realMode;
   integrations.innerHTML = '<h2>Integrações locais</h2>' + (data.integrations.length ? data.integrations.map(i => `<p><strong>${escape(i.agent)}</strong><br>${escape(i.message)}</p>`).join('') : '<p>Buscando sessões locais…</p>');
@@ -123,6 +125,30 @@ sessions.addEventListener('click', event => {
 document.getElementById('restore')!.addEventListener('click', () => void action('restore').catch(showError));
 document.getElementById('close')!.addEventListener('click', () => void desktopCommand('hide_window', { label: document.body.dataset.surface }).catch(showError));
 document.getElementById('openPanel')?.addEventListener('click', () => void desktopCommand('show_panel').catch(showError));
+document.getElementById('refreshQuotas')!.addEventListener('click', event => {
+  const button = event.currentTarget as HTMLButtonElement;
+  button.disabled = true;
+  void desktopCommand('refresh_quotas').then(() => {
+    notice.textContent = 'Atualização solicitada. As fontes serão consultadas em segundo plano. Claude e Antigravity dependem de uma nova observação do statusline.';
+  }).catch(showError).finally(() => setTimeout(() => { button.disabled = false; },15_000));
+});
+document.querySelectorAll<HTMLButtonElement>('[data-quota-section]').forEach(button => {
+  button.addEventListener('click', () => {
+    if (document.body.dataset.surface !== 'panel') {
+      void desktopCommand('show_panel').catch(showError);
+      return;
+    }
+    const section = document.getElementById(button.dataset.quotaSection!);
+    if (!section) { notice.textContent = 'Esta configuração está disponível no aplicativo desktop.'; return; }
+    for (let parent: HTMLElement | null = section; parent; parent = parent.parentElement) {
+      if (parent instanceof HTMLDetailsElement) parent.open = true;
+    }
+    section.scrollIntoView({block:'start'});
+    const target = section.querySelector<HTMLElement>('button,input,select,textarea,summary') ?? section;
+    if (target === section) target.tabIndex = -1;
+    target.focus({preventScroll:true});
+  });
+});
 document.querySelectorAll<HTMLButtonElement>('[data-scenario]').forEach(b => {
   if (b.dataset.scenario === 'real') b.hidden = !native;
   b.addEventListener('click', () => { notice.textContent = ''; void action('scenario', '', b.dataset.scenario!).catch(showError); });

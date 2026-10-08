@@ -217,6 +217,7 @@ pub struct Cache {
     rows: Vec<Row>,
 }
 impl Cache {
+    pub fn refresh(&mut self) { self.attempted_at = None; }
     pub fn poll(&mut self, sources: &Sources) -> Vec<Row> {
         self.rows(now_ms(), || read(sources));
         self.current(now_ms())

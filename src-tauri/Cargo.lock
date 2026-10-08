@@ -427,6 +427,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-single-instance",
+ "time",
  "tungstenite",
  "url",
  "uuid",
