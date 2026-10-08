@@ -1,6 +1,6 @@
 # Retomada do Capy
 
-Atualizado em 2026-10-07: referências automáticas de instruções nas tarefas Claude passaram em 35 checks do autor, com resumo preservado após alteração do arquivo e cancelamento sem envio. Perfis, controles durante geração, troca/layout, launcher externo e preservação de quotas têm provas anteriores. Smoke posterior sem erros. Prévia empacotada 0.4.0-alpha.2 permanece anterior a este trecho; escopo completo continua aberto.
+Atualizado em 2026-10-08: retomada reconciliou o PASS local C13 e os commits posteriores de skins/acessórios/janelas (0.4.0-alpha.3). Corrigidos início da mascote no código-fonte/dev, gesto perdido na troca de skin, animações banho/laranja durante ocultação ou movimento reduzido e dicas que anunciavam sucesso sem observação. 36 JS, 133 Rust/2 live ignorados, desktop build e smoke passaram; runner visual atual passou em 23 checks e revisão automática sintética em 29. Auditoria C1–C19 registrada em `.checks/multifunction.final-audit.md`; escopo completo permanece aberto pelas lacunas descritas ali. Executável corrigido: `src-tauri/target/release/capy.exe`; cópia empacotada alpha.3 anterior não foi substituída.
 
 ## Plano multifuncional em implementação
 

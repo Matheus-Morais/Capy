@@ -151,6 +151,7 @@ let failure;
 try{
   const petTarget=await waitFor(async()=>ownTarget(await targets(),'/index.html')??ownTarget(await targets(),'/'),'Mascote nativa/CDP');
   let pet=await connect(petTarget);
+  await pet.call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
   await waitFor(()=>pet.evaluate(`document.querySelector('#pet') instanceof SVGSVGElement && !!window.__TAURI_INTERNALS__`),'SVG carregado');
   let panelShown=false,lastPanelError;
   for(let attempt=0;attempt<30&&!panelShown;attempt++){
@@ -458,9 +459,16 @@ try{
   await summary.screenshot('summary');
   await pet.invoke('hide_window',{label:'summary'});
 
+  await waitFor(()=>pet.evaluate(`!document.querySelector('#pet').classList.contains('g-celebrate') && !document.querySelector('#pet').classList.contains('g-click')`),'Gesto finito encerra antes da prova de banho');
+  await pet.evaluate(`document.querySelector('#pet').classList.add('s-bath');true`);
+  await writeFile(join(root,'accessory-animation.json'),JSON.stringify(await pet.evaluate(`({classes:document.querySelector('#pet').getAttribute('class'),body:document.body.className,name:getComputedStyle(document.querySelector('#orange')).animationName,playState:getComputedStyle(document.querySelector('#orange')).animationPlayState})`),null,2));
+  check('native_bath_animation_present_before_pause',await pet.evaluate(`getComputedStyle(document.querySelector('#orange')).animationName==='capy-yuzu-float'`));
   await pet.invoke('hide_window',{label:'pet'});
   await waitFor(()=>pet.evaluate(`document.body.classList.contains('pet-paused')`),'Animações pausadas quando oculta');
   check('native_hidden_animations_paused',await pet.evaluate(`document.getAnimations().every(a=>a.playState==='paused')`));
+  check('native_hidden_bath_animation_paused',await pet.evaluate(`getComputedStyle(document.querySelector('#orange')).animationPlayState==='paused'`));
+  await pet.evaluate(`document.querySelector('#pet').classList.remove('s-bath');document.querySelector('#pet').classList.add('g-orange-trick');true`);
+  check('native_hidden_orange_gesture_paused',await pet.evaluate(`getComputedStyle(document.querySelector('#orange')).animationName==='capy-orange-trick-toss' && getComputedStyle(document.querySelector('#orange')).animationPlayState==='paused'`));
   await pet.invoke('move_pet',{dx:0,dy:0});
   // The tray's show operation is intentionally exercised by the existing native smoke test.
   await pet.invoke('toggle_summary');
@@ -471,7 +479,18 @@ try{
   await pet.invoke('demo_action',{action:'motion',id:'',answer:'true'});
   await waitFor(()=>pet.evaluate(`document.body.classList.contains('reduce-motion')`),'Movimento reduzido');
   check('native_reduced_motion_removes_spatial_animation',await pet.evaluate(`document.getAnimations().length===0 && getComputedStyle(document.querySelector('.eye-open')).translate==='none'`));
+  check('native_reduced_motion_removes_orange_gesture',await pet.evaluate(`getComputedStyle(document.querySelector('#orange')).animationName==='none'`));
+  await pet.evaluate(`document.querySelector('#pet').classList.remove('g-orange-trick');document.querySelector('#pet').classList.add('s-bath');true`);
+  check('native_reduced_motion_removes_bath_animation',await pet.evaluate(`getComputedStyle(document.querySelector('#orange')).animationName==='none'`));
   await pet.screenshot('reduced-motion');
+  await pet.invoke('demo_action',{action:'motion',id:'',answer:'false'});
+  await waitFor(()=>pet.evaluate(`!document.body.classList.contains('reduce-motion')`),'Preferência local de movimento restaurada');
+  await pet.call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+  check('native_system_reduced_motion_removes_bath_animation',await pet.evaluate(`getComputedStyle(document.querySelector('#orange')).animationName==='none'`));
+  await pet.evaluate(`document.querySelector('#pet').classList.remove('s-bath');document.querySelector('#pet').classList.add('g-orange-trick');true`);
+  check('native_system_reduced_motion_removes_orange_gesture',await pet.evaluate(`getComputedStyle(document.querySelector('#orange')).animationName==='none'`));
+  await pet.call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+  await pet.evaluate(`document.querySelector('#pet').classList.remove('s-bath','g-orange-trick');true`);
   await pet.invoke('demo_action',{action:'motion',id:'',answer:'false'});
   await pet.invoke('demo_action',{action:'scenario',id:'',answer:'waiting'});
   await waitFor(()=>pet.evaluate(`document.querySelector('#pet').classList.contains('g-wave')`),'Novo pedido acena');

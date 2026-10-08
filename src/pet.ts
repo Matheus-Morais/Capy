@@ -25,12 +25,12 @@ const FRIENDS = ['none', 'bird', 'butterfly', 'duck', 'turtle', 'all'];
 const ENVIRONMENTS = ['auto', 'day', 'sunset', 'night', 'rain'];
 
 const DEV_TIPS = [
-  'Git push feito! 🚀',
-  'Compilando... Tudo verde! ✅',
+  'Confira o destino antes do git push! 🚀',
+  'Confira a build antes de entregar! ✅',
   'Não esquece o git commit! 💡',
   'Seu código tá lindo hoje! ✨',
   'Café recarregado, foco total! ☕',
-  '34 testes passando! 🧪',
+  'Rode os testes da sua mudança! 🧪',
   'Respira fundo e refatora! 🦫',
   'Hora de hidratar a mente! 💧',
   'Você manda muito bem! 🌟'
@@ -112,8 +112,8 @@ function applySkin(skin: string) {
   applyEnvironment();
 }
 
+let pet: HTMLElement;
 applySkin(currentSkin);
-let pet = document.getElementById('pet')!;
 const badge = document.getElementById('petBadge')!;
 const behavior = new PetBehavior(Date.now());
 let latest: Snapshot | undefined;
@@ -128,9 +128,10 @@ function render(data: Snapshot) {
   if (lastGestureId !== frame.gestureId) {
     if (windowVisible && !document.hidden && data.preferences?.sounds && (gesture === 'hello' || gesture === 'wave' || gesture === 'celebrate')) playPetSound(gesture);
     for (const value of ['hello', 'wave', 'click', 'celebrate']) pet.classList.remove(`g-${value}`);
-    if (gesture) { void pet.getBoundingClientRect(); pet.classList.add(`g-${gesture}`); }
+    if (gesture) void pet.getBoundingClientRect();
     lastGestureId = frame.gestureId;
   }
+  if (gesture) pet.classList.add(`g-${gesture}`);
   if (!gesture) for (const value of ['hello', 'wave', 'click', 'celebrate']) pet.classList.remove(`g-${value}`);
   badge.hidden = !waiting;
   badge.textContent = String(waiting);

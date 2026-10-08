@@ -182,11 +182,7 @@
 }
 
 /* Laranjinha no topo da cabeça balançando em sincronia viva com o corpinho */
-#pet #orange,
-#pet.s-idle:not(.s-sleeping) #orange,
-#pet.p-stand #orange,
-#pet.p-lie #orange,
-#pet.p-sit #orange {
+#pet #orange {
   transform: none;
   transform-origin: 135px 23px;
   animation: capy-orange-sway 3.2s ease-in-out infinite;
@@ -292,7 +288,7 @@
 #pet.s-bath .eye-zen { display: inline !important; }
 #pet.s-bath .zzz { display: none !important; }
 #pet.s-bath #orange {
-  animation: capy-yuzu-float 3.2s ease-in-out infinite alternate !important;
+  animation: capy-yuzu-float 3.2s ease-in-out infinite alternate;
   transform-origin: 180px 150px;
 }
 #pet.s-bath #rig { animation: capy-bath-bob 3.6s ease-in-out infinite; }
@@ -344,7 +340,7 @@
 #pet.g-orange-trick .eye-look-up { display: inline !important; }
 #pet.g-orange-trick .zzz { display: none !important; }
 #pet.g-orange-trick #orange {
-  animation: capy-orange-trick-toss 1.8s cubic-bezier(.22, .9, .35, 1) 1 !important;
+  animation: capy-orange-trick-toss 1.8s cubic-bezier(.22, .9, .35, 1) 1;
   transform-origin: 135px 23px;
 }
 #pet.g-orange-trick #rig { animation: capy-trick-body 1.8s ease-in-out 1; }

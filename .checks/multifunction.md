@@ -19,6 +19,8 @@ Reusar monitor, snapshot/eventos Tauri, pedidos Codex, fontes de quotas e arte S
 | Door | Literal shape | Alternative rejected |
 | --- | --- | --- |
 | Movimento com memória | controlador TS por janela, relógio injetado; aceno 30s, sono 180s | mapear snapshot diretamente a CSS: repete eventos e dorme imediatamente |
+| Inicialização e troca de skin | inicializar a referência SVG antes de aplicar acessórios; renderizar gesto atual na nova arte sem emitir outro som/evento | atribuir variável ainda não inicializada ou perder o aceno ao substituir o SVG |
+| Movimento reduzido em gestos acessórios | supressão e pausa abrangem também banho e laranja; provar estilos computados no WebView | animação com prioridade própria que ignora a preferência ou continua com janela oculta |
 | Conclusão real | identificador explícito de conclusão de provedor | inferir de Stop/idle/ausência: falsos positivos |
 | Transferência | preparar → revisar → aprovar uma vez → executar | envio silencioso: contradiz escolha do usuário |
 | Terminal integrado | `portable-pty` 0.9 + xterm.js 6, com PTY nativo Windows e buffers limitados | pipes em um textarea: não atendem os prompts interativos do CLI |
