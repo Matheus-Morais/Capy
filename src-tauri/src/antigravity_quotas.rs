@@ -33,14 +33,18 @@ impl Cache {
 fn collect() -> Result<(),&'static str> {
     let started=crate::quotas::now_ms();
     crate::agy_usage::collect(||status_path().and_then(|path|read(&path,crate::quotas::now_ms()))
-        .is_some_and(|rows|rows.iter().all(|q|q.account.is_some() && q.observed_at.is_some_and(|at|at>=started))))?;
+        .is_some_and(|rows|complete_export(&rows,started)))?;
     let rows=status_path().and_then(|path|read(&path,crate::quotas::now_ms()))
         .ok_or("O agy respondeu, mas não exportou um statusline identificado compatível.")?;
     let finished=crate::quotas::now_ms();
-    if !rows.iter().all(|q|q.account.is_some() && q.observed_at.is_some_and(|at|at>=started&&at<=finished)) {
+    if !complete_export(&rows,started) || rows.iter().any(|q|q.observed_at.is_some_and(|at|at>finished)) {
         return Err("O agy respondeu, mas o statusline não gerou uma observação nova. Verifique a configuração do export.");
     }
     Ok(())
+}
+fn complete_export(rows:&[Row],started:u64)->bool {
+    rows.len()==4 && rows.iter().all(|q|q.account.is_some() && q.observed_at.is_some_and(|at|at>=started))
+        && rows.iter().any(|q|q.state=="fresh" && q.window.is_some())
 }
 
 fn unavailable(message: &str) -> Row {
@@ -135,6 +139,12 @@ mod tests {
             assert!(rows.iter().all(|q|q.observed_at==Some(now()) && q.message.contains("Own refresh failure.")));
             assert_eq!(rows[0].window.is_some(),at==now());
         }
+    }
+    #[test] fn automatic_export_waits_for_quotas_not_only_identity() {
+        let mut intermediate=sample();intermediate["quota"]=json!({});
+        assert!(!complete_export(&parse(&intermediate,now(),now()).unwrap(),now()));
+        assert!(!complete_export(&parse(&sample(),now()-1,now()).unwrap(),now()));
+        assert!(complete_export(&parse(&sample(),now(),now()).unwrap(),now()));
     }
     #[test]
     #[ignore="Read-only live agy /usage requires installed authenticated CLI and statusline export"]
