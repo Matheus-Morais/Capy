@@ -1,39 +1,741 @@
+/* ===== Capy V5 - Estilos e Animações da Capivara Proporcional com Olhos Grandes Kawaii & Novos Comportamentos ===== */
+
 #pet #rig { transform-origin: 135px 183px; }
-#pet #shadow { transform-origin: 135px 184px; }
-#pet #ear { transform-origin: 135px 40px; }
-#pet #orange { transform: none; }
-#pet.s-idle .eye-open { transform-origin: 135px 60px; }
+#pet #shadow { transform-origin: 135px 184px; transition: transform .3s ease-out; }
+#pet #ear { transform-origin: 135px 44px; }
+#pet #orange { transform-origin: 135px 23px; }
+
+/* Por padrão, variações de olhos, sobrancelhas, boca de bocejo, itens especiais, guarda-roupa e partículas ficam rigorosamente ocultas */
+#pet .eye-open,
+#pet .eye-wide,
+#pet .eye-half,
+#pet .eye-happy,
+#pet .eye-love,
+#pet .eye-closed,
+#pet .eye-look-up,
+#pet .eye-wink,
+#pet .eye-zen,
+#pet .brow-alert,
+#pet .mouth-yawn-group,
+#pet .clover,
+#pet .hearts,
+#pet .attention-mark,
+#pet .sparkles,
+#pet .zzz,
+#pet .coffee-cup,
+#pet .coffee-steam,
+#pet .bath-tub,
+#pet .towel-head,
+#pet .bath-bubbles,
+#pet .headphones,
+#pet .music-notes,
+#pet .highfive-paw,
+#pet .highfive-spark,
+#pet .dream-cloud,
+#pet .hat-cap,
+#pet .hat-straw,
+#pet .hat-top,
+#pet .hat-beanie,
+#pet .hat-flower,
+#pet .cloth-sunglasses,
+#pet .cloth-scarf,
+#pet .cloth-bowtie,
+#pet .cloth-hoodie,
+#pet .cloth-raincoat,
+#pet .costume-head-wizard,
+#pet .costume-body-wizard,
+#pet .costume-head-dino,
+#pet .costume-body-dino,
+#pet .costume-head-pirate,
+#pet .costume-body-pirate,
+#pet .costume-head-detective,
+#pet .costume-body-detective,
+#pet .costume-head-royal,
+#pet .costume-body-royal,
+#pet .friend-bird,
+#pet .friend-butterfly,
+#pet .friend-duck,
+#pet .friend-turtle,
+#pet .env-night-sky,
+#pet .env-fireflies,
+#pet .env-sun-rays,
+#pet .env-rain,
+#pet .item-water-bottle,
+#pet .speech-bubble-group {
+  display: none !important;
+}
+
+/* ===== ESTADO: DORMINDO APÓS 3 MINUTOS (S-SLEEPING) ===== */
+#pet.s-sleeping .zzz {
+  display: inline !important;
+  fill: #4a5ea6;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-weight: 900;
+  user-select: none;
+  pointer-events: none;
+}
+
+#pet.s-sleeping .zzz .z {
+  animation: capy-float-zzz 2.8s ease-in-out infinite;
+  opacity: 0;
+  transform-box: view-box;
+}
+
+#pet .zzz .z1 { animation-delay: 0s; font-size: 15px; }
+#pet .zzz .z2 { animation-delay: .55s; font-size: 20px; }
+#pet .zzz .z3 { animation-delay: 1.1s; font-size: 16px; }
+#pet .zzz .z4 { animation-delay: 1.65s; font-size: 23px; }
+#pet .zzz .z5 { animation-delay: 2.2s; font-size: 18px; }
+
+@keyframes capy-float-zzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(.7) rotate(-6deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(4px, -10px) scale(.9) rotate(1deg);
+  }
+  75% {
+    opacity: .95;
+    transform: translate(12px, -30px) scale(1.08) rotate(-3deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(18px, -50px) scale(1.22) rotate(7deg);
+  }
+}
+
+/* Respiração suave de quando está dormindo */
+#pet.s-sleeping #rig {
+  animation: capy-sleep-breathe 4.2s ease-in-out infinite;
+}
+@keyframes capy-sleep-breathe {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.018, 1.032); }
+}
+
+/* Olhinhos fechados quando dormindo */
+#pet.s-sleeping .eye-closed {
+  display: inline !important;
+}
+
+/* ===== ESTADO: PARADA / VIVA & ACORDADA (S-IDLE) ===== */
+/* Olhinhos abertos atentos com piscar natural e orgânico */
+#pet.s-idle:not(.s-sleeping) .eye-open {
+  display: inline !important;
+  animation: capy-natural-blink 3.8s ease-in-out infinite;
+  transform-origin: 135px 76px;
+}
+@keyframes capy-natural-blink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  93.5% { transform: scaleY(0.06); }
+  97% { transform: scaleY(1); }
+}
+
+/* Movimento corporal vivo contínuo no idle: leve balanço pendular, respiração suave e presença */
+#pet.s-idle:not(.s-sleeping) #rig {
+  animation: capy-idle-lively 4.2s ease-in-out infinite;
+  transform-origin: 135px 183px;
+}
+@keyframes capy-idle-lively {
+  0%, 100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
+  25% { transform: translateY(-1.5px) scale(1.015, 1.022) rotate(-0.8deg); }
+  50% { transform: translateY(0) scale(0.995, 0.995) rotate(0deg); }
+  75% { transform: translateY(-1.2px) scale(1.018, 1.02) rotate(0.8deg); }
+}
+
+/* Cabeça olhando sutil e curiosamente ao redor */
+#pet.s-idle:not(.s-sleeping) #faceAnim {
+  animation: capy-idle-look 6.8s ease-in-out infinite;
+  transform-origin: 135px 85px;
+}
+@keyframes capy-idle-look {
+  0%, 35%, 100% { transform: translate(0, 0) rotate(0deg); }
+  45%, 60% { transform: translate(-3.5px, 0.5px) rotate(-1.8deg); }
+  70%, 85% { transform: translate(3px, -0.5px) rotate(1.5deg); }
+}
+
+/* Orelhinhas sacudindo em espasmo suave pantaneiro */
+#pet.s-idle:not(.s-sleeping) #ear {
+  animation: capy-ear-twitch 3.8s ease-in-out infinite;
+  transform-origin: 135px 44px;
+}
+@keyframes capy-ear-twitch {
+  0%, 80%, 100% { transform: rotate(0deg); }
+  83% { transform: rotate(-7deg); }
+  86% { transform: rotate(6deg); }
+  89% { transform: rotate(-4deg); }
+  92% { transform: rotate(2deg); }
+}
+
+/* Focinho fungando suavemente */
+#pet.s-idle:not(.s-sleeping) .capy-nostrils {
+  animation: capy-sniff 4.2s ease-in-out infinite;
+  transform-origin: 135px 88px;
+}
+@keyframes capy-sniff {
+  0%, 90%, 100% { transform: scale(1); }
+  93% { transform: scale(1.1, 0.9); }
+  96% { transform: scale(0.95, 1.05); }
+}
+
+/* Laranjinha acompanhando com física de balanço elástico suave */
+#pet.s-idle:not(.s-sleeping) #orange {
+  animation: capy-orange-sway 3.6s ease-in-out infinite;
+}
+@keyframes capy-orange-sway {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(-3deg) translateY(-0.8px); }
+  75% { transform: rotate(2.5deg) translateY(-0.4px); }
+}
+
+/* Patinhas dianteiras com micro-apoio suave de peso */
+#pet.s-idle:not(.s-sleeping) .front-paws .fnA {
+  animation: capy-paw-shift 4.2s ease-in-out infinite alternate;
+  transform-origin: 94px 128px;
+}
+#pet.s-idle:not(.s-sleeping) .front-paws .ffA {
+  animation: capy-paw-shift 4.2s ease-in-out infinite alternate-reverse;
+  transform-origin: 176px 128px;
+}
+@keyframes capy-paw-shift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.2px); }
+}
+
+/* ===== NOVO COMPORTAMENTO: LANCHINHO / MASTIGANDO GRAMINHA (S-SNACK) ===== */
+#pet.s-snack .clover { display: inline !important; }
+#pet.s-snack .capy-mouth, #pet.s-snack .clover {
+  animation: capy-munch .8s ease-in-out infinite alternate;
+}
+@keyframes capy-munch {
+  0% { transform: rotate(0) translate(0, 0); }
+  50% { transform: rotate(-2deg) translate(-1px, 1px); }
+  100% { transform: rotate(2deg) translate(1px, -1px); }
+}
+
+/* ===== NOVO COMPORTAMENTO: CARINHO / AMOR (G-LOVE) ===== */
+#pet.g-love .hearts { display: inline !important; }
+#pet.g-love .eye-love { display: inline !important; }
+#pet.g-love .capy-mouth { display: none !important; }
+#pet.g-love .blush-left, #pet.g-love .blush-right { fill: #ff7391; opacity: .75; }
+#pet.g-love #rig { animation: capy-purr .4s ease-in-out 3; }
+#pet.g-love .hearts .heart { animation: capy-heart-rise 1.4s ease-out both; }
+#pet.g-love .hearts .h1 { animation-delay: 0s; }
+#pet.g-love .hearts .h2 { animation-delay: .25s; }
+#pet.g-love .hearts .h3 { animation-delay: .45s; }
+
+@keyframes capy-heart-rise {
+  0% { opacity: 0; transform: translateY(10px) scale(.5); }
+  30% { opacity: 1; transform: translateY(-8px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-38px) scale(1.3) rotate(12deg); }
+}
+@keyframes capy-purr {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.02, .98) rotate(1deg); }
+}
+
+/* ===== NOVO COMPORTAMENTO: BOCEJO AO DESPERTAR (G-YAWN) ===== */
+#pet.g-yawn .mouth-yawn-group { display: inline !important; }
+#pet.g-yawn .capy-mouth { display: none !important; }
+#pet.g-yawn .eye-closed { display: inline !important; }
+#pet.g-yawn #rig { animation: capy-stretch 1.6s ease-in-out 1; }
+@keyframes capy-stretch {
+  0%, 100% { transform: scale(1, 1); }
+  45% { transform: translateY(-4px) scale(.98, 1.05); }
+}
+
+/* ===== NOVO COMPORTAMENTO: SACUDIDA DE PELOS (G-SHAKE) ===== */
+#pet.g-shake #rig { animation: capy-shake .6s ease-in-out 1; }
+@keyframes capy-shake {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-4deg); }
+  40% { transform: rotate(4deg); }
+  60% { transform: rotate(-3deg); }
+  80% { transform: rotate(2deg); }
+}
+
+/* ===== NOVO ESTADO: PAUSA PRO CAFÉ / CHÁ (S-COFFEE) ===== */
+#pet.s-coffee .coffee-cup,
+#pet.s-coffee .coffee-steam { display: inline !important; }
+#pet.s-coffee .eye-half { display: inline !important; }
+#pet.s-coffee .zzz { display: none !important; }
+#pet.s-coffee #rig { animation: capy-coffee-breathe 4s ease-in-out infinite; }
+#pet.s-coffee .coffee-steam .steam { animation: capy-steam-float 2.5s ease-out infinite; opacity: 0; }
+#pet.s-coffee .coffee-steam .s1 { animation-delay: 0s; }
+#pet.s-coffee .coffee-steam .s2 { animation-delay: 0.8s; }
+#pet.s-coffee .coffee-steam .s3 { animation-delay: 1.6s; }
+
+@keyframes capy-steam-float {
+  0% { opacity: 0; transform: translateY(2px) scale(0.85); }
+  35% { opacity: 0.75; }
+  100% { opacity: 0; transform: translateY(-16px) scale(1.2); }
+}
+@keyframes capy-coffee-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: translateY(1.5px) scale(1.015, 0.985); }
+}
+
+/* ===== NOVO ESTADO: BANHO TERMAL DE OFURÔ (S-BATH) ===== */
+#pet.s-bath .bath-tub,
+#pet.s-bath .towel-head,
+#pet.s-bath .bath-bubbles { display: inline !important; }
+#pet.s-bath .eye-zen { display: inline !important; }
+#pet.s-bath .zzz { display: none !important; }
+#pet.s-bath #orange {
+  animation: capy-yuzu-float 3.2s ease-in-out infinite alternate !important;
+  transform-origin: 180px 150px;
+}
+#pet.s-bath #rig { animation: capy-bath-bob 3.6s ease-in-out infinite; }
+#pet.s-bath .bath-bubbles .bubble { animation: capy-bubble-rise 2.6s ease-out infinite; opacity: 0; }
+#pet.s-bath .bath-bubbles .b1 { animation-delay: 0s; }
+#pet.s-bath .bath-bubbles .b2 { animation-delay: 0.65s; }
+#pet.s-bath .bath-bubbles .b3 { animation-delay: 1.3s; }
+#pet.s-bath .bath-bubbles .b4 { animation-delay: 1.95s; }
+
+@keyframes capy-yuzu-float {
+  0% { transform: translate(46px, 126px) rotate(-8deg); }
+  100% { transform: translate(48px, 131px) rotate(10deg); }
+}
+@keyframes capy-bubble-rise {
+  0% { opacity: 0; transform: translateY(4px) scale(0.5); }
+  35% { opacity: 0.85; }
+  85% { opacity: 0.85; transform: translateY(-12px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-16px) scale(1.25); }
+}
+@keyframes capy-bath-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(2.5px); }
+}
+
+/* ===== NOVO ESTADO: MÚSICA LOFI / FONES (S-MUSIC) ===== */
+#pet.s-music .headphones,
+#pet.s-music .music-notes { display: inline !important; }
+#pet.s-music .eye-happy { display: inline !important; }
+#pet.s-music .zzz { display: none !important; }
+#pet.s-music #faceAnim { animation: capy-music-bop 1.3s ease-in-out infinite; transform-origin: 135px 85px; }
+#pet.s-music .music-notes .note { animation: capy-note-float 2.4s ease-out infinite; opacity: 0; }
+#pet.s-music .music-notes .n1 { animation-delay: 0s; }
+#pet.s-music .music-notes .n2 { animation-delay: 0.6s; }
+#pet.s-music .music-notes .n3 { animation-delay: 1.2s; }
+#pet.s-music .music-notes .n4 { animation-delay: 1.8s; }
+
+@keyframes capy-music-bop {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(2px) rotate(2deg); }
+  75% { transform: translateY(2px) rotate(-2deg); }
+}
+@keyframes capy-note-float {
+  0% { opacity: 0; transform: translateY(6px) scale(0.7) rotate(-10deg); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-20px) scale(1.15) rotate(15deg); }
+}
+
+/* ===== NOVO GESTO: MALABARISMO DA LARANJA (G-ORANGE-TRICK) ===== */
+#pet.g-orange-trick .eye-look-up { display: inline !important; }
+#pet.g-orange-trick .zzz { display: none !important; }
+#pet.g-orange-trick #orange {
+  animation: capy-orange-trick-toss 1.8s cubic-bezier(.22, .9, .35, 1) 1 !important;
+  transform-origin: 135px 23px;
+}
+#pet.g-orange-trick #rig { animation: capy-trick-body 1.8s ease-in-out 1; }
+
+@keyframes capy-orange-trick-toss {
+  0% { transform: translateY(0) rotate(0deg) scale(1); }
+  35% { transform: translateY(-42px) rotate(180deg) scale(1.15); }
+  50% { transform: translateY(-48px) rotate(270deg) scale(1.18); }
+  75% { transform: translateY(-5px) rotate(360deg) scale(0.96); }
+  88% { transform: translateY(-10px) rotate(360deg) scale(1.02); }
+  100% { transform: translateY(0) rotate(360deg) scale(1); }
+}
+@keyframes capy-trick-body {
+  0%, 100% { transform: scale(1); }
+  20% { transform: translateY(3px) scale(1.02, 0.97); }
+  45% { transform: translateY(-4px) scale(0.98, 1.02); }
+  75% { transform: translateY(0); }
+  85% { transform: translateY(2px) scale(1.01, 0.99); }
+}
+
+/* ===== NOVO GESTO: TOCA AQUI / HIGH-FIVE (G-HIGHFIVE) ===== */
+#pet.g-highfive .highfive-paw,
+#pet.g-highfive .highfive-spark { display: inline !important; }
+#pet.g-highfive .eye-wink { display: inline !important; }
+#pet.g-highfive .front-paws .ffA { display: none !important; }
+#pet.g-highfive .zzz { display: none !important; }
+#pet.g-highfive .highfive-paw {
+  animation: capy-paw-highfive 1.5s cubic-bezier(.16, 1, .3, 1) 1;
+  transform-origin: 172px 136px;
+}
+#pet.g-highfive .highfive-spark {
+  animation: capy-spark-pop 1.5s ease-out 1;
+  transform-origin: 212px 120px;
+}
+#pet.g-highfive #rig { animation: capy-highfive-tilt 1.5s ease-in-out 1; }
+
+@keyframes capy-paw-highfive {
+  0% { transform: rotate(40deg) scale(0.8); opacity: 0; }
+  25% { transform: rotate(-15deg) scale(1.1); opacity: 1; }
+  50%, 75% { transform: rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: rotate(30deg) scale(0.9); opacity: 0; }
+}
+@keyframes capy-spark-pop {
+  0%, 20% { opacity: 0; transform: scale(0.2); }
+  35% { opacity: 1; transform: scale(1.3) rotate(20deg); }
+  65% { opacity: 0.9; transform: scale(1) rotate(45deg); }
+  100% { opacity: 0; transform: scale(0.4); }
+}
+@keyframes capy-highfive-tilt {
+  0%, 100% { transform: scale(1); }
+  25% { transform: rotate(2deg) translateY(-2px); }
+  75% { transform: rotate(0deg); }
+}
+
+/* ===== NOVO GESTO: SONHO FOFO DE MELANCIA (G-DREAM) ===== */
+#pet.g-dream .dream-cloud { display: inline !important; }
+#pet.g-dream .eye-closed { display: inline !important; }
+#pet.g-dream .zzz { display: none !important; }
+#pet.g-dream .dream-cloud {
+  animation: capy-dream-float 2.5s ease-in-out 1;
+  transform-origin: 215px 0px;
+}
+#pet.g-dream #rig { animation: capy-dream-snore 2.5s ease-in-out 1; }
+
+@keyframes capy-dream-float {
+  0% { opacity: 0; transform: scale(0.3) translateY(12px); }
+  25% { opacity: 1; transform: scale(1.08) translateY(-3px); }
+  45% { transform: scale(1) translateY(0); }
+  70% { opacity: 1; transform: scale(1.04) translateY(-2px); }
+  100% { opacity: 0; transform: scale(0.7) translateY(-14px); }
+}
+@keyframes capy-dream-snore {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025, 0.98); }
+}
+
+/* ===== NOVO GESTO: DANCINHA ANIMADA (G-DANCE) ===== */
+#pet.g-dance .eye-happy { display: inline !important; }
+#pet.g-dance .music-notes { display: inline !important; }
+#pet.g-dance .zzz { display: none !important; }
+#pet.g-dance #rig {
+  animation: capy-dance-groove 0.55s ease-in-out infinite;
+  transform-origin: 135px 183px;
+}
+#pet.g-dance #faceAnim {
+  animation: capy-dance-head 0.55s ease-in-out infinite alternate;
+  transform-origin: 135px 85px;
+}
+#pet.g-dance #ear {
+  animation: capy-dance-ears 0.28s ease-in-out infinite alternate;
+  transform-origin: 135px 44px;
+}
+#pet.g-dance .front-paws .fnA {
+  animation: capy-dance-paw-l 0.28s ease-in-out infinite alternate;
+  transform-origin: 94px 128px;
+}
+#pet.g-dance .front-paws .ffA {
+  animation: capy-dance-paw-r 0.28s ease-in-out infinite alternate;
+  transform-origin: 176px 128px;
+}
+#pet.g-dance #orange {
+  animation: capy-dance-orange 0.55s ease-in-out infinite alternate;
+}
+#pet.g-dance .music-notes .note { animation: capy-note-float 1.8s ease-out infinite; opacity: 0; }
+#pet.g-dance .music-notes .n1 { animation-delay: 0s; }
+#pet.g-dance .music-notes .n2 { animation-delay: 0.45s; }
+#pet.g-dance .music-notes .n3 { animation-delay: 0.9s; }
+#pet.g-dance .music-notes .n4 { animation-delay: 1.35s; }
+
+@keyframes capy-dance-groove {
+  0% { transform: translateY(0) rotate(0deg) scale(1, 1); }
+  25% { transform: translateY(-7px) rotate(-5deg) scale(1.03, 0.97); }
+  50% { transform: translateY(0) rotate(0deg) scale(0.98, 1.02); }
+  75% { transform: translateY(-7px) rotate(5deg) scale(1.03, 0.97); }
+  100% { transform: translateY(0) rotate(0deg) scale(1, 1); }
+}
+@keyframes capy-dance-head {
+  0% { transform: translate(-3px, -2px) rotate(-4deg); }
+  100% { transform: translate(3px, -2px) rotate(4deg); }
+}
+@keyframes capy-dance-ears {
+  0% { transform: rotate(-8deg); }
+  100% { transform: rotate(8deg); }
+}
+@keyframes capy-dance-paw-l {
+  0% { transform: translateY(-6px) rotate(-6deg); }
+  100% { transform: translateY(2px) rotate(0deg); }
+}
+@keyframes capy-dance-paw-r {
+  0% { transform: translateY(2px) rotate(0deg); }
+  100% { transform: translateY(-6px) rotate(6deg); }
+}
+@keyframes capy-dance-orange {
+  0% { transform: translateY(-4px) rotate(-10deg); }
+  100% { transform: translateY(-4px) rotate(10deg); }
+}
+
+/* ===== NOVO GESTO: ANDADINHA / WADDLE (G-WADDLE) ===== */
+#pet.g-waddle .eye-open { display: inline !important; }
+#pet.g-waddle .zzz { display: none !important; }
+#pet.g-waddle #rig {
+  animation: capy-waddle-body 0.5s ease-in-out infinite;
+  transform-origin: 135px 183px;
+}
+#pet.g-waddle .front-paws .fnA {
+  animation: capy-waddle-paw-1 0.5s ease-in-out infinite;
+  transform-origin: 94px 128px;
+}
+#pet.g-waddle .front-paws .ffA {
+  animation: capy-waddle-paw-2 0.5s ease-in-out infinite;
+  transform-origin: 176px 128px;
+}
+#pet.g-waddle #orange {
+  animation: capy-waddle-orange 0.5s ease-in-out infinite;
+}
+
+@keyframes capy-waddle-body {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-3.5px) rotate(-3.5deg); }
+  50% { transform: translateY(0) rotate(0deg); }
+  75% { transform: translateY(-3.5px) rotate(3.5deg); }
+}
+@keyframes capy-waddle-paw-1 {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  25% { transform: translateY(-7px) scaleY(0.9); }
+  50% { transform: translateY(0) scaleY(1); }
+  75% { transform: translateY(1px); }
+}
+@keyframes capy-waddle-paw-2 {
+  0%, 100% { transform: translateY(1px); }
+  25% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(0) scaleY(1); }
+  75% { transform: translateY(-7px) scaleY(0.9); }
+}
+@keyframes capy-waddle-orange {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg) translateY(-1px); }
+  75% { transform: rotate(5deg) translateY(-1px); }
+}
+
+/* ===== NOVO GESTO: PULO GIRATÓRIO 360° / SPIN (G-SPIN) ===== */
+#pet.g-spin .eye-happy { display: inline !important; }
+#pet.g-spin .sparkles { display: inline !important; }
+#pet.g-spin .zzz { display: none !important; }
+#pet.g-spin .sparkles g { animation: twinkle 0.8s ease-in-out infinite; }
+#pet.g-spin #rig {
+  animation: capy-spin-jump 1.3s cubic-bezier(.22, 1, .36, 1) 1;
+  transform-origin: 135px 140px;
+}
+#pet.g-spin #orange {
+  animation: capy-spin-orange 1.3s cubic-bezier(.22, 1, .36, 1) 1;
+}
+
+@keyframes capy-spin-jump {
+  0% { transform: translateY(0) rotate(0deg) scale(1, 1); }
+  18% { transform: translateY(6px) scale(1.1, 0.85); }
+  45% { transform: translateY(-38px) rotate(-180deg) scale(0.92, 1.12); }
+  75% { transform: translateY(-10px) rotate(-360deg) scale(1, 1); }
+  88% { transform: translateY(4px) scale(1.08, 0.9); }
+  100% { transform: translateY(0) rotate(-360deg) scale(1, 1); }
+}
+@keyframes capy-spin-orange {
+  0% { transform: translateY(0) rotate(0deg); }
+  18% { transform: translateY(4px); }
+  45% { transform: translateY(-56px) rotate(180deg) scale(1.15); }
+  85% { transform: translateY(0) rotate(360deg); }
+  100% { transform: translateY(0) rotate(360deg); }
+}
+
+/* ===== NOVO GESTO: SUPER ALONGAMENTO (G-STRETCH) ===== */
+#pet.g-stretch .mouth-yawn-group { display: inline !important; }
+#pet.g-stretch .capy-mouth { display: none !important; }
+#pet.g-stretch .eye-closed { display: inline !important; }
+#pet.g-stretch .zzz { display: none !important; }
+#pet.g-stretch #rig {
+  animation: capy-deep-stretch 2.4s ease-in-out 1;
+  transform-origin: 135px 183px;
+}
+#pet.g-stretch #faceAnim {
+  animation: capy-stretch-face 2.4s ease-in-out 1;
+}
+
+@keyframes capy-deep-stretch {
+  0%, 100% { transform: translate(0, 0) scale(1, 1); }
+  22% { transform: translate(-6px, 8px) scale(1.08, 0.88) skewX(-6deg); }
+  55% { transform: translate(12px, -8px) scale(0.94, 1.08) skewX(4deg); }
+  80% { transform: translate(0, -3px) scale(1.02, 1.02); }
+}
+@keyframes capy-stretch-face {
+  0%, 100% { transform: translate(0, 0); }
+  22% { transform: translate(-4px, 6px); }
+  55% { transform: translate(8px, -4px); }
+}
+
+/* ===== NOVO GESTO: REBOLADINHO FELIZ / WIGGLE (G-WIGGLE) ===== */
+#pet.g-wiggle .eye-happy { display: inline !important; }
+#pet.g-wiggle .hearts { display: inline !important; }
+#pet.g-wiggle .zzz { display: none !important; }
+#pet.g-wiggle .hearts .heart { animation: capy-heart-rise 1.2s ease-out both; }
+#pet.g-wiggle #rig {
+  animation: capy-wiggle-fast 0.6s ease-in-out 3;
+  transform-origin: 135px 183px;
+}
+#pet.g-wiggle #ear {
+  animation: capy-wiggle-ears 0.3s ease-in-out 6;
+  transform-origin: 135px 44px;
+}
+
+@keyframes capy-wiggle-fast {
+  0%, 100% { transform: rotate(0deg) scale(1, 1); }
+  25% { transform: rotate(-5deg) scale(1.02, 0.98); }
+  50% { transform: rotate(0deg) scale(0.98, 1.02); }
+  75% { transform: rotate(5deg) scale(1.02, 0.98); }
+}
+@keyframes capy-wiggle-ears {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(12deg); }
+}
+
+/* ===== NOVO GESTO: BATER PATINHA / FOOT-TAP (G-TAP) ===== */
+#pet.g-tap .eye-happy { display: inline !important; }
+#pet.g-tap .zzz { display: none !important; }
+#pet.g-tap .front-paws .fnA {
+  animation: capy-paw-tap 0.2s ease-in-out 8 alternate;
+  transform-origin: 94px 128px;
+}
+#pet.g-tap #faceAnim {
+  animation: front-nod 0.4s ease-in-out 4;
+}
+
+@keyframes capy-paw-tap {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-7px) rotate(-6deg); }
+}
+
+/* ===== INTERAÇÃO / MOUSE EM CIMA (IS-HOVERED) ===== */
+/* Quando passa o mouse por cima: Capy ACORDA na hora com olhinhos grandes abertos e curiosidade! */
+#pet.is-hovered .eye-open, #pet.is-hovered .eye-wide {
+  display: inline !important;
+  translate: var(--gaze-x, 0px) var(--gaze-y, 0px);
+}
+#pet .eye-open, #pet .eye-wide { transition: translate .15s ease-out; }
+#pet.is-hovered .eye-open {
+  transform-origin: 135px 60.5px;
+  animation: capy-blink 4s infinite;
+}
+#pet.g-love .eye-open, #pet.g-yawn .eye-open, #pet.s-bath .eye-open, #pet.g-dream .eye-open {
+  display: none !important;
+}
+
+/* Inclinação curiosa da cabeça acompanhando o usuário */
+#pet.is-hovered #faceAnim {
+  animation: capy-curious-tilt 2.4s ease-in-out infinite alternate;
+  transform-origin: 135px 85px;
+}
+@keyframes capy-curious-tilt {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(2.5deg) translateY(-1px); }
+}
+
+@keyframes capy-blink {
+  0%, 93%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.06); }
+}
+
+#pet.is-hovered #rig {
+  animation: capy-wake-perk .35s ease-out 1 both;
+}
+@keyframes capy-wake-perk {
+  0% { transform: scale(1, 1); }
+  40% { transform: translateY(-3px) scale(1.02, 1.03); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+
+/* Balanço sutil e orgânico da laranjinha */
+#pet #orange {
+  animation: capy-orange-sway 4.2s ease-in-out infinite;
+}
+@keyframes capy-orange-sway {
+  0%, 100% { transform: rotate(0deg); }
+  35% { transform: rotate(-2.5deg) translateY(-0.4px); }
+  70% { transform: rotate(2deg) translateY(0.2px); }
+}
+
+/* Espasmo fofo das orelhinhas (típico de capivara!) */
+#pet.s-idle #ear,
+#pet.s-waiting #ear {
+  animation: capy-ear-wiggle 5s ease-in-out infinite;
+}
+@keyframes capy-ear-wiggle {
+  0%, 84%, 100% { transform: rotate(0deg); }
+  87% { transform: rotate(-6deg); }
+  90% { transform: rotate(5deg); }
+  93% { transform: rotate(-3deg); }
+}
+
+/* Fungadinha suave do focinho */
+#pet .capy-nostrils {
+  transform-origin: 135px 88px;
+  animation: capy-sniff 6.5s ease-in-out infinite;
+}
+@keyframes capy-sniff {
+  0%, 93%, 100% { transform: scale(1); }
+  95% { transform: scale(1.08, .92); }
+  97% { transform: scale(.95, 1.05); }
+}
+
+/* ===== ESTADO: TRABALHANDO (S-WORKING) ===== */
 #pet.s-working .front-paws .anim { transform-box: fill-box; transform-origin: center; }
-#pet.s-working .front-paws .fnA { animation: tap .28s ease-in-out infinite alternate; }
-#pet.s-working .front-paws .ffA { animation: tap .28s -.14s ease-in-out infinite alternate; }
-#pet.s-working #faceAnim { animation: front-nod 1.6s ease-in-out infinite; }
-#pet.s-sleeping #faceAnim { transform: translateY(4px); }
-#pet.s-sleeping #ear { animation: none; }
-#pet .attention-mark { display: none; transform-box: fill-box; transform-origin: center; }
-#pet.s-waiting .attention-mark { display: inline; }
+#pet.s-working .front-paws .fnA { animation: tap .24s ease-in-out infinite alternate; }
+#pet.s-working .front-paws .ffA { animation: tap .24s -.12s ease-in-out infinite alternate; }
+#pet.s-working #faceAnim { animation: front-nod 1.4s ease-in-out infinite; }
+#pet.s-working .eye-half { display: inline !important; }
+#pet.s-working .laptop path:last-child { animation: capy-code 1.4s steps(2) infinite; }
+#pet.s-working #rig { animation: breathe 3.6s ease-in-out infinite; }
+
+/* ===== ESTADO: ESPERANDO VOCÊ (S-WAITING) ===== */
+#pet.s-waiting .attention-mark { display: inline !important; transform-box: fill-box; transform-origin: center; }
+#pet.s-waiting .eye-wide,
+#pet.s-waiting .brow-alert { display: inline !important; }
+#pet.s-waiting #rig { animation: breathe 3.2s ease-in-out infinite; }
 #pet.g-wave .attention-mark { animation: attention-beat 1.6s cubic-bezier(.16,1,.3,1) 1 both; }
-#pet.s-waiting #rig { animation: breathe 3.6s ease-in-out infinite; }
-#pet.s-waiting #ear { animation: ear 6s ease-in-out infinite; }
+
 #pet .front-paws .ffA { transform-origin: 184px 127px; }
 #pet.g-wave .front-paws .ffA, #pet.g-hello .front-paws .ffA {
   transform-box: view-box;
   transform-origin: 184px 127px;
   animation: capy-wave 1.6s cubic-bezier(.16,1,.3,1) 1 both;
 }
+
 #pet.g-hello #faceAnim { animation: capy-greet 1.8s ease-in-out 1; }
+
+/* ===== GESTO: CLIQUE ===== */
 #pet.g-click #rig { animation: capy-click .65s cubic-bezier(.16,1,.3,1) 1; }
-#pet.is-hovered .eye-open, #pet.is-hovered .eye-wide {
-  translate: var(--gaze-x, 0px) var(--gaze-y, 0px);
-}
-#pet .eye-open, #pet .eye-wide { transition: translate .15s ease-out; }
-#pet.is-hovered.s-idle #faceAnim { animation: none; }
-#pet.s-working .laptop path:last-child { animation: capy-code 1.8s steps(2) infinite; }
+
+/* ===== ESTADO: CONCLUSÃO / COMEMORAÇÃO (S-DONE / G-CELEBRATE) ===== */
+#pet.s-done .eye-happy,
+#pet.g-celebrate .eye-happy { display: inline !important; }
 #pet.s-done #rig { animation-iteration-count: 2; }
 #pet.s-done .sparkles g { animation-iteration-count: 2; }
-#pet.g-celebrate #rig { animation: jump 1s ease-in-out 2; }
-#pet.g-celebrate .sparkles { display:inline; }
-#pet.g-celebrate .sparkles g { animation: twinkle 1s ease-in-out 2; transform-box:fill-box; transform-origin:center; }
+#pet.g-celebrate #rig { animation: capy-jump 1s ease-in-out 2; }
+#pet.g-celebrate .sparkles { display: inline !important; }
+#pet.g-celebrate .sparkles g { animation: twinkle 1s ease-in-out 2; transform-box: fill-box; transform-origin: center; }
+#pet.g-celebrate #orange { animation: capy-orange-jump 1s ease-in-out 2; }
+
+@keyframes capy-jump {
+  0%, 100% { transform: translateY(0) scale(1.04, .95); }
+  35% { transform: translateY(-26px) scale(.95, 1.07); }
+  65% { transform: translateY(0) scale(1.05, .94); }
+}
+
+@keyframes capy-orange-jump {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  35% { transform: translateY(-10px) rotate(8deg); }
+  65% { transform: translateY(0) rotate(-4deg); }
+}
+
 .pet-paused #pet, .pet-paused #pet * { animation-play-state: paused !important; }
+
 @keyframes capy-wave {
   0%,100% { transform: rotate(0deg); }
   16% { transform: rotate(-120deg); }
@@ -48,14 +750,11 @@
 }
 @keyframes capy-click {
   0%,100% { transform: scale(1); }
-  20% { transform: scale(1.035,.965); }
-  50% { transform: translateY(-3px) scale(.985,1.02); }
+  20% { transform: scale(1.04, .96); }
+  50% { transform: translateY(-4px) scale(.98, 1.03); }
 }
 @keyframes capy-code { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
-@media (prefers-reduced-motion: reduce) {
-  #pet .eye-open, #pet .eye-wide { translate: none; transition: none; }
-}
-.reduce-motion #pet .eye-open, .reduce-motion #pet .eye-wide { translate: none; transition: none; }
+
 @keyframes attention-beat {
   0% { opacity: 0; transform: translateY(7px) scale(.55); }
   14%,100% { opacity: 1; transform: translateY(0) scale(1); }
@@ -66,3 +765,204 @@
   92% { transform: translateY(0) scale(1); }
 }
 @keyframes front-nod { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+
+/* ===== GUARDA-ROUPA & ITENS PERSONALIZÁVEIS ===== */
+
+/* Bonés & Chapéus */
+#pet.w-hat-cap .hat-cap { display: inline !important; }
+#pet.w-hat-straw .hat-straw { display: inline !important; }
+#pet.w-hat-top .hat-top { display: inline !important; }
+#pet.w-hat-beanie .hat-beanie { display: inline !important; }
+#pet.w-hat-flower .hat-flower { display: inline !important; }
+
+/* Roupas & Acessórios */
+#pet.w-cloth-sunglasses .cloth-sunglasses { display: inline !important; }
+#pet.w-cloth-scarf .cloth-scarf { display: inline !important; }
+#pet.w-cloth-bowtie .cloth-bowtie { display: inline !important; }
+#pet.w-cloth-hoodie .cloth-hoodie { display: inline !important; }
+#pet.w-cloth-raincoat .cloth-raincoat { display: inline !important; }
+
+/* Fantasias Completas */
+#pet.w-costume-wizard .costume-head-wizard,
+#pet.w-costume-wizard .costume-body-wizard { display: inline !important; }
+
+#pet.w-costume-dino .costume-head-dino,
+#pet.w-costume-dino .costume-body-dino { display: inline !important; }
+
+#pet.w-costume-pirate .costume-head-pirate,
+#pet.w-costume-pirate .costume-body-pirate { display: inline !important; }
+
+#pet.w-costume-detective .costume-head-detective,
+#pet.w-costume-detective .costume-body-detective { display: inline !important; }
+
+#pet.w-costume-royal .costume-head-royal,
+#pet.w-costume-royal .costume-body-royal { display: inline !important; }
+
+/* Ocultar laranjinha da cabeça quando usando chapéus ou fantasias que cobrem o topo (exceto tiara de flores) */
+#pet.w-hat-cap #orange,
+#pet.w-hat-straw #orange,
+#pet.w-hat-top #orange,
+#pet.w-hat-beanie #orange,
+#pet.w-costume-wizard #orange,
+#pet.w-costume-dino #orange,
+#pet.w-costume-pirate #orange,
+#pet.w-costume-detective #orange,
+#pet.w-costume-royal #orange {
+  display: none !important;
+}
+
+/* Leve balanço aconchegante para capuz e roupas durante respiração */
+#pet.w-cloth-hoodie .cloth-hoodie,
+#pet.w-cloth-raincoat .cloth-raincoat,
+#pet.w-costume-royal .costume-body-royal {
+  transform-origin: 135px 184px;
+}
+
+/* ===== AMIGUINHOS DO PANTANAL (MINI-PETS) ===== */
+#pet.has-friend-bird .friend-bird,
+#pet.has-friend-all .friend-bird {
+  display: inline !important;
+  animation: capy-bird-chirp 4s ease-in-out infinite;
+  transform-origin: 68px 105px;
+}
+#pet.has-friend-bird .friend-bird path:nth-child(2),
+#pet.has-friend-all .friend-bird path:nth-child(2) {
+  animation: capy-bird-wing 3s ease-in-out infinite;
+  transform-origin: 64px 92px;
+}
+
+#pet.has-friend-butterfly .friend-butterfly,
+#pet.has-friend-all .friend-butterfly {
+  display: inline !important;
+  animation: capy-butterfly-flutter 4.5s ease-in-out infinite;
+  transform-origin: 180px 74px;
+}
+#pet.has-friend-butterfly .friend-butterfly path,
+#pet.has-friend-all .friend-butterfly path {
+  animation: capy-butterfly-wing 0.35s ease-in-out infinite alternate;
+  transform-origin: 180px 74px;
+}
+
+#pet.has-friend-duck .friend-duck,
+#pet.has-friend-all .friend-duck {
+  display: inline !important;
+  animation: capy-duck-waddle 3.2s ease-in-out infinite;
+  transform-origin: 214px 178px;
+}
+
+#pet.has-friend-turtle .friend-turtle,
+#pet.has-friend-all .friend-turtle {
+  display: inline !important;
+  animation: capy-turtle-idle 5s ease-in-out infinite;
+  transform-origin: 54px 176px;
+}
+
+@keyframes capy-bird-chirp {
+  0%, 80%, 100% { transform: translateY(0) rotate(0deg); }
+  85% { transform: translateY(-3px) rotate(-4deg); }
+  90% { transform: translateY(-3px) rotate(3deg); }
+  95% { transform: translateY(0) rotate(0deg); }
+}
+@keyframes capy-bird-wing {
+  0%, 82%, 100% { transform: scaleY(1); }
+  87% { transform: scaleY(0.6) rotate(12deg); }
+  92% { transform: scaleY(1); }
+}
+@keyframes capy-butterfly-flutter {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-5px, -6px) rotate(-8deg); }
+  50% { transform: translate(3px, -10px) rotate(6deg); }
+  75% { transform: translate(5px, -4px) rotate(-4deg); }
+}
+@keyframes capy-butterfly-wing {
+  0% { transform: scaleX(1); }
+  100% { transform: scaleX(0.25); }
+}
+@keyframes capy-duck-waddle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(1.5px) rotate(3deg); }
+}
+@keyframes capy-turtle-idle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02, 0.98); }
+}
+
+/* ===== AMBIENTE & CLIMA DINÂMICO ===== */
+#pet.env-night .env-night-sky,
+#pet.env-night .env-fireflies { display: inline !important; }
+#pet.env-night .star { animation: capy-star-twinkle 2.5s ease-in-out infinite alternate; }
+#pet.env-night .star.s1 { animation-delay: 0s; }
+#pet.env-night .star.s2 { animation-delay: 0.6s; }
+#pet.env-night .star.s3 { animation-delay: 1.2s; }
+#pet.env-night .star.s4 { animation-delay: 1.8s; }
+
+#pet.env-night .firefly { animation: capy-firefly-glow 2.8s ease-in-out infinite; opacity: 0.2; }
+#pet.env-night .firefly.f1 { animation-delay: 0s; }
+#pet.env-night .firefly.f2 { animation-delay: 0.7s; }
+#pet.env-night .firefly.f3 { animation-delay: 1.4s; }
+#pet.env-night .firefly.f4 { animation-delay: 2.1s; }
+
+#pet.env-day .env-sun-rays {
+  display: inline !important;
+  animation: capy-sun-glow 4s ease-in-out infinite alternate;
+  transform-origin: 34px -6px;
+}
+
+#pet.env-rain .env-rain { display: inline !important; }
+#pet.env-rain #orange { display: none !important; }
+#pet.env-rain .rain-drops .drop {
+  animation: capy-rain-fall 1.1s linear infinite;
+}
+#pet.env-rain .rain-drops .d1 { animation-delay: 0s; }
+#pet.env-rain .rain-drops .d2 { animation-delay: 0.2s; }
+#pet.env-rain .rain-drops .d3 { animation-delay: 0.4s; }
+#pet.env-rain .rain-drops .d4 { animation-delay: 0.6s; }
+#pet.env-rain .rain-drops .d5 { animation-delay: 0.8s; }
+#pet.env-rain .rain-drops .d6 { animation-delay: 0.35s; }
+
+@keyframes capy-star-twinkle {
+  0% { opacity: 0.35; transform: scale(0.75); }
+  100% { opacity: 1; transform: scale(1.15); }
+}
+@keyframes capy-firefly-glow {
+  0%, 100% { opacity: 0.15; transform: scale(0.6) translateY(0); }
+  50% { opacity: 0.95; transform: scale(1.25) translateY(-5px); }
+}
+@keyframes capy-sun-glow {
+  0% { opacity: 0.85; transform: scale(0.96); }
+  100% { opacity: 1; transform: scale(1.05); }
+}
+@keyframes capy-rain-fall {
+  0% { opacity: 0; transform: translateY(-16px); }
+  40% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(22px); }
+}
+
+/* ===== BEM-ESTAR (ÁGUA) & DEV BUDDY (BALÃO DE DIÁLOGO) ===== */
+#pet.s-water .item-water-bottle {
+  display: inline !important;
+  animation: capy-bottle-sip 2s ease-in-out infinite;
+  transform-origin: 194px 135px;
+}
+#pet.s-water .eye-happy { display: inline !important; }
+@keyframes capy-bottle-sip {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(-8deg); }
+}
+
+#pet.has-speech .speech-bubble-group {
+  display: inline !important;
+  animation: capy-speech-pop 0.35s cubic-bezier(.16,1,.3,1) 1 both;
+  transform-origin: 135px 22px;
+}
+@keyframes capy-speech-pop {
+  0% { opacity: 0; transform: scale(0.6) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #pet .eye-open, #pet .eye-wide { translate: none !important; transition: none !important; }
+  #pet, #pet * { animation: none !important; transition: none !important; }
+}
+.reduce-motion #pet .eye-open, .reduce-motion #pet .eye-wide { translate: none !important; transition: none !important; }
+.reduce-motion #pet, .reduce-motion #pet *, .reduce-motion, .reduce-motion * { animation: none !important; transition: none !important; }

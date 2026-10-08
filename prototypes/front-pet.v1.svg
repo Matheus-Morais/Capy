@@ -1,0 +1,50 @@
+<svg id="pet" class="s-idle p-sit" viewBox="0 -20 270 230" role="img" aria-label="Capivara animada olhando de frente">
+  <line x1="20" y1="183" x2="250" y2="183" stroke="#e3d6b4" stroke-width="2"/>
+  <path d="M42 188 l3 -7 3 7 3 -5 3 5 M215 188 l3 -7 3 7 3 -5 3 5" fill="var(--grass)" opacity=".7"/>
+  <ellipse id="shadow" cx="135" cy="184" rx="65" ry="6" fill="#000" opacity=".13"/>
+  <g id="rig">
+    <path d="M94 92 C77 107 69 138 74 160 C78 182 102 184 135 184 C168 184 192 182 196 160 C201 138 193 107 176 92 Z" fill="var(--fur)" stroke="var(--line)" stroke-width="2.2"/>
+    <path d="M108 120 C93 136 92 160 102 173 C118 178 151 178 168 173 C177 159 176 136 163 120 Z" fill="var(--belly)" opacity=".7"/>
+    <g id="ear">
+      <ellipse cx="73" cy="35" rx="13" ry="15" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2.2"/>
+      <ellipse cx="197" cy="35" rx="13" ry="15" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2.2"/>
+      <ellipse cx="74" cy="35" rx="6" ry="8" fill="#e0a48a"/>
+      <ellipse cx="196" cy="35" rx="6" ry="8" fill="#e0a48a"/>
+    </g>
+    <g id="faceAnim">
+      <path d="M96 28 C111 23 159 23 174 28 C196 34 207 48 208 72 L208 88 C208 112 185 125 135 125 C85 125 62 112 62 88 L62 72 C63 48 74 34 96 28 Z" fill="var(--fur)" stroke="var(--line)" stroke-width="2.2"/>
+      <path d="M89 69 C106 63 164 63 181 69 C194 73 201 84 198 96 C194 113 171 119 135 119 C99 119 76 113 72 96 C69 84 76 73 89 69 Z" fill="var(--fur-dark)"/>
+      <path d="M102 76 C118 73 152 73 168 76 C182 79 187 87 183 96 C178 107 161 112 135 112 C109 112 92 107 87 96 C83 87 88 79 102 76 Z" fill="var(--muzzle)" opacity=".75"/>
+      <ellipse cx="120" cy="87" rx="4.5" ry="3" fill="var(--ink)"/>
+      <ellipse cx="150" cy="87" rx="4.5" ry="3" fill="var(--ink)"/>
+      <path d="M135 96 v6 M124 103 Q130 108 135 102 Q140 108 146 103" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
+      <ellipse cx="84" cy="80" rx="8" ry="4" fill="var(--blush)" opacity=".45"/>
+      <ellipse cx="186" cy="80" rx="8" ry="4" fill="var(--blush)" opacity=".45"/>
+      <g class="eye-open" fill="var(--ink)"><circle cx="94" cy="60" r="4"/><circle cx="176" cy="60" r="4"/><g fill="#fff"><circle cx="95" cy="59" r="1.2"/><circle cx="177" cy="59" r="1.2"/></g></g>
+      <g class="eye-wide" fill="var(--ink)"><circle cx="94" cy="60" r="5.5"/><circle cx="176" cy="60" r="5.5"/><g fill="#fff"><circle cx="95.5" cy="58.5" r="1.6"/><circle cx="177.5" cy="58.5" r="1.6"/></g></g>
+      <g class="eye-half" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"><path d="M89 60 Q94 66 99 60 M171 60 Q176 66 181 60" fill="none"/><path d="M89 59 H99 M171 59 H181"/></g>
+      <path class="eye-happy" d="M88 62 Q94 52 100 62 M170 62 Q176 52 182 62" fill="none" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round"/>
+      <path class="eye-closed" d="M88 60 Q94 66 100 60 M170 60 Q176 66 182 60" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/>
+      <path class="brow-alert" d="M88 47 l12 -3 M170 44 l12 3" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
+      <path d="M129 39 l3 3 3 -4 3 4 3 -3" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+    </g>
+    <g class="front-paws" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2" stroke-linecap="round">
+      <g class="anim fnA"><path d="M86 127 Q81 142 88 157 Q98 164 106 155 L102 133"/><path d="M91 151 l1 5 M97 152 v5"/></g>
+      <g class="anim ffA"><path d="M184 127 Q189 142 182 157 Q172 164 164 155 L168 133"/><path d="M179 151 l-1 5 M173 152 v5"/></g>
+    </g>
+    <g fill="var(--foot)" stroke="var(--line)" stroke-width="2" stroke-linecap="round"><path d="M80 169 Q68 182 83 184 H106 Q115 181 108 175 Z"/><path d="M190 169 Q202 182 187 184 H164 Q155 181 162 175 Z"/><path d="M82 178 v5 M91 179 v5 M179 179 v5 M188 178 v5"/></g>
+    <g class="laptop">
+      <path d="M90 139 h90 l-4 39 H94 Z" fill="#39434c" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="98" y="146" width="74" height="26" rx="2" fill="#222d33"/>
+      <path d="M85 178 h100 l-6 5 H91 Z" fill="#7a8794" stroke="var(--line)" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M129 158 l-5 3 5 3 M141 158 l5 3 -5 3 M137 155 l-4 12" fill="none" stroke="#c4d7b1" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g id="orange"><g class="orange"><circle cx="135" cy="17" r="10" fill="#ffa21f" stroke="var(--line)" stroke-width="2"/><path d="M135 7 q4 -7 11 -5 q-3 6 -11 5z" fill="#6aa84f" stroke="var(--line)" stroke-width="1.4"/><circle cx="131" cy="14" r="2.2" fill="#fff" opacity=".45"/></g></g>
+  </g>
+  <g class="sparkles"><g><path d="M47 42 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#ffc933"/></g><g><path d="M135 -9 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#ff8fb5"/></g><g><path d="M223 42 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#6cc9f0"/></g></g>
+  <g class="attention-mark" aria-hidden="true">
+    <path d="M197 13 Q197 8 202 8 H223 Q228 8 228 13 V29 Q228 34 223 34 H215 L208 41 V34 H202 Q197 34 197 29 Z" fill="#f7f0df" stroke="#8a5b18" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M212.5 14 V23 M212.5 28 V28.5" fill="none" stroke="#8a5b18" stroke-width="2.8" stroke-linecap="round"/>
+  </g>
+  <g class="zzz" fill="#7d8fd6" font-family="Segoe UI, sans-serif" font-weight="700"><text x="206" y="98" font-size="18">z</text><text x="219" y="83" font-size="22">z</text><text x="233" y="67" font-size="26">Z</text></g>
+</svg>

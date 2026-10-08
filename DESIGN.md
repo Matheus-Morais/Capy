@@ -184,19 +184,54 @@ Controls use a 7px radius; status labels use 8px, command snippets 5px, and agen
 - The transparent pet surface shows a status label, front-facing artwork, and an amber waiting-count badge.
 
 ### Capy Companion
-- `prototypes/front-pet.svg` is the approved front-facing standard and is sourced unchanged by `src/pet.ts`.
-- The pet changes pose with aggregate session state, can be dragged, and opens the summary on click. Reduced-motion preference disables motion.
+- `prototypes/front-pet.svg` é o padrão expressivo atual (V5 — Olhos Maiores & Anatomia Aprimorada) e é consumido por `src/pet.ts`.
+- `prototypes/showcase.html` é preservado permanentemente como a galeria interativa de todas as animações, trajes, mini-pets, climas e sintetizador Web Audio.
+- **Galeria Histórica de Versões (V1 a V5)**:
+  - **V1 (Ursinho Clássico)**: Protótipo histórico inicial (`front-pet.v1.svg`).
+  - **V2 (Capivara Fofinha)**: Transição para formato capivara com corpo volumoso (`front-pet.v2.svg`).
+  - **V3 (Capivara Esbelta)**: Silhueta afinada de 216px para 194px de quadril (`front-pet.v3.svg`).
+  - **V4 (Capivara Proporcional)**: Cabeça reduzida em 8.5% mantendo o corpo da V3 (`front-pet.v4.svg`).
+  - **V5 (Capivara Expressiva)**: Proporções da V4 com olhos ampliados kawaii, brilho duplo e máxima expressividade (`front-pet.svg`).
+  - Alterne entre as 5 versões via tecla <kbd>V</kbd> ou seletor nas configurações.
+- **Comportamento Ocioso Vivo (`s-idle`)**:
+  - A Capy fica acordada e atenta por padrão: piscadas naturais a cada 3,8s, respiração sutil com balanço de peso, orelhinhas mexendo, fungadinha no focinho e oscilação leve da laranjinha.
+  - O sono com ZZZ (`s-sleeping`) só inicia após 3 minutos sem interação ou pelo cenário demo.
+- **Movimentos Dinâmicos & Atalhos de Teclado**:
+  - <kbd>T</kbd>: Dancinha ritmada (Samba pantaneiro) com notas musicais.
+  - <kbd>A</kbd>: Andadinha no lugar (Waddle) alternando patinhas.
+  - <kbd>R</kbd>: Salto acrobático 360° com spin completo da laranjinha.
+  - <kbd>E</kbd>: Super alongamento relaxante com respiração profunda.
+  - <kbd>G</kbd>: Reboladinho rápido (Wiggle) com corações flutuantes.
+  - <kbd>Z</kbd>: Batidinha de patinha no chão ritmada.
+  - <kbd>H</kbd>: Lanche de graminha / trevo.
+  - <kbd>C</kbd>: Carinho / amor com corações e blush.
+  - <kbd>Y</kbd>: Bocejo gostoso com patinhas esticadas.
+  - <kbd>S</kbd>: Sacudida de pelos pantaneira.
+- **Guarda-Roupa & Acessórios**:
+  - Bonés & Chapéus (<kbd>1</kbd>): Streetwear, Chapéu de Palha, Cartola Chic, Gorro, Coroa de Flores.
+  - Roupas & Acessórios (<kbd>2</kbd>): Cachecol, Gravata Borboleta, Moletom Dev, Capa de Chuva, Óculos Escuros.
+  - Fantasias Completas (<kbd>3</kbd>): Mago, Dino-Capy, Pirata, Detetive Sherlock, Rei Capivara.
+  - Tecla <kbd>0</kbd> despir todos os trajes.
+- **Amiguinhos & Clima Dinâmico**:
+  - Mini-pets (<kbd>4</kbd>): Bem-te-vi, Borboleta, Patinho Amarelo, Tartaruguinha.
+  - Clima (<kbd>5</kbd>): Sol, Pôr do Sol, Noite com vaga-lumes, Chuva pantaneira, ou automático pelo horário real.
+  - Dev Buddy (<kbd>J</kbd>): Dicas práticas de engenharia de software e encorajamento.
+  - Lembrete de Água (<kbd>L</kbd>): Garrafinha d'água animada e hidratação.
+- **Acessibilidade**:
+  - Respeita `prefers-reduced-motion` do sistema e checkbox "Reduzir movimento" no painel, desativando todas as translações e animações CSS.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** preserve the approved front-facing SVG as the standard companion artwork.
-- **Do** keep olive for routine actions and amber for attention states.
-- **Do** keep project, agent, and origin legible together in each session row.
-- **Do** label sessions, replies, and quota values as synthetic demonstration data.
-- **Do** keep the summary compact and expose the full panel for scenario controls.
+- **Do** preservar o arquivo `prototypes/showcase.html` e todas as 5 versões históricas de arte.
+- **Do** manter a Capy atenta e viva no estado ocioso (`s-idle`), reservando o sono para repouso prolongado (`s-sleeping`).
+- **Do** manter olive para ações de rotina e amber para atenção/espera.
+- **Do** manter projeto, agente e origem legíveis em cada linha de sessão.
+- **Do** rotular sessões, respostas e cotas simuladas com clareza.
+- **Do** manter o resumo compacto e o painel sem overflow horizontal.
 
 ### Don't:
-- **Don't** nest cards inside the session list; use rows and soft dividers.
-- **Don't** imply live responses or quota access from the demonstration. Native real mode identifies open Claude Code/Codex sessions with unknown activity; show source diagnostics and no simulated action or quota percentage on real rows.
-- **Don't** replace or modify the approved front-facing mascot artwork.
+- **Don't** aninhar cartões dentro da lista de sessões; use linhas e divisores suaves.
+- **Don't** remover ou sobrescrever `prototypes/showcase.html`.
+- **Don't** descartar nenhuma das 5 versões visuais criadas (V1 a V5).
+- **Don't** fazer a Capy dormir imediatamente ao parar; ela deve permanecer desperta e expressiva.

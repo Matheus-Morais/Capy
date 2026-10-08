@@ -1,0 +1,68 @@
+#pet #rig { transform-origin: 135px 183px; }
+#pet #shadow { transform-origin: 135px 184px; }
+#pet #ear { transform-origin: 135px 40px; }
+#pet #orange { transform: none; }
+#pet.s-idle .eye-open { transform-origin: 135px 60px; }
+#pet.s-working .front-paws .anim { transform-box: fill-box; transform-origin: center; }
+#pet.s-working .front-paws .fnA { animation: tap .28s ease-in-out infinite alternate; }
+#pet.s-working .front-paws .ffA { animation: tap .28s -.14s ease-in-out infinite alternate; }
+#pet.s-working #faceAnim { animation: front-nod 1.6s ease-in-out infinite; }
+#pet.s-sleeping #faceAnim { transform: translateY(4px); }
+#pet.s-sleeping #ear { animation: none; }
+#pet .attention-mark { display: none; transform-box: fill-box; transform-origin: center; }
+#pet.s-waiting .attention-mark { display: inline; }
+#pet.g-wave .attention-mark { animation: attention-beat 1.6s cubic-bezier(.16,1,.3,1) 1 both; }
+#pet.s-waiting #rig { animation: breathe 3.6s ease-in-out infinite; }
+#pet.s-waiting #ear { animation: ear 6s ease-in-out infinite; }
+#pet .front-paws .ffA { transform-origin: 184px 127px; }
+#pet.g-wave .front-paws .ffA, #pet.g-hello .front-paws .ffA {
+  transform-box: view-box;
+  transform-origin: 184px 127px;
+  animation: capy-wave 1.6s cubic-bezier(.16,1,.3,1) 1 both;
+}
+#pet.g-hello #faceAnim { animation: capy-greet 1.8s ease-in-out 1; }
+#pet.g-click #rig { animation: capy-click .65s cubic-bezier(.16,1,.3,1) 1; }
+#pet.is-hovered .eye-open, #pet.is-hovered .eye-wide {
+  translate: var(--gaze-x, 0px) var(--gaze-y, 0px);
+}
+#pet .eye-open, #pet .eye-wide { transition: translate .15s ease-out; }
+#pet.is-hovered.s-idle #faceAnim { animation: none; }
+#pet.s-working .laptop path:last-child { animation: capy-code 1.8s steps(2) infinite; }
+#pet.s-done #rig { animation-iteration-count: 2; }
+#pet.s-done .sparkles g { animation-iteration-count: 2; }
+#pet.g-celebrate #rig { animation: jump 1s ease-in-out 2; }
+#pet.g-celebrate .sparkles { display:inline; }
+#pet.g-celebrate .sparkles g { animation: twinkle 1s ease-in-out 2; transform-box:fill-box; transform-origin:center; }
+.pet-paused #pet, .pet-paused #pet * { animation-play-state: paused !important; }
+@keyframes capy-wave {
+  0%,100% { transform: rotate(0deg); }
+  16% { transform: rotate(-120deg); }
+  30%,58% { transform: rotate(-145deg); }
+  44%,72% { transform: rotate(-110deg); }
+  88% { transform: rotate(-120deg); }
+}
+@keyframes capy-greet {
+  0%,100% { transform: rotate(0deg); }
+  30%,70% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+@keyframes capy-click {
+  0%,100% { transform: scale(1); }
+  20% { transform: scale(1.035,.965); }
+  50% { transform: translateY(-3px) scale(.985,1.02); }
+}
+@keyframes capy-code { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) {
+  #pet .eye-open, #pet .eye-wide { translate: none; transition: none; }
+}
+.reduce-motion #pet .eye-open, .reduce-motion #pet .eye-wide { translate: none; transition: none; }
+@keyframes attention-beat {
+  0% { opacity: 0; transform: translateY(7px) scale(.55); }
+  14%,100% { opacity: 1; transform: translateY(0) scale(1); }
+  24% { transform: translateY(-2px) scale(1.12); }
+  34% { transform: translateY(0) scale(1); }
+  72% { opacity: 1; transform: translateY(0) scale(1); }
+  82% { transform: translateY(-1px) scale(1.08); }
+  92% { transform: translateY(0) scale(1); }
+}
+@keyframes front-nod { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }

@@ -89,6 +89,7 @@ html { scrollbar-width:thin; scrollbar-color:#c1b9a7 #faf7ed; }
 .scenarios button { font-size:12px; }
 .scenarios [aria-pressed=true] { background:#d9e1cc; border-color:#8fa37b; }
 .demo-controls label { display:flex; align-items:center; gap:7px; margin-top:20px; font-size:12px; }
+.demo-controls select { max-width: 100%; box-sizing: border-box; }
 input { accent-color:var(--accent); }
 .demo-controls p { font-size:12px; color:var(--muted); line-height:1.7; }
 html:has(.pet-window),.pet-window { background:transparent; overflow:hidden; user-select:none; }
@@ -103,7 +104,8 @@ html:has(.pet-window),.pet-window { background:transparent; overflow:hidden; use
 .pet-button svg.s-waiting #rig,.pet-button svg.s-waiting #ear { animation-iteration-count:1; }
 .pet-button svg.s-done #rig,.pet-button svg.s-done .sparkles g { animation-iteration-count:2; }
 .pet-error { position:absolute; bottom:0; margin:0; padding:3px; color:#7d352a; background:#faf7ed; font-size:11px; max-height:55px; overflow:auto; }
-.reduce-motion #pet *,.reduce-motion #pet { animation:none !important; transition:none !important; }
+.reduce-motion #pet *,.reduce-motion #pet,.reduce-motion,.reduce-motion * { animation:none !important; transition:none !important; }
+.reduce-motion #pet .eye-open,.reduce-motion #pet .eye-wide { translate:none !important; transition:none !important; }
 .preferences { border-top:1px solid var(--rule); padding:20px; }
 .preferences h2 { font-size:14px; margin:0 0 10px; }
 .preferences p { font-size:12px; line-height:1.6; color:var(--muted); }

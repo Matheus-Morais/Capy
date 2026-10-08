@@ -1,50 +1,597 @@
-<svg id="pet" class="s-idle p-sit" viewBox="0 -20 270 230" role="img" aria-label="Capivara animada olhando de frente">
+<svg id="pet" class="s-idle p-sit" viewBox="0 -30 270 240" role="img" aria-label="Capivara animada olhando de frente">
   <line x1="20" y1="183" x2="250" y2="183" stroke="#e3d6b4" stroke-width="2"/>
   <path d="M42 188 l3 -7 3 7 3 -5 3 5 M215 188 l3 -7 3 7 3 -5 3 5" fill="var(--grass)" opacity=".7"/>
-  <ellipse id="shadow" cx="135" cy="184" rx="65" ry="6" fill="#000" opacity=".13"/>
+  <ellipse id="shadow" cx="135" cy="184" rx="55" ry="5.5" fill="#000" opacity=".13"/>
+  
   <g id="rig">
-    <path d="M94 92 C77 107 69 138 74 160 C78 182 102 184 135 184 C168 184 192 182 196 160 C201 138 193 107 176 92 Z" fill="var(--fur)" stroke="var(--line)" stroke-width="2.2"/>
-    <path d="M108 120 C93 136 92 160 102 173 C118 178 151 178 168 173 C177 159 176 136 163 120 Z" fill="var(--belly)" opacity=".7"/>
+    <!-- Corpo da Capy V5: esbelto, elegante e proporcional -->
+    <path class="capy-body" d="M96 92 C84 108 80 136 84 162 C87 182 105 184 135 184 C165 184 183 182 186 162 C190 136 186 108 174 92 Z" fill="var(--fur)" stroke="var(--line)" stroke-width="2.2"/>
+    <!-- Peito / barriguinha harmoniosa -->
+    <path class="capy-belly" d="M110 118 C100 134 98 158 106 172 C118 177 152 177 164 172 C172 158 170 134 160 118 Z" fill="var(--belly)" opacity=".75"/>
+
+    <!-- Orelhas autênticas de capivara: laterais e dobradas -->
     <g id="ear">
-      <ellipse cx="73" cy="35" rx="13" ry="15" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2.2"/>
-      <ellipse cx="197" cy="35" rx="13" ry="15" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2.2"/>
-      <ellipse cx="74" cy="35" rx="6" ry="8" fill="#e0a48a"/>
-      <ellipse cx="196" cy="35" rx="6" ry="8" fill="#e0a48a"/>
+      <g class="ear-left">
+        <path d="M84 50 C75 44 77 32 87 34 C94 35 98 42 94 51 C90 54 87 53 84 50 Z" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M86 48 C80 43 81 36 87 37 C90 39 92 44 89 49 Z" fill="#e0a48a"/>
+      </g>
+      <g class="ear-right">
+        <path d="M186 50 C195 44 193 32 183 34 C176 35 172 42 176 51 C180 54 183 53 186 50 Z" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M184 48 C190 43 189 36 183 37 C180 39 178 44 181 49 Z" fill="#e0a48a"/>
+      </g>
     </g>
+
     <g id="faceAnim">
-      <path d="M96 28 C111 23 159 23 174 28 C196 34 207 48 208 72 L208 88 C208 112 185 125 135 125 C85 125 62 112 62 88 L62 72 C63 48 74 34 96 28 Z" fill="var(--fur)" stroke="var(--line)" stroke-width="2.2"/>
-      <path d="M89 69 C106 63 164 63 181 69 C194 73 201 84 198 96 C194 113 171 119 135 119 C99 119 76 113 72 96 C69 84 76 73 89 69 Z" fill="var(--fur-dark)"/>
-      <path d="M102 76 C118 73 152 73 168 76 C182 79 187 87 183 96 C178 107 161 112 135 112 C109 112 92 107 87 96 C83 87 88 79 102 76 Z" fill="var(--muzzle)" opacity=".75"/>
-      <ellipse cx="120" cy="87" rx="4.5" ry="3" fill="var(--ink)"/>
-      <ellipse cx="150" cy="87" rx="4.5" ry="3" fill="var(--ink)"/>
-      <path d="M135 96 v6 M124 103 Q130 108 135 102 Q140 108 146 103" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
-      <ellipse cx="84" cy="80" rx="8" ry="4" fill="var(--blush)" opacity=".45"/>
-      <ellipse cx="186" cy="80" rx="8" ry="4" fill="var(--blush)" opacity=".45"/>
-      <g class="eye-open" fill="var(--ink)"><circle cx="94" cy="60" r="4"/><circle cx="176" cy="60" r="4"/><g fill="#fff"><circle cx="95" cy="59" r="1.2"/><circle cx="177" cy="59" r="1.2"/></g></g>
-      <g class="eye-wide" fill="var(--ink)"><circle cx="94" cy="60" r="5.5"/><circle cx="176" cy="60" r="5.5"/><g fill="#fff"><circle cx="95.5" cy="58.5" r="1.6"/><circle cx="177.5" cy="58.5" r="1.6"/></g></g>
-      <g class="eye-half" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"><path d="M89 60 Q94 66 99 60 M171 60 Q176 66 181 60" fill="none"/><path d="M89 59 H99 M171 59 H181"/></g>
-      <path class="eye-happy" d="M88 62 Q94 52 100 62 M170 62 Q176 52 182 62" fill="none" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round"/>
-      <path class="eye-closed" d="M88 60 Q94 66 100 60 M170 60 Q176 66 182 60" fill="none" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round"/>
-      <path class="brow-alert" d="M88 47 l12 -3 M170 44 l12 3" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
-      <path d="M129 39 l3 3 3 -4 3 4 3 -3" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+      <!-- Cabeça proporcional mantida da V4 -->
+      <path class="capy-head" d="M104 35 C118 31 152 31 166 35 C183 40 189 52 189 73 L189 92 C189 113 172 121 135 121 C98 121 81 113 81 92 L81 73 C81 52 87 40 104 35 Z" fill="var(--fur)" stroke="var(--line)" stroke-width="2.2" stroke-linejoin="round"/>
+      
+      <!-- Focinho amplo e quadrado característico -->
+      <path class="capy-snout-base" d="M93 72 C108 66 162 66 177 72 C188 77 190 88 186 100 C182 114 164 120 135 120 C106 120 88 114 84 100 C80 88 82 77 93 72 Z" fill="var(--fur-dark)"/>
+      <path class="capy-snout-plate" d="M101 77 C114 73 156 73 169 77 C179 81 180 90 177 99 C173 108 157 114 135 114 C113 114 97 108 93 99 C90 90 91 81 101 77 Z" fill="var(--muzzle)" opacity=".75"/>
+      
+      <!-- Narinas no topo-frente do focinho -->
+      <g class="capy-nostrils" fill="var(--ink)">
+        <ellipse cx="124" cy="88" rx="4.2" ry="2.8" transform="rotate(-10 124 88)"/>
+        <ellipse cx="146" cy="88" rx="4.2" ry="2.8" transform="rotate(10 146 88)"/>
+      </g>
+      
+      <!-- Boquinha de capivara zen -->
+      <path class="capy-mouth" d="M135 91 v5 M125 98 Q130 102 135 97 Q140 102 145 98" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round"/>
+      
+      <!-- Boquinha de bocejo -->
+      <g class="mouth-yawn-group">
+        <ellipse cx="135" cy="100" rx="5" ry="6.5" fill="#582a1a" stroke="var(--ink)" stroke-width="1.8"/>
+        <ellipse cx="135" cy="102.5" rx="3.2" ry="2.4" fill="#f08888"/>
+      </g>
+
+      <!-- Raminho de graminha para lanche -->
+      <g class="clover">
+        <path d="M145 98 Q156 94 165 98 Q169 100 173 97" fill="none" stroke="#549932" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M162 93 Q167 89 166 95 Z M167 98 Q173 96 171 102 Z" fill="#69b83e"/>
+      </g>
+      
+      <!-- Bochechas com blush fofo -->
+      <ellipse class="blush-left" cx="89" cy="82" rx="7" ry="3.5" fill="var(--blush)" opacity=".5"/>
+      <ellipse class="blush-right" cx="181" cy="82" rx="7" ry="3.5" fill="var(--blush)" opacity=".5"/>
+      
+      <!-- Olhinhos MAIORES da V5: super expressivos, brilhantes e kawaii -->
+      <g class="eye-open">
+        <ellipse cx="107" cy="60.5" rx="10.5" ry="11.2" fill="var(--ink)"/>
+        <ellipse cx="163" cy="60.5" rx="10.5" ry="11.2" fill="var(--ink)"/>
+        <circle cx="110.5" cy="57.5" r="3.8" fill="#ffffff"/>
+        <circle cx="166.5" cy="57.5" r="3.8" fill="#ffffff"/>
+        <circle cx="103.8" cy="64.5" r="1.8" fill="#ffffff" opacity=".9"/>
+        <circle cx="159.8" cy="64.5" r="1.8" fill="#ffffff" opacity=".9"/>
+        <circle cx="111.5" cy="64.5" r="1.0" fill="#ffffff" opacity=".75"/>
+        <circle cx="167.5" cy="64.5" r="1.0" fill="#ffffff" opacity=".75"/>
+        <path d="M98 49 Q107 44 116 49" fill="none" stroke="var(--line)" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M154 49 Q163 44 172 49" fill="none" stroke="var(--line)" stroke-width="2.2" stroke-linecap="round"/>
+      </g>
+
+      <!-- Olhinhos olhando para o alto (truque da laranjinha) -->
+      <g class="eye-look-up">
+        <ellipse cx="107" cy="58" rx="10.5" ry="11.2" fill="var(--ink)"/>
+        <ellipse cx="163" cy="58" rx="10.5" ry="11.2" fill="var(--ink)"/>
+        <circle cx="110.5" cy="54" r="3.8" fill="#ffffff"/>
+        <circle cx="166.5" cy="54" r="3.8" fill="#ffffff"/>
+        <circle cx="103.8" cy="61.5" r="1.8" fill="#ffffff" opacity=".9"/>
+        <circle cx="159.8" cy="61.5" r="1.8" fill="#ffffff" opacity=".9"/>
+        <circle cx="111.5" cy="61.5" r="1.0" fill="#ffffff" opacity=".75"/>
+        <circle cx="167.5" cy="61.5" r="1.0" fill="#ffffff" opacity=".75"/>
+        <path d="M98 48 Q107 43 116 48" fill="none" stroke="var(--line)" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M154 48 Q163 43 172 48" fill="none" stroke="var(--line)" stroke-width="2.2" stroke-linecap="round"/>
+      </g>
+
+      <!-- Olhinhos piscando (High-Five / maroto) -->
+      <g class="eye-wink">
+        <ellipse cx="107" cy="60.5" rx="10.5" ry="11.2" fill="var(--ink)"/>
+        <circle cx="110.5" cy="57.5" r="3.8" fill="#ffffff"/>
+        <circle cx="103.8" cy="64.5" r="1.8" fill="#ffffff" opacity=".9"/>
+        <path d="M98 49 Q107 44 116 49" fill="none" stroke="var(--line)" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M152 61 Q163 51 174 61" fill="none" stroke="var(--ink)" stroke-width="3.2" stroke-linecap="round"/>
+      </g>
+
+      <!-- Olhinhos de êxtase zen (Ofurô / banho termal) -->
+      <g class="eye-zen">
+        <path d="M96 61 Q107 68 118 61 M152 61 Q163 68 174 61" fill="none" stroke="var(--ink)" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M99 53 Q107 49 115 53 M155 53 Q163 49 171 53" fill="none" stroke="var(--line)" stroke-width="1.8" stroke-linecap="round"/>
+      </g>
+      
+      <!-- Olhos bem arregalados / curiosos -->
+      <g class="eye-wide">
+        <ellipse cx="107" cy="60.5" rx="12.2" ry="12.8" fill="var(--ink)"/>
+        <ellipse cx="163" cy="60.5" rx="12.2" ry="12.8" fill="var(--ink)"/>
+        <circle cx="111" cy="57" r="4.4" fill="#ffffff"/>
+        <circle cx="167" cy="57" r="4.4" fill="#ffffff"/>
+        <circle cx="103" cy="65" r="2.2" fill="#ffffff" opacity=".95"/>
+        <circle cx="159" cy="65" r="2.2" fill="#ffffff" opacity=".95"/>
+        <circle cx="112" cy="65" r="1.2" fill="#ffffff" opacity=".8"/>
+        <circle cx="168" cy="65" r="1.2" fill="#ffffff" opacity=".8"/>
+        <path d="M97 45 Q107 40 117 45" fill="none" stroke="var(--line)" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M153 45 Q163 40 173 45" fill="none" stroke="var(--line)" stroke-width="2.2" stroke-linecap="round"/>
+      </g>
+      
+      <!-- Olhos semicerrados relaxados (laptop / café) -->
+      <g class="eye-half">
+        <ellipse cx="107" cy="62.5" rx="9.5" ry="6.2" fill="var(--ink)"/>
+        <ellipse cx="163" cy="62.5" rx="9.5" ry="6.2" fill="var(--ink)"/>
+        <circle cx="110" cy="60.5" r="2.4" fill="#ffffff"/>
+        <circle cx="166" cy="60.5" r="2.4" fill="#ffffff"/>
+        <path d="M98 58 Q107 54 116 58 M154 58 Q163 54 172 58" fill="none" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round"/>
+      </g>
+      
+      <!-- Olhos felizes fechadinhos em arco (^ ^) -->
+      <path class="eye-happy" d="M96 64 Q107 50 118 64 M152 64 Q163 50 174 64" fill="none" stroke="var(--ink)" stroke-width="3.2" stroke-linecap="round"/>
+      
+      <!-- Olhos de carinho / amor (> <) -->
+      <path class="eye-love" d="M97 57 L107 63 L97 69 M117 57 L107 63 L117 69 M153 57 L163 63 L153 69 M173 57 L163 63 L173 69" fill="none" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <!-- Olhos fechadinhos dormindo serenamente (- -) -->
+      <path class="eye-closed" d="M96 61 Q107 72 118 61 M152 61 Q163 72 174 61" fill="none" stroke="var(--ink)" stroke-width="3.0" stroke-linecap="round"/>
+      
+      <!-- Sobrancelhas de alerta -->
+      <path class="brow-alert" d="M99 46 l12 -3 M159 43 l12 3" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round"/>
+      
+      <!-- Detalhes de pelinho na testa -->
+      <path d="M130 43 l3 3 3 -4 3 4 3 -3" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+
+      <!-- Toalhinha de cabeça (estilo banho japonês onsen) -->
+      <g class="towel-head">
+        <rect x="117" y="27" width="36" height="10" rx="3" fill="#fcfbf7" stroke="var(--line)" stroke-width="1.8"/>
+        <line x1="123" y1="32" x2="147" y2="32" stroke="#d6cebd" stroke-width="1.5" stroke-dasharray="2 2"/>
+      </g>
+
+      <!-- Fones de Ouvido acolchoados (Música Lofi) -->
+      <g class="headphones">
+        <path d="M78 52 C78 22 192 22 192 52" fill="none" stroke="#2e3842" stroke-width="4.5" stroke-linecap="round"/>
+        <rect x="74" y="42" width="12" height="24" rx="5" fill="#4d8b79" stroke="#2e3842" stroke-width="2"/>
+        <rect x="184" y="42" width="12" height="24" rx="5" fill="#4d8b79" stroke="#2e3842" stroke-width="2"/>
+      </g>
+
+      <!-- ===== GUARDA-ROUPA: ITENS DE CABEÇA, BONÉS & CHAPÉUS ===== -->
+      <g class="wardrobe-headwear" aria-hidden="true">
+        <!-- 🧢 Boné Streetwear -->
+        <g class="hat-cap">
+          <path d="M96 44 C96 22 174 22 174 44 Z" fill="#2d7f7b" stroke="var(--line)" stroke-width="2"/>
+          <path d="M135 22 Q135 33 135 44" fill="none" stroke="#1d5c59" stroke-width="1.8"/>
+          <path d="M100 42 Q135 47 182 38 C194 36 195 44 184 48 Q135 55 96 45 Z" fill="#205c59" stroke="var(--line)" stroke-width="2"/>
+          <circle cx="135" cy="22" r="3.2" fill="#e89d38" stroke="var(--line)" stroke-width="1.5"/>
+          <path d="M139 31 C133 30 130 33 130 36 C130 39 133 42 139 41" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+        </g>
+
+        <!-- 🤠 Chapéu de Palha Pantaneiro -->
+        <g class="hat-straw">
+          <path d="M110 38 L114 16 Q135 12 156 16 L160 38 Z" fill="#f0d478" stroke="var(--line)" stroke-width="2"/>
+          <ellipse cx="135" cy="16" rx="21" ry="3.5" fill="#e2c35f" stroke="var(--line)" stroke-width="1.5"/>
+          <path d="M110 32 Q135 36 160 32 L160 38 Q135 42 110 38 Z" fill="#d94132" stroke="var(--line)" stroke-width="1.6"/>
+          <ellipse cx="135" cy="40" rx="55" ry="11" fill="#f7dc88" stroke="var(--line)" stroke-width="2.2"/>
+          <ellipse cx="135" cy="40" rx="25" ry="5" fill="#d8b94f" opacity=".5"/>
+          <path d="M92 40 Q135 47 178 40 M100 38 Q135 45 170 38" fill="none" stroke="#c9a738" stroke-width="1" stroke-dasharray="3 3"/>
+        </g>
+
+        <!-- 🎩 Cartola Chic Vitoriana -->
+        <g class="hat-top">
+          <ellipse cx="135" cy="40" rx="46" ry="8" fill="#1c2229" stroke="var(--line)" stroke-width="2.2"/>
+          <path d="M111 38 L113 4 Q135 2 157 4 L159 38 Z" fill="#262f38" stroke="var(--line)" stroke-width="2"/>
+          <ellipse cx="135" cy="4" rx="22" ry="4" fill="#3b4754" stroke="var(--line)" stroke-width="1.8"/>
+          <path d="M111 31 Q135 34 159 31 L159 38 Q135 41 111 38 Z" fill="#c92a2a" stroke="var(--line)" stroke-width="1.6"/>
+          <rect x="131" y="32" width="8" height="6" rx="1.5" fill="#f5c227" stroke="var(--line)" stroke-width="1.2"/>
+        </g>
+
+        <!-- 🧶 Gorro de Inverno com Pompom -->
+        <g class="hat-beanie">
+          <circle cx="135" cy="6" r="9" fill="#fcf9ee" stroke="var(--line)" stroke-width="1.8"/>
+          <circle cx="133" cy="4" r="2" fill="#fff" opacity=".8"/>
+          <path d="M102 36 C102 12 168 12 168 36 Z" fill="#4d749a" stroke="var(--line)" stroke-width="2"/>
+          <path d="M114 36 C116 20 154 20 156 36" fill="none" stroke="#3b5d7e" stroke-width="2"/>
+          <rect x="98" y="32" width="74" height="13" rx="4" fill="#658db4" stroke="var(--line)" stroke-width="2"/>
+          <path d="M108 32 v13 M118 32 v13 M128 32 v13 M138 32 v13 M148 32 v13 M158 32 v13 M164 32 v13" stroke="#486e94" stroke-width="1.5"/>
+        </g>
+
+        <!-- 🌸 Coroa / Tiara de Flores Tropicais -->
+        <g class="hat-flower">
+          <path d="M94 40 Q135 48 176 40" fill="none" stroke="#417d35" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="102" cy="38" r="6" fill="#ff7da7" stroke="var(--line)" stroke-width="1.4"/>
+          <circle cx="102" cy="38" r="2.5" fill="#fff066"/>
+          <circle cx="118" cy="42" r="6.5" fill="#ffcf40" stroke="var(--line)" stroke-width="1.4"/>
+          <circle cx="118" cy="42" r="2.5" fill="#e0721b"/>
+          <circle cx="135" cy="44" r="7.5" fill="#ff6b6b" stroke="var(--line)" stroke-width="1.5"/>
+          <circle cx="135" cy="44" r="3" fill="#fff"/>
+          <circle cx="152" cy="42" r="6.5" fill="#b078e6" stroke="var(--line)" stroke-width="1.4"/>
+          <circle cx="152" cy="42" r="2.5" fill="#ffd15c"/>
+          <circle cx="168" cy="38" r="6" fill="#58c4dd" stroke="var(--line)" stroke-width="1.4"/>
+          <circle cx="168" cy="38" r="2.5" fill="#fff"/>
+        </g>
+
+        <!-- 🕶️ Óculos Escuros Estilosos -->
+        <g class="cloth-sunglasses">
+          <path d="M84 56 L98 59" stroke="#1c2024" stroke-width="3" stroke-linecap="round"/>
+          <path d="M186 56 L172 59" stroke="#1c2024" stroke-width="3" stroke-linecap="round"/>
+          <rect x="124" y="58" width="22" height="4" rx="1.5" fill="#1c2024"/>
+          <rect x="94" y="54" width="32" height="19" rx="3" fill="#181d22" stroke="var(--line)" stroke-width="1.8"/>
+          <rect x="144" y="54" width="32" height="19" rx="3" fill="#181d22" stroke="var(--line)" stroke-width="1.8"/>
+          <polygon points="97,56 103,56 99,70 95,70" fill="#ffffff" opacity=".6"/>
+          <polygon points="107,56 111,56 105,70 102,70" fill="#ffffff" opacity=".4"/>
+          <polygon points="147,56 153,56 149,70 145,70" fill="#ffffff" opacity=".6"/>
+          <polygon points="157,56 161,56 155,70 152,70" fill="#ffffff" opacity=".4"/>
+        </g>
+
+        <!-- 🧙 Chapéu de Mago -->
+        <g class="costume-head-wizard">
+          <ellipse cx="135" cy="40" rx="48" ry="9" fill="#2f1854" stroke="var(--line)" stroke-width="2.2"/>
+          <path d="M108 38 Q125 18 130 -8 Q140 16 162 38 Z" fill="#442675" stroke="var(--line)" stroke-width="2"/>
+          <path d="M109 33 Q135 37 161 33 L162 38 Q135 42 108 38 Z" fill="#e8b828"/>
+          <path d="M130 14 l2 4 4 1 -3 3 1 4 -4 -2 -4 2 1 -4 -3 -3 4 -1z" fill="#f5c227"/>
+          <circle cx="144" cy="24" r="2" fill="#ffd966"/>
+        </g>
+
+        <!-- 🦖 Capuz de Dinossauro -->
+        <g class="costume-head-dino">
+          <path d="M84 48 C84 20 186 20 186 48 L188 75 C188 62 180 50 166 42 C152 35 118 35 104 42 C90 50 82 62 82 75 Z" fill="#589e3a" stroke="var(--line)" stroke-width="2.2"/>
+          <polygon points="106,44 112,50 118,44" fill="#ffffff" stroke="var(--line)" stroke-width="1.2"/>
+          <polygon points="120,44 126,51 132,44" fill="#ffffff" stroke="var(--line)" stroke-width="1.2"/>
+          <polygon points="138,44 144,51 150,44" fill="#ffffff" stroke="var(--line)" stroke-width="1.2"/>
+          <polygon points="152,44 158,50 164,44" fill="#ffffff" stroke="var(--line)" stroke-width="1.2"/>
+          <polygon points="135,16 128,26 142,26" fill="#f28e2b" stroke="var(--line)" stroke-width="1.5"/>
+          <polygon points="135,4 129,14 141,14" fill="#f28e2b" stroke="var(--line)" stroke-width="1.5"/>
+          <ellipse cx="98" cy="28" rx="4" ry="2.5" fill="#46802e"/>
+          <ellipse cx="172" cy="28" rx="4" ry="2.5" fill="#46802e"/>
+        </g>
+
+        <!-- 🏴‍☠️ Chapéu de Pirata & Tapa-Olho -->
+        <g class="costume-head-pirate">
+          <path d="M84 40 Q135 15 186 40 Q196 28 174 18 Q135 12 96 18 Q74 28 84 40 Z" fill="#1e2226" stroke="var(--line)" stroke-width="2.2"/>
+          <path d="M84 40 Q135 15 186 40" fill="none" stroke="#e6b82e" stroke-width="2.5"/>
+          <circle cx="135" cy="24" r="5" fill="#ffa21f" stroke="var(--line)" stroke-width="1.2"/>
+          <line x1="126" y1="20" x2="144" y2="28" stroke="#ffffff" stroke-width="1.6"/>
+          <line x1="126" y1="28" x2="144" y2="20" stroke="#ffffff" stroke-width="1.6"/>
+          <path d="M84 52 L128 66" stroke="#16181b" stroke-width="2"/>
+          <ellipse cx="107" cy="60.5" rx="12" ry="12" fill="#1e2226" stroke="var(--line)" stroke-width="2"/>
+          <circle cx="107" cy="60.5" rx="9" ry="9" fill="#14171a"/>
+        </g>
+
+        <!-- 🕵️ Chapéu de Detetive Sherlock -->
+        <g class="costume-head-detective">
+          <path d="M96 38 C96 18 174 18 174 38 Z" fill="#9e8569" stroke="var(--line)" stroke-width="2"/>
+          <path d="M114 20 L156 38 M156 20 L114 38 M135 18 v20" stroke="#7d664e" stroke-width="1.4" opacity=".6"/>
+          <path d="M92 40 Q135 48 178 40 Q135 34 92 40 Z" fill="#8a735a" stroke="var(--line)" stroke-width="1.8"/>
+          <path d="M127 18 Q135 12 143 18" fill="none" stroke="#4a3825" stroke-width="2.5"/>
+          <circle cx="135" cy="14" r="2.2" fill="#4a3825"/>
+        </g>
+
+        <!-- 👑 Coroa Real de Ouro -->
+        <g class="costume-head-royal">
+          <path d="M106 38 L110 14 L122 26 L135 10 L148 26 L160 14 L164 38 Z" fill="#f5c227" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/>
+          <ellipse cx="135" cy="38" rx="29" ry="5" fill="#deb01f" stroke="var(--line)" stroke-width="1.8"/>
+          <circle cx="110" cy="14" r="2.5" fill="#e63946"/>
+          <circle cx="135" cy="10" r="3.2" fill="#e63946"/>
+          <circle cx="160" cy="14" r="2.5" fill="#e63946"/>
+          <circle cx="122" cy="36" r="2.2" fill="#2a9d8f"/>
+          <circle cx="135" cy="36" r="2.5" fill="#e63946"/>
+          <circle cx="148" cy="36" r="2.2" fill="#2a9d8f"/>
+        </g>
+      </g>
     </g>
+
+    <!-- ===== GUARDA-ROUPA: ROUPAS DE CORPO & FANTASIAS ===== -->
+    <g class="wardrobe-bodywear" aria-hidden="true">
+      <!-- 👕 Moletom Capy Dev -->
+      <g class="cloth-hoodie">
+        <path d="M96 114 C83 124 80 152 83 174 C86 182 105 184 135 184 C165 184 184 182 187 174 C190 152 187 124 174 114 Z" fill="#2d4a66" stroke="var(--line)" stroke-width="2.2"/>
+        <path d="M84 172 Q135 178 186 172 L186 182 Q135 187 84 182 Z" fill="#20354a" stroke="var(--line)" stroke-width="1.8"/>
+        <path d="M110 148 H160 L166 170 H104 Z" fill="#20354a" stroke="var(--line)" stroke-width="1.8"/>
+        <path d="M110 148 L104 170 M160 148 L166 170" stroke="#162534" stroke-width="1.6"/>
+        <path d="M106 114 Q135 126 164 114" fill="none" stroke="#20354a" stroke-width="4" stroke-linecap="round"/>
+        <path d="M125 122 v18 M145 122 v18" stroke="#f0ede4" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="125" cy="141" r="1.8" fill="#e8a838"/>
+        <circle cx="145" cy="141" r="1.8" fill="#e8a838"/>
+      </g>
+
+      <!-- 🧥 Capa de Chuva Amarela -->
+      <g class="cloth-raincoat">
+        <path d="M96 114 C83 124 80 152 83 174 C86 182 105 184 135 184 C165 184 184 182 187 174 C190 152 187 124 174 114 Z" fill="#f5c72a" stroke="var(--line)" stroke-width="2.2"/>
+        <path d="M106 114 L120 130 L135 120 L150 130 L164 114" fill="#e3b219" stroke="var(--line)" stroke-width="1.8" stroke-linejoin="round"/>
+        <line x1="135" y1="120" x2="135" y2="183" stroke="#cca014" stroke-width="2"/>
+        <circle cx="135" cy="138" r="2.8" fill="#264466" stroke="var(--line)" stroke-width="1.2"/>
+        <circle cx="135" cy="153" r="2.8" fill="#264466" stroke="var(--line)" stroke-width="1.2"/>
+        <circle cx="135" cy="168" r="2.8" fill="#264466" stroke="var(--line)" stroke-width="1.2"/>
+      </g>
+
+      <!-- 🧙 Capa e Varinha do Mago -->
+      <g class="costume-body-wizard">
+        <path d="M92 116 Q135 127 178 116 Q182 135 185 168 Q135 174 85 168 Q88 135 92 116 Z" fill="#3c2166" stroke="var(--line)" stroke-width="2"/>
+        <ellipse cx="135" cy="122" rx="4.5" ry="4.5" fill="#f5c227" stroke="var(--line)" stroke-width="1.4"/>
+        <line x1="174" y1="152" x2="202" y2="108" stroke="#6b4624" stroke-width="3" stroke-linecap="round"/>
+        <path d="M202 108 l2 5 5 1 -4 4 1 5 -4 -2 -4 2 1 -5 -4 -4 5 -1z" fill="#ffd700" stroke="var(--line)" stroke-width="1.2"/>
+      </g>
+
+      <!-- 🦖 Espinhos dorsais do Dinossauro -->
+      <g class="costume-body-dino">
+        <polygon points="78,126 86,132 86,120" fill="#f28e2b" stroke="var(--line)" stroke-width="1.5"/>
+        <polygon points="77,142 85,148 85,136" fill="#f28e2b" stroke="var(--line)" stroke-width="1.5"/>
+        <polygon points="78,158 86,164 86,152" fill="#f28e2b" stroke="var(--line)" stroke-width="1.5"/>
+      </g>
+
+      <!-- 🏴‍☠️ Lenço pirata no pescoço -->
+      <g class="costume-body-pirate">
+        <path d="M102 116 Q135 126 168 116 L160 134 Q135 138 110 134 Z" fill="#c43333" stroke="var(--line)" stroke-width="1.8"/>
+        <path d="M112 121 Q135 129 158 121 M114 128 Q135 134 156 128" stroke="#ffffff" stroke-width="2"/>
+      </g>
+
+      <!-- 🕵️ Capa e Lupa do Detetive -->
+      <g class="costume-body-detective">
+        <path d="M94 116 Q135 126 176 116 L180 148 Q135 154 90 148 Z" fill="#9e8569" stroke="var(--line)" stroke-width="2"/>
+        <path d="M104 122 L166 142 M166 122 L104 142" stroke="#7d664e" stroke-width="1.4" opacity=".6"/>
+        <circle cx="195" cy="138" r="9" fill="#cce8ff" opacity=".7" stroke="var(--line)" stroke-width="2"/>
+        <line x1="189" y1="144" x2="175" y2="156" stroke="#5c3f21" stroke-width="3" stroke-linecap="round"/>
+      </g>
+
+      <!-- 👑 Manto Real com Arminho -->
+      <g class="costume-body-royal">
+        <path d="M92 116 Q135 128 178 116 L184 172 Q135 180 86 172 Z" fill="#a81b2a" stroke="var(--line)" stroke-width="2.2"/>
+        <path d="M96 116 Q135 128 174 116 L171 135 Q135 142 99 135 Z" fill="#faf7ee" stroke="var(--line)" stroke-width="1.8"/>
+        <circle cx="112" cy="126" r="1.3" fill="#1b1c1e"/>
+        <circle cx="126" cy="129" r="1.3" fill="#1b1c1e"/>
+        <circle cx="144" cy="129" r="1.3" fill="#1b1c1e"/>
+        <circle cx="158" cy="126" r="1.3" fill="#1b1c1e"/>
+      </g>
+
+      <!-- 🧣 Cachecol Vermelho de Inverno -->
+      <g class="cloth-scarf">
+        <path d="M95 114 Q135 125 175 114 Q178 127 135 133 Q92 127 95 114 Z" fill="#d13838" stroke="var(--line)" stroke-width="2"/>
+        <path d="M96 119 Q135 129 174 119" fill="none" stroke="#b02525" stroke-width="2"/>
+        <path d="M142 125 L146 164 L165 162 L158 124 Z" fill="#b82a2a" stroke="var(--line)" stroke-width="1.8"/>
+        <path d="M147 164 v6 M151 163 v6 M156 163 v6 M160 162 v6 M164 162 v6" stroke="#941f1f" stroke-width="1.8" stroke-linecap="round"/>
+      </g>
+
+      <!-- 👔 Gravata Borboleta Charmosa -->
+      <g class="cloth-bowtie">
+        <polygon points="135,123 115,114 115,132" fill="#d93b3b" stroke="var(--line)" stroke-width="1.8" stroke-linejoin="round"/>
+        <polygon points="135,123 118,117 118,129" fill="#e85a5a"/>
+        <polygon points="135,123 155,114 155,132" fill="#d93b3b" stroke="var(--line)" stroke-width="1.8" stroke-linejoin="round"/>
+        <polygon points="135,123 152,117 152,129" fill="#e85a5a"/>
+        <ellipse cx="135" cy="123" rx="4.5" ry="4" fill="#a82323" stroke="var(--line)" stroke-width="1.8"/>
+        <ellipse cx="135" cy="122" rx="2" ry="1.5" fill="#f58e8e"/>
+      </g>
+    </g>
+
+    <!-- Patinhas dianteiras proporcionais -->
     <g class="front-paws" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2" stroke-linecap="round">
-      <g class="anim fnA"><path d="M86 127 Q81 142 88 157 Q98 164 106 155 L102 133"/><path d="M91 151 l1 5 M97 152 v5"/></g>
-      <g class="anim ffA"><path d="M184 127 Q189 142 182 157 Q172 164 164 155 L168 133"/><path d="M179 151 l-1 5 M173 152 v5"/></g>
+      <g class="anim fnA"><path d="M94 128 Q90 142 96 156 Q104 163 112 155 L108 133"/><path d="M98 150 l1 5 M104 151 v5"/></g>
+      <g class="anim ffA"><path d="M176 128 Q180 142 174 156 Q166 163 158 155 L162 133"/><path d="M172 150 l-1 5 M166 151 v5"/></g>
     </g>
-    <g fill="var(--foot)" stroke="var(--line)" stroke-width="2" stroke-linecap="round"><path d="M80 169 Q68 182 83 184 H106 Q115 181 108 175 Z"/><path d="M190 169 Q202 182 187 184 H164 Q155 181 162 175 Z"/><path d="M82 178 v5 M91 179 v5 M179 179 v5 M188 178 v5"/></g>
+
+    <!-- Patinha levantada de High-Five -->
+    <g class="highfive-paw">
+      <path d="M174 124 Q188 118 202 126 Q208 134 200 142 L172 136 Z" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2"/>
+      <ellipse cx="196" cy="130" rx="4" ry="5" fill="#e0a48a"/>
+      <circle cx="192" cy="123" r="1.8" fill="#e0a48a"/>
+      <circle cx="197" cy="122" r="1.8" fill="#e0a48a"/>
+      <circle cx="202" cy="124" r="1.8" fill="#e0a48a"/>
+    </g>
+
+    <!-- Patas traseiras de capivara -->
+    <g fill="var(--foot)" stroke="var(--line)" stroke-width="2" stroke-linecap="round">
+      <path d="M90 170 Q80 182 94 184 H116 Q124 181 118 175 Z"/>
+      <path d="M180 170 Q190 182 176 184 H154 Q146 181 152 175 Z"/>
+      <path d="M93 178 v5 M101 179 v5 M169 179 v5 M177 178 v5"/>
+    </g>
+
+    <!-- Caneca de Café quentinho nas patinhas -->
+    <g class="coffee-cup">
+      <rect x="122" y="142" width="26" height="24" rx="4" fill="#586e53" stroke="var(--line)" stroke-width="2"/>
+      <path d="M148 147 C155 147 155 161 148 161" fill="none" stroke="var(--line)" stroke-width="2" stroke-linecap="round"/>
+      <ellipse cx="135" cy="143" rx="11" ry="3" fill="#422c1b"/>
+      <path d="M135 152 C135 149 132 147 130 149 C128 147 125 149 125 152 C125 156 130 159 130 159 C130 159 135 156 135 152 Z" fill="#e8dcc4" transform="scale(0.8) translate(34, 30)"/>
+    </g>
+
+    <!-- Banheira de Ofurô tradicional de madeira -->
+    <g class="bath-tub">
+      <path d="M68 148 C68 148 76 186 135 186 C194 186 202 148 202 148 H68 Z" fill="#9e7247" stroke="var(--line)" stroke-width="2.2"/>
+      <path d="M72 162 C85 174 185 174 198 162" fill="none" stroke="#3b2b1c" stroke-width="2.4"/>
+      <path d="M80 177 C95 184 175 184 190 177" fill="none" stroke="#3b2b1c" stroke-width="2.4"/>
+      <ellipse cx="135" cy="148" rx="66" ry="10" fill="#78b7c4" opacity=".85" stroke="var(--line)" stroke-width="1.8"/>
+      <ellipse cx="135" cy="148" rx="58" ry="7" fill="#a4d7e0" opacity=".6"/>
+    </g>
+
+    <!-- Laptop compacto para quando os agentes trabalham -->
     <g class="laptop">
-      <path d="M90 139 h90 l-4 39 H94 Z" fill="#39434c" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/>
-      <rect x="98" y="146" width="74" height="26" rx="2" fill="#222d33"/>
-      <path d="M85 178 h100 l-6 5 H91 Z" fill="#7a8794" stroke="var(--line)" stroke-width="1.8" stroke-linejoin="round"/>
-      <path d="M129 158 l-5 3 5 3 M141 158 l5 3 -5 3 M137 155 l-4 12" fill="none" stroke="#c4d7b1" stroke-width="2" stroke-linecap="round"/>
+      <path d="M92 140 h86 l-4 38 H96 Z" fill="#39434c" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="99" y="146" width="72" height="25" rx="2" fill="#222d33"/>
+      <path d="M88 178 h94 l-5 5 H93 Z" fill="#7a8794" stroke="var(--line)" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M129 157 l-5 3 5 3 M141 157 l5 3 -5 3 M137 154 l-4 12" fill="none" stroke="#c4d7b1" stroke-width="2" stroke-linecap="round"/>
     </g>
-    <g id="orange"><g class="orange"><circle cx="135" cy="17" r="10" fill="#ffa21f" stroke="var(--line)" stroke-width="2"/><path d="M135 7 q4 -7 11 -5 q-3 6 -11 5z" fill="#6aa84f" stroke="var(--line)" stroke-width="1.4"/><circle cx="131" cy="14" r="2.2" fill="#fff" opacity=".45"/></g></g>
+
+    <!-- A icônica laranjinha da capivara na cabeça -->
+    <g id="orange">
+      <g class="orange">
+        <circle cx="135" cy="23" r="9.2" fill="#ffa21f" stroke="var(--line)" stroke-width="2"/>
+        <path d="M135 15 q3.5 -6 9.5 -4 q-2.7 5 -9.5 4z" fill="#6aa84f" stroke="var(--line)" stroke-width="1.4"/>
+        <circle cx="131.5" cy="20.5" r="2" fill="#fff" opacity=".5"/>
+      </g>
+    </g>
   </g>
-  <g class="sparkles"><g><path d="M47 42 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#ffc933"/></g><g><path d="M135 -9 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#ff8fb5"/></g><g><path d="M223 42 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#6cc9f0"/></g></g>
+
+  <!-- Vapor saindo do cafézinho -->
+  <g class="coffee-steam" aria-hidden="true">
+    <path class="steam s1" d="M129 138 Q126 130 131 122 Q136 114 130 106" fill="none" stroke="#bdae99" stroke-width="2" stroke-linecap="round"/>
+    <path class="steam s2" d="M135 137 Q140 128 135 120 Q130 112 136 103" fill="none" stroke="#bdae99" stroke-width="2.2" stroke-linecap="round"/>
+    <path class="steam s3" d="M141 138 Q137 131 142 123 Q147 115 141 107" fill="none" stroke="#bdae99" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Bolhas do banho termal -->
+  <g class="bath-bubbles" aria-hidden="true">
+    <circle class="bubble b1" cx="82" cy="142" r="5" fill="#e8f7fa" stroke="#68abb8" stroke-width="1.5" opacity=".85"/>
+    <circle class="bubble b2" cx="188" cy="140" r="6" fill="#e8f7fa" stroke="#68abb8" stroke-width="1.5" opacity=".85"/>
+    <circle class="bubble b3" cx="74" cy="125" r="4" fill="#e8f7fa" stroke="#68abb8" stroke-width="1.4" opacity=".75"/>
+    <circle class="bubble b4" cx="196" cy="122" r="4.5" fill="#e8f7fa" stroke="#68abb8" stroke-width="1.4" opacity=".75"/>
+  </g>
+
+  <!-- Notinhas musicais (Lofi Beats) -->
+  <g class="music-notes" aria-hidden="true">
+    <text class="note n1" x="52" y="48" font-size="18" fill="#e66885" font-weight="bold">♪</text>
+    <text class="note n2" x="210" y="42" font-size="22" fill="#589ad6" font-weight="bold">♫</text>
+    <text class="note n3" x="42" y="24" font-size="20" fill="#71b359" font-weight="bold">♬</text>
+    <text class="note n4" x="222" y="20" font-size="16" fill="#e89d38" font-weight="bold">♩</text>
+  </g>
+
+  <!-- Brilho de High-Five -->
+  <g class="highfive-spark" aria-hidden="true">
+    <path d="M212 120 l3 6 6 2 -6 2 -3 6 -3 -6 -6 -2 6 -2z" fill="#ffb833" stroke="var(--line)" stroke-width="1"/>
+    <circle cx="218" cy="112" r="2.5" fill="#ff4d79"/>
+  </g>
+
+  <!-- Nuvem de Sonho fofo (Melancia) -->
+  <g class="dream-cloud" aria-hidden="true">
+    <circle cx="178" cy="22" r="3.5" fill="#fcfaf2" stroke="var(--line)" stroke-width="1.6"/>
+    <circle cx="188" cy="12" r="5" fill="#fcfaf2" stroke="var(--line)" stroke-width="1.6"/>
+    <path d="M192 -2 C186 -6 186 -16 195 -18 C198 -26 210 -28 217 -22 C224 -28 236 -24 238 -16 C246 -15 248 -5 242 0 C246 6 240 14 232 12 C226 16 215 15 210 10 C204 14 195 10 192 -2 Z" fill="#ffffff" stroke="var(--line)" stroke-width="1.8"/>
+    <path d="M206 -6 A 14 14 0 0 0 228 -6 Z" fill="#2d7a42" stroke="var(--line)" stroke-width="1.2"/>
+    <path d="M208 -6 A 11 11 0 0 0 226 -6 Z" fill="#e6475b"/>
+    <circle cx="214" cy="-3" r="0.8" fill="#222"/>
+    <circle cx="217" cy="-1.5" r="0.8" fill="#222"/>
+    <circle cx="220" cy="-3" r="0.8" fill="#222"/>
+  </g>
+
+  <!-- Partículas de corações para carinho / amor -->
+  <g class="hearts" aria-hidden="true">
+    <path class="heart h1" d="M112 36 C112 31 107 27 102 31 C97 27 92 31 92 36 C92 43 102 48 102 48 C102 48 112 43 112 36 Z" fill="#ff5e84"/>
+    <path class="heart h2" d="M174 32 C174 27 170 24 166 27 C162 24 158 27 158 32 C158 38 166 43 166 43 C166 43 174 38 174 32 Z" fill="#ff4270"/>
+    <path class="heart h3" d="M141 10 C141 6 137 3 133 6 C130 3 126 6 126 10 C126 15 133 19 133 19 C133 19 141 15 141 10 Z" fill="#ff7597"/>
+  </g>
+
+  <!-- Partículas de estrelinhas / comemoração -->
+  <g class="sparkles">
+    <g><path d="M47 42 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#ffc933"/></g>
+    <g><path d="M135 -9 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#ff8fb5"/></g>
+    <g><path d="M223 42 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#6cc9f0"/></g>
+  </g>
+
+  <!-- Balãozinho de atenção -->
   <g class="attention-mark" aria-hidden="true">
-    <path d="M197 13 Q197 8 202 8 H223 Q228 8 228 13 V29 Q228 34 223 34 H215 L208 41 V34 H202 Q197 34 197 29 Z" fill="#f7f0df" stroke="#8a5b18" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M212.5 14 V23 M212.5 28 V28.5" fill="none" stroke="#8a5b18" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M188 19 Q188 14 193 14 H214 Q219 14 219 19 V35 Q219 40 214 40 H206 L199 47 V40 H193 Q188 40 188 35 Z" fill="#f7f0df" stroke="#8a5b18" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M203.5 20 V29 M203.5 34 V34.5" fill="none" stroke="#8a5b18" stroke-width="2.8" stroke-linecap="round"/>
   </g>
-  <g class="zzz" fill="#7d8fd6" font-family="Segoe UI, sans-serif" font-weight="700"><text x="206" y="98" font-size="18">z</text><text x="219" y="83" font-size="22">z</text><text x="233" y="67" font-size="26">Z</text></g>
+
+  <!-- Sequência encantadora de ZZZZZZZZZZZZ flutuando quando parada / dormindo -->
+  <g class="zzz" aria-hidden="true">
+    <text class="z z1" x="194" y="98">z</text>
+    <text class="z z2" x="206" y="82">Z</text>
+    <text class="z z3" x="218" y="64">z</text>
+    <text class="z z4" x="230" y="46">Z</text>
+    <text class="z z5" x="240" y="26">z</text>
+  </g>
+
+  <!-- ===== AMIGUINHOS DO PANTANAL (MINI-PETS) ===== -->
+  <g class="mini-friends" aria-hidden="true">
+    <!-- 🐦 Passarinho Bem-te-vi pousado no ombro -->
+    <g class="friend-bird">
+      <ellipse cx="68" cy="94" rx="8" ry="6" fill="#f5cf38" stroke="var(--line)" stroke-width="1.4"/>
+      <path d="M64 92 Q72 88 74 96 Z" fill="#b85f23"/>
+      <polygon points="60,94 54,96 60,98" fill="#e88220"/>
+      <circle cx="63" cy="92" r="1.2" fill="#1c2229"/>
+      <circle cx="63.3" cy="91.7" r="0.4" fill="#fff"/>
+      <polygon points="76,95 82,92 80,98" fill="#b85f23"/>
+      <line x1="66" y1="100" x2="66" y2="105" stroke="var(--line)" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="71" y1="100" x2="71" y2="105" stroke="var(--line)" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+
+    <!-- 🦋 Borboleta Colorida Curiosa perto do focinho -->
+    <g class="friend-butterfly">
+      <ellipse cx="180" cy="74" rx="1.8" ry="5" fill="#3b2b4d"/>
+      <path d="M180 72 C192 60 200 70 182 75 Z" fill="#699bf7" opacity=".95"/>
+      <path d="M180 75 C190 77 195 86 181 78 Z" fill="#9f7bf7" opacity=".9"/>
+      <path d="M180 72 C168 60 160 70 178 75 Z" fill="#699bf7" opacity=".95"/>
+      <path d="M180 75 C170 77 165 86 179 78 Z" fill="#9f7bf7" opacity=".9"/>
+      <path d="M180 69 Q177 65 174 66 M180 69 Q183 65 186 66" stroke="#3b2b4d" stroke-width="1" fill="none" stroke-linecap="round"/>
+    </g>
+
+    <!-- 🦆 Patinho Amarelo companheiro -->
+    <g class="friend-duck">
+      <ellipse cx="214" cy="174" rx="11" ry="8" fill="#ffdb38" stroke="var(--line)" stroke-width="1.6"/>
+      <circle cx="206" cy="168" r="6.5" fill="#ffdb38" stroke="var(--line)" stroke-width="1.6"/>
+      <polygon points="200,167 192,169 200,171" fill="#e87920"/>
+      <circle cx="204" cy="166" r="1.2" fill="#222"/>
+      <circle cx="204.3" cy="165.7" r="0.4" fill="#fff"/>
+      <ellipse cx="216" cy="174" rx="5" ry="3.5" fill="#f0be24"/>
+    </g>
+
+    <!-- 🐢 Tartaruguinha companheira -->
+    <g class="friend-turtle">
+      <ellipse cx="54" cy="173" rx="13" ry="8" fill="#4d8f4d" stroke="var(--line)" stroke-width="1.6"/>
+      <path d="M47 173 h14 M54 165 v16" stroke="#356635" stroke-width="1.4"/>
+      <ellipse cx="40" cy="174" rx="4.5" ry="3.5" fill="#6ab86a" stroke="var(--line)" stroke-width="1.4"/>
+      <circle cx="39" cy="173" r="1" fill="#222"/>
+      <ellipse cx="48" cy="180" rx="3.5" ry="2" fill="#6ab86a"/>
+      <ellipse cx="60" cy="180" rx="3.5" ry="2" fill="#6ab86a"/>
+    </g>
+  </g>
+
+  <!-- ===== AMBIENTE & CLIMA DINÂMICO ===== -->
+  <g class="env-layers" aria-hidden="true">
+    <!-- 🌙 Céu Noturno & Estrelas Cintilantes -->
+    <g class="env-night-sky">
+      <path d="M38 -12 A 14 14 0 1 0 52 2 A 11 11 0 0 1 38 -12 Z" fill="#fff2a8" stroke="#d4b83b" stroke-width="1.2"/>
+      <path class="star s1" d="M30 16 l1.5 3 3 1.5 -3 1.5 -1.5 3 -1.5 -3 -3 -1.5 3 -1.5z" fill="#ffeaa7"/>
+      <path class="star s2" d="M228 10 l2 4 4 2 -4 2 -2 4 -2 -4 -4 -2 4 -2z" fill="#ffeaa7"/>
+      <path class="star s3" d="M242 42 l1.5 3 3 1.5 -3 1.5 -1.5 3 -1.5 -3 -3 -1.5 3 -1.5z" fill="#ffeaa7"/>
+      <path class="star s4" d="M22 48 l1.5 3 3 1.5 -3 1.5 -1.5 3 -1.5 -3 -3 -1.5 3 -1.5z" fill="#ffeaa7"/>
+    </g>
+
+    <!-- ✨ Vaga-lumes bioluminescentes -->
+    <g class="env-fireflies">
+      <circle class="firefly f1" cx="44" cy="80" r="3.2" fill="#d9ff66"/>
+      <circle class="firefly f2" cx="225" cy="74" r="3.2" fill="#d9ff66"/>
+      <circle class="firefly f3" cx="60" cy="138" r="2.8" fill="#d9ff66"/>
+      <circle class="firefly f4" cx="218" cy="132" r="2.8" fill="#d9ff66"/>
+    </g>
+
+    <!-- ☀️ Raios de Sol da Manhã -->
+    <g class="env-sun-rays">
+      <circle cx="34" cy="-6" r="16" fill="#ffe57f" opacity=".4"/>
+      <circle cx="34" cy="-6" r="10" fill="#ffb74d" stroke="#e68a19" stroke-width="1.2"/>
+      <line x1="34" y1="-24" x2="34" y2="-20" stroke="#f57c00" stroke-width="2" stroke-linecap="round"/>
+      <line x1="34" y1="8" x2="34" y2="12" stroke="#f57c00" stroke-width="2" stroke-linecap="round"/>
+      <line x1="16" y1="-6" x2="20" y2="-6" stroke="#f57c00" stroke-width="2" stroke-linecap="round"/>
+      <line x1="48" y1="-6" x2="52" y2="-6" stroke="#f57c00" stroke-width="2" stroke-linecap="round"/>
+      <line x1="21" y1="-19" x2="24" y2="-16" stroke="#f57c00" stroke-width="2" stroke-linecap="round"/>
+      <line x1="44" y1="4" x2="47" y2="7" stroke="#f57c00" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <!-- 🌧️ Chuva Suave & Guarda-chuvinha -->
+    <g class="env-rain">
+      <g class="rain-drops" stroke="#5dade2" stroke-width="1.8" stroke-linecap="round">
+        <line class="drop d1" x1="46" y1="10" x2="41" y2="24"/>
+        <line class="drop d2" x1="110" y1="-5" x2="105" y2="9"/>
+        <line class="drop d3" x1="195" y1="12" x2="190" y2="26"/>
+        <line class="drop d4" x1="235" y1="38" x2="230" y2="52"/>
+        <line class="drop d5" x1="35" y1="65" x2="30" y2="79"/>
+        <line class="drop d6" x1="225" y1="95" x2="220" y2="109"/>
+      </g>
+      <g class="env-umbrella">
+        <path d="M135 15 v120 c0 6 -6 6 -6 3" fill="none" stroke="#61442d" stroke-width="3" stroke-linecap="round"/>
+        <path d="M72 15 C72 -22 198 -22 198 15 C177 10 156 12 135 15 C114 12 93 10 72 15 Z" fill="#e74c3c" stroke="var(--line)" stroke-width="2.2"/>
+        <path d="M102 12 C108 -15 162 -15 168 12" fill="none" stroke="#fff" opacity=".35" stroke-width="8"/>
+        <line x1="135" y1="-22" x2="135" y2="-28" stroke="#61442d" stroke-width="3" stroke-linecap="round"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ===== BEM-ESTAR (ÁGUA / ALONGAMENTO) & DEV BUDDY ===== -->
+  <g class="wellness-dev-group" aria-hidden="true">
+    <!-- 💧 Garrafinha d'Água Mineral -->
+    <g class="item-water-bottle">
+      <rect x="186" y="118" width="16" height="30" rx="4" fill="#d4edfa" stroke="var(--line)" stroke-width="1.8"/>
+      <rect x="189" y="113" width="10" height="6" rx="2" fill="#2980b9" stroke="var(--line)" stroke-width="1.4"/>
+      <rect x="187.5" y="126" width="13" height="20" rx="2.5" fill="#5dade2" opacity=".7"/>
+      <rect x="187" y="129" width="14" height="10" fill="#ffffff" opacity=".9"/>
+      <path d="M194 133 C192 136 191 137.5 194 138 C197 137.5 196 136 194 133 Z" fill="#2980b9"/>
+    </g>
+
+    <!-- 💬 Balão de Diálogo Dinâmico (Dev Buddy & Lembretes) -->
+    <g class="speech-bubble-group">
+      <path class="bubble-bg" d="M42 -22 H228 Q238 -22 238 -12 V12 Q238 22 228 22 H155 L135 34 L125 22 H42 Q32 22 32 12 V-12 Q32 -22 42 -22 Z" fill="#ffffff" stroke="var(--line)" stroke-width="2"/>
+      <text class="speech-text" x="135" y="4" font-family="'Segoe UI', system-ui, sans-serif" font-size="11.5" font-weight="700" fill="#2c3e50" text-anchor="middle">Git push feito! 🚀</text>
+    </g>
+  </g>
 </svg>

@@ -1,0 +1,145 @@
+<svg id="pet" class="s-idle p-sit" viewBox="0 -20 270 230" role="img" aria-label="Capivara animada olhando de frente">
+  <line x1="20" y1="183" x2="250" y2="183" stroke="#e3d6b4" stroke-width="2"/>
+  <path d="M42 188 l3 -7 3 7 3 -5 3 5 M215 188 l3 -7 3 7 3 -5 3 5" fill="var(--grass)" opacity=".7"/>
+  <ellipse id="shadow" cx="135" cy="184" rx="68" ry="6.5" fill="#000" opacity=".13"/>
+  
+  <g id="rig">
+    <!-- Corpo barrel-shaped de capivara ("pãozinho / loaf") -->
+    <path class="capy-body" d="M88 92 C68 107 58 138 65 162 C71 183 98 185 135 185 C172 185 199 183 205 162 C212 138 202 107 182 92 Z" fill="var(--fur)" stroke="var(--line)" stroke-width="2.2"/>
+    <!-- Peito / barriguinha fofa -->
+    <path class="capy-belly" d="M104 118 C90 134 89 160 100 173 C116 179 154 179 170 173 C181 160 180 134 166 118 Z" fill="var(--belly)" opacity=".75"/>
+
+    <!-- Orelhas autênticas de capivara: pequenas, arredondadas e posicionadas nas laterais da cabeça -->
+    <g id="ear">
+      <!-- Orelha Esquerda -->
+      <g class="ear-left">
+        <path d="M69 46 C58 40 60 26 73 28 C82 29 86 38 82 48 C78 52 73 50 69 46 Z" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M71 43 C63 38 65 30 73 31 C78 33 80 39 77 45 Z" fill="#e0a48a"/>
+      </g>
+      <!-- Orelha Direita -->
+      <g class="ear-right">
+        <path d="M201 46 C212 40 210 26 197 28 C188 29 184 38 188 48 C192 52 197 50 201 46 Z" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2.2" stroke-linejoin="round"/>
+        <path d="M199 43 C207 38 205 30 197 31 C192 33 190 39 193 45 Z" fill="#e0a48a"/>
+      </g>
+    </g>
+
+    <g id="faceAnim">
+      <!-- Cabeça autêntica: topo reto para apoiar a laranja e formato quadrado característico -->
+      <path class="capy-head" d="M96 28 C114 24 156 24 174 28 C198 34 206 48 206 72 L206 95 C206 119 184 126 135 126 C86 126 64 119 64 95 L64 72 C64 48 72 34 96 28 Z" fill="var(--fur)" stroke="var(--line)" stroke-width="2.2" stroke-linejoin="round"/>
+      
+      <!-- Focinho amplo, quadrado e achatado típico da espécie -->
+      <path class="capy-snout-base" d="M82 66 C102 60 168 60 188 66 C202 72 205 85 201 101 C196 118 174 125 135 125 C96 125 74 118 69 101 C65 85 68 72 82 66 Z" fill="var(--fur-dark)"/>
+      <path class="capy-snout-plate" d="M94 73 C110 69 160 69 176 73 C189 77 191 88 187 99 C182 110 162 116 135 116 C108 116 88 110 83 99 C79 88 81 77 94 73 Z" fill="var(--muzzle)" opacity=".75"/>
+      
+      <!-- Narinas no topo-frente do focinho -->
+      <g class="capy-nostrils" fill="var(--ink)">
+        <ellipse cx="121" cy="85" rx="5" ry="3.3" transform="rotate(-10 121 85)"/>
+        <ellipse cx="149" cy="85" rx="5" ry="3.3" transform="rotate(10 149 85)"/>
+      </g>
+      
+      <!-- Boquinha de capivara zen -->
+      <path class="capy-mouth" d="M135 88 v5 M122 96 Q128 101 135 95 Q142 101 148 96" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round"/>
+      
+      <!-- Bochechas com blush fofo -->
+      <ellipse cx="80" cy="79" rx="8" ry="4" fill="var(--blush)" opacity=".45"/>
+      <ellipse cx="190" cy="79" rx="8" ry="4" fill="var(--blush)" opacity=".45"/>
+      
+      <!-- Olhinhos Grandes e Expressivos com brilho kawaii -->
+      <g class="eye-open">
+        <ellipse cx="96" cy="56" rx="9" ry="9.8" fill="var(--ink)"/>
+        <ellipse cx="174" cy="56" rx="9" ry="9.8" fill="var(--ink)"/>
+        <circle cx="99" cy="53" r="3.4" fill="#ffffff"/>
+        <circle cx="177" cy="53" r="3.4" fill="#ffffff"/>
+        <circle cx="93.5" cy="59.5" r="1.6" fill="#ffffff" opacity=".85"/>
+        <circle cx="171.5" cy="59.5" r="1.6" fill="#ffffff" opacity=".85"/>
+        <path d="M87 47 Q96 43 105 47" fill="none" stroke="var(--line)" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M165 47 Q174 43 183 47" fill="none" stroke="var(--line)" stroke-width="1.8" stroke-linecap="round"/>
+      </g>
+      
+      <!-- Olhos bem arregalados / curiosos (quando agentes precisam de você) -->
+      <g class="eye-wide">
+        <ellipse cx="96" cy="56" rx="10.8" ry="11.8" fill="var(--ink)"/>
+        <ellipse cx="174" cy="56" rx="10.8" ry="11.8" fill="var(--ink)"/>
+        <circle cx="99.5" cy="52.5" r="4.2" fill="#ffffff"/>
+        <circle cx="177.5" cy="52.5" r="4.2" fill="#ffffff"/>
+        <circle cx="92.5" cy="60.5" r="2" fill="#ffffff" opacity=".9"/>
+        <circle cx="170.5" cy="60.5" r="2" fill="#ffffff" opacity=".9"/>
+        <path d="M86 44 Q96 39 106 44" fill="none" stroke="var(--line)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M164 44 Q174 39 184 44" fill="none" stroke="var(--line)" stroke-width="2" stroke-linecap="round"/>
+      </g>
+      
+      <!-- Olhos semicerrados relaxados (trabalhando ou descansando acordada) -->
+      <g class="eye-half">
+        <ellipse cx="96" cy="58" rx="8" ry="5.8" fill="var(--ink)"/>
+        <ellipse cx="174" cy="58" rx="8" ry="5.8" fill="var(--ink)"/>
+        <circle cx="98.5" cy="56.5" r="2.2" fill="#ffffff"/>
+        <circle cx="176.5" cy="56.5" r="2.2" fill="#ffffff"/>
+        <path d="M87 55 Q96 52 105 55 M165 55 Q174 52 183 55" fill="none" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round"/>
+      </g>
+      
+      <!-- Olhos felizes fechadinhos em arco (^ ^) para comemoração e conclusão -->
+      <path class="eye-happy" d="M86 59 Q96 46 106 59 M164 59 Q174 46 184 59" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+      
+      <!-- Olhos fechadinhos dormindo serenamente (- -) -->
+      <path class="eye-closed" d="M86 57 Q96 65 106 57 M164 57 Q174 65 184 57" fill="none" stroke="var(--ink)" stroke-width="2.8" stroke-linecap="round"/>
+      
+      <!-- Sobrancelhas de alerta -->
+      <path class="brow-alert" d="M88 44 l14 -3 M168 41 l14 3" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
+      
+      <!-- Detalhes de pelinho na testa -->
+      <path d="M129 37 l3 3 3 -4 3 4 3 -3" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+    </g>
+
+    <!-- Patinhas dianteiras de capivara -->
+    <g class="front-paws" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2" stroke-linecap="round">
+      <g class="anim fnA"><path d="M86 127 Q81 142 88 157 Q98 164 106 155 L102 133"/><path d="M91 151 l1 5 M97 152 v5"/></g>
+      <g class="anim ffA"><path d="M184 127 Q189 142 182 157 Q172 164 164 155 L168 133"/><path d="M179 151 l-1 5 M173 152 v5"/></g>
+    </g>
+
+    <!-- Patas traseiras de capivara apoiadas como um pãozinho -->
+    <g fill="var(--foot)" stroke="var(--line)" stroke-width="2" stroke-linecap="round">
+      <path d="M80 169 Q68 182 83 184 H106 Q115 181 108 175 Z"/>
+      <path d="M190 169 Q202 182 187 184 H164 Q155 181 162 175 Z"/>
+      <path d="M82 178 v5 M91 179 v5 M179 179 v5 M188 178 v5"/>
+    </g>
+
+    <!-- Laptop compacto para quando os agentes trabalham -->
+    <g class="laptop">
+      <path d="M90 139 h90 l-4 39 H94 Z" fill="#39434c" stroke="var(--line)" stroke-width="2" stroke-linejoin="round"/>
+      <rect x="98" y="146" width="74" height="26" rx="2" fill="#222d33"/>
+      <path d="M85 178 h100 l-6 5 H91 Z" fill="#7a8794" stroke="var(--line)" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M129 158 l-5 3 5 3 M141 158 l5 3 -5 3 M137 155 l-4 12" fill="none" stroke="#c4d7b1" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <!-- A icônica laranjinha da capivara na cabeça -->
+    <g id="orange">
+      <g class="orange">
+        <circle cx="135" cy="15" r="10.5" fill="#ffa21f" stroke="var(--line)" stroke-width="2"/>
+        <path d="M135 5 q4 -7 11 -5 q-3 6 -11 5z" fill="#6aa84f" stroke="var(--line)" stroke-width="1.4"/>
+        <circle cx="131" cy="12" r="2.2" fill="#fff" opacity=".5"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- Partículas de estrelinhas / comemoração -->
+  <g class="sparkles">
+    <g><path d="M47 42 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#ffc933"/></g>
+    <g><path d="M135 -9 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#ff8fb5"/></g>
+    <g><path d="M223 42 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#6cc9f0"/></g>
+  </g>
+
+  <!-- Balãozinho de atenção -->
+  <g class="attention-mark" aria-hidden="true">
+    <path d="M197 13 Q197 8 202 8 H223 Q228 8 228 13 V29 Q228 34 223 34 H215 L208 41 V34 H202 Q197 34 197 29 Z" fill="#f7f0df" stroke="#8a5b18" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M212.5 14 V23 M212.5 28 V28.5" fill="none" stroke="#8a5b18" stroke-width="2.8" stroke-linecap="round"/>
+  </g>
+
+  <!-- Sequência encantadora de ZZZZZZZZZZZZ flutuando quando parada / dormindo -->
+  <g class="zzz" aria-hidden="true">
+    <text class="z z1" x="202" y="98">z</text>
+    <text class="z z2" x="214" y="82">Z</text>
+    <text class="z z3" x="226" y="64">z</text>
+    <text class="z z4" x="238" y="46">Z</text>
+    <text class="z z5" x="248" y="26">z</text>
+  </g>
+</svg>
