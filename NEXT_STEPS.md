@@ -110,3 +110,10 @@ Não declarar respostas pelo Capy disponíveis com base apenas na observação d
 - `.checks/claude-activity.verified.md`: verificação independente e limitações.
 - `.checks/session-discovery.verified.md` e `.checks/codex-activity.verified.md`: evidências e limitações.
 - `README.md`: execução e comportamento atual.
+
+## Atualização de 2026-10-08 — Antigravity automático
+A Capy agora consulta agy /usage sem terminal visível ao entrar no modo real e a cada 60 segundos (4d3233b), além do botão de fontes. Exige nova amostra identificada do statusline existente; não altera login/configuração. A prova nativa --agy-auto passou 39 checks, com duas observações novas sem intervenção manual. Essa fonte de cotas local deixou de depender de abrir agy em outro terminal. Presença de sessões, outras contas e limites de aceitação Claude/API permanecem conforme os registros anteriores.
+
+A revisão independente encontrou corrida no export intermediário; f747e18 exige uma janela válida recente antes de fechar o job. O teste nativo mantém os mesmos prazos e exigências. Registro final: .checks/agy-automatic.verified.md.
+
+Verificação independente final: 5/5 PASS; nativa --agy-auto passou 39 checks com coleta inicial e renovação periódica. Versão local atualizada reaberta. Não é necessário abrir agy em outro terminal para a conta/export já configurados.
