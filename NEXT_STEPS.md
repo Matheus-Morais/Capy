@@ -1,5 +1,17 @@
 # Retomada do Capy
 
+## Estado de retomada em 09/10/2026 — evolução E1
+
+Roteiro ativo: [PLANO_EVOLUCAO.md](PLANO_EVOLUCAO.md), com foco Windows confirmado: consolidar Claude/Codex/Antigravity antes de expandir para atividade detalhada, Cursor/Gemini e GitHub. [CAPACIDADES.md](CAPACIDADES.md) reconcilia código, provas históricas e lacunas; [ENTREGA_ATUAL.md](ENTREGA_ATUAL.md) identifica o candidato de trabalho e diferencia as cópias antigas.
+
+Respostas Codex e coleta automática de cotas Antigravity já existem. Aprovações Claude, presença IDE Antigravity e continuidade de sessões externas não devem ser inferidas dessas entregas. Chat/tarefas próprios têm alcance distinto de observação de sessões externas. Leia a matriz antes de reiniciar um trabalho descrito como pendente nos registros antigos abaixo.
+
+E1 aguarda revisão independente: documentação reconciliada, inventário histórico registrado e candidato recompilado com sucesso. Manifesto de 167 entradas sem alteração durante a build em [.checks/evolution-e1-build.json](.checks/evolution-e1-build.json); hash atual em ENTREGA_ATUAL. Critérios em [.checks/evolution-e1.md](.checks/evolution-e1.md). E2–E8 não foram implementadas por esta rodada. Alterações de interface/backend já presentes no checkout foram preservadas; a build não equivale a QA nativo.
+
+## Histórico até 08/10/2026
+
+As referências a prévia atual e resultados de testes abaixo são históricas, vinculadas à rodada descrita. Não identificam automaticamente o candidato de 09/10 nem substituem a matriz reconciliada.
+
 Pedido confirmado em 2026-10-08: cotas como no Token-Watch, com visão das contas, alertas e troca de conta/IA. Implementação em `447c8ca` e `2200140`: painel de contas/janelas com saldo disponível e renovação, validade local e foco preservados, leitura das quatro janelas Antigravity, atualização em segundo plano, alternativas API no chat Claude com revisão e confirmação de cobrança. Fonte e checks: `.design/token-watch-quota.md` e `.checks/token-watch-quota.md`. Token-Watch foi consultado somente como referência. Codex real e seu alerta foram observados; Claude sem conexão e Antigravity vencido permanecem indisponíveis. Provas entre outras contas e APIs reais continuam abertas; não requerer contratação de serviço API para provar quotas da assinatura Claude.
 
 Atualizado em 2026-10-08: retomada reconciliou o PASS local C13 e os commits posteriores de skins/acessórios/janelas (0.4.0-alpha.3). Corrigidos início da mascote no código-fonte/dev, gesto perdido na troca de skin, animações banho/laranja durante ocultação ou movimento reduzido e dicas que anunciavam sucesso sem observação. 36 JS, 133 Rust/2 live ignorados, desktop build e smoke passaram; runner visual atual passou em 23 checks e revisão automática sintética em 29. Auditoria C1–C19 registrada em `.checks/multifunction.final-audit.md`; escopo completo permanece aberto pelas lacunas descritas ali. Executável corrigido: `src-tauri/target/release/capy.exe`; cópia empacotada alpha.3 anterior não foi substituída.

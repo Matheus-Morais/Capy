@@ -1,0 +1,58 @@
+> tauri build --no-bundle
+> tsc --noEmit && vite build
+vite v8.3.2 building client environment for production...
+transforming...
+✓ 40 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                      0.89 kB │ gzip:  0.47 kB
+dist/panel.html                      6.93 kB │ gzip:  3.34 kB
+dist/summary.html                    7.21 kB │ gzip:  3.31 kB
+dist/assets/tasks-ui-BrP-ENHg.css    3.93 kB │ gzip:  1.01 kB
+dist/assets/pet-BjBYs7xN.css        26.53 kB │ gzip:  5.02 kB
+dist/assets/bridge-Cj55vKsx.css     28.61 kB │ gzip:  7.44 kB
+dist/assets/bridge-Do5YLdmY.js       7.77 kB │ gzip:  3.01 kB
+dist/assets/chat-ui-CYAy5u7Y.js     11.54 kB │ gzip:  4.30 kB
+dist/assets/dashboard--FxEqpOp.js   48.79 kB │ gzip: 15.33 kB
+dist/assets/pet-BaoCorZQ.js        101.34 kB │ gzip: 22.97 kB
+dist/assets/tasks-ui-CQxpi9P4.js   341.36 kB │ gzip: 86.58 kB
+✓ built in 4.06s
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+[33m[PLUGIN_TIMINGS] [0mJavaScript callbacks ran for 3.7s of this 4.0s build (91%).
+3 callbacks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - plugin vite:asset load (5 calls)
+  - plugin vite:build-html transform (3 calls)
+  - plugin vite:css transform (3 calls)
+See https://rolldown.rs/reference/InputOptions.checks#bundlertimings for more details.
+   Compiling capy v0.4.0-alpha.3 (C:\PProjetos\Capy\src-tauri)
+warning: unreachable statement
+   --> src\main.rs:639:9
+    |
+637 |             std::process::exit(1);
+    |             --------------------- any code following this expression is unreachable
+638 |         }
+639 |         return;
+    |         ^^^^^^^ unreachable statement
+    |
+    = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
+warning: unused variable: `error`
+   --> src\interventions\protocol.rs:235:17
+    |
+235 |             Err(error) => {
+    |                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_error`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+warning: unused variable: `error`
+   --> src\interventions\protocol.rs:342:32
+    |
+342 |                     if let Err(error) = self.registry.receive(callback) {
+    |                                ^^^^^ help: if this is intentional, prefix it with an underscore: `_error`
+warning: unused variable: `error`
+   --> src\interventions\protocol.rs:347:21
+    |
+347 |                 Err(error) => {
+    |                     ^^^^^ help: if this is intentional, prefix it with an underscore: `_error`
+warning: `capy` (bin "capy") generated 4 warnings (run `cargo fix --bin "capy" -p capy` to apply 3 suggestions)
+    Finished `release` profile [optimized] target(s) in 5m 33s
+       Built application at: C:\PProjetos\Capy\src-tauri\target\release\capy.exe
