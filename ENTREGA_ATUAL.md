@@ -1,6 +1,6 @@
 # Entrega atual — inventário e candidato local
 
-Inspeção e recompilação em 09/10/2026. A proveniência do candidato atual está registrada; a revisão independente E1 está pendente. Referências: [plano E1/E5](PLANO_EVOLUCAO.md) e [critérios E1](.checks/evolution-e1.md).
+Inspeção e recompilação em 09/10/2026. A proveniência do candidato atual está registrada; [revisão independente E1](.checks/evolution-e1.verified.md) aprovou C1–C6 no escopo documental/proveniência. Referências: [plano E1/E5](PLANO_EVOLUCAO.md) e [critérios E1](.checks/evolution-e1.md).
 
 ## Candidato único para a próxima validação
 

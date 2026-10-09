@@ -6,7 +6,9 @@ Roteiro ativo: [PLANO_EVOLUCAO.md](PLANO_EVOLUCAO.md), com foco Windows confirma
 
 Respostas Codex e coleta automática de cotas Antigravity já existem. Aprovações Claude, presença IDE Antigravity e continuidade de sessões externas não devem ser inferidas dessas entregas. Chat/tarefas próprios têm alcance distinto de observação de sessões externas. Leia a matriz antes de reiniciar um trabalho descrito como pendente nos registros antigos abaixo.
 
-E1 aguarda revisão independente: documentação reconciliada, inventário histórico registrado e candidato recompilado com sucesso. Manifesto de 167 entradas sem alteração durante a build em [.checks/evolution-e1-build.json](.checks/evolution-e1-build.json); hash atual em ENTREGA_ATUAL. Critérios em [.checks/evolution-e1.md](.checks/evolution-e1.md). E2–E8 não foram implementadas por esta rodada. Alterações de interface/backend já presentes no checkout foram preservadas; a build não equivale a QA nativo.
+E1 concluída com [revisão independente C1–C6 PASS](.checks/evolution-e1.verified.md): documentação reconciliada, inventário histórico registrado e candidato recompilado com sucesso. Manifesto de 167 entradas sem alteração durante a build em [.checks/evolution-e1-build.json](.checks/evolution-e1-build.json); hash atual em ENTREGA_ATUAL. E2–E8 não foram implementadas por esta rodada. Alterações de interface/backend já presentes no checkout foram preservadas; a build não equivale a QA nativo.
+
+Próximo trabalho: E2, começando pela prova isolada do canal de respostas Claude. [Pesquisa preliminar](.checks/evolution-e2-research.md) registra os contratos oficiais e distingue PermissionRequest, PreToolUse/AskUserQuestion e SDK. Definir e provar transporte Windows, identidade e timeout antes de ligar o canal à interface; não reutilizar implicitamente o hook observacional de dois segundos.
 
 ## Histórico até 08/10/2026
 

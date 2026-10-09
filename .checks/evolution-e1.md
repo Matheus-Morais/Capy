@@ -4,6 +4,8 @@ Sources: `PLANO_EVOLUCAO.md`, E1; conversa de 09/10/2026 (seguir, com subagentes
 
 Profile: light. Escopo desta entrega: reconciliação documental e inventário de artefatos. Não demonstra novamente comportamento nativo nem fecha E2–E8.
 
+Resultado em 09/10/2026: [verificação independente C1–C6 PASS](evolution-e1.verified.md), incluindo proveniência de build. Documentos/registro revisados no commit `de3f539`; a atualização posterior de status apenas registra esse veredito.
+
 ## Out of scope
 
 Implementar integrações, executar sessões de IA, modificar configurações do usuário, substituir pacotes históricos, publicar ou declarar uma nova release validada.

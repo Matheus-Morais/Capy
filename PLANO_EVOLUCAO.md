@@ -1,6 +1,6 @@
 # Plano de evolução da Capy — excelência no Windows
 
-Data: 09/10/2026. Status: E1 em execução; E2–E8 planejadas. Estado reconciliado em [CAPACIDADES.md](CAPACIDADES.md) e candidato local em [ENTREGA_ATUAL.md](ENTREGA_ATUAL.md).
+Data: 09/10/2026. Status: E1 concluída e verificada; E2–E8 planejadas. Estado reconciliado em [CAPACIDADES.md](CAPACIDADES.md) e candidato local em [ENTREGA_ATUAL.md](ENTREGA_ATUAL.md).
 
 ## 1. Objetivo e decisões
 
@@ -207,8 +207,8 @@ Cada conclusão deve apontar para comando, resultado, versão/artefato, cenário
 
 | Item | Estado inicial | Evidência de conclusão |
 | --- | --- | --- |
-| E1 — Base reconciliada | Documentos, inventário e build concluídos; revisão independente pendente | [.checks/evolution-e1.md](.checks/evolution-e1.md) |
-| E2 — Sessões/intervenções | Planejado; reaproveita implementação existente | Pendente |
+| E1 — Base reconciliada | Concluída: documentação/proveniência; revisão independente C1–C6 PASS | [.checks/evolution-e1.verified.md](.checks/evolution-e1.verified.md) |
+| E2 — Sessões/intervenções | Planejado; pesquisa preliminar Claude registrada | [.checks/evolution-e2-research.md](.checks/evolution-e2-research.md); implementação/provas pendentes |
 | E3 — Cotas/continuidade | Planejado; reaproveita implementação e provas existentes | Pendente |
 | E4 — Experiência | Planejado | Pendente |
 | E5 — Instalador / Marco A | Planejado | Pendente |
