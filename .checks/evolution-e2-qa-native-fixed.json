@@ -1,0 +1,83 @@
+{
+  "root": "C:\\PProjetos\\Capy\\scratch\\capy-visual-claude-GYAsA1",
+  "sessionId": "65456fa2-186e-476a-bb25-4cf93e6fd1f8",
+  "mode": "native WebView2 + Claude print",
+  "permissionTransport": "hooks with passive stdio host",
+  "executable": "C:\\PProjetos\\Capy\\src-tauri\\target\\release\\capy.exe",
+  "executableSha256": "d9c73054082741aafd2fb022334c3fbbdd82660773cf8f10d6bfac35f0ad3165",
+  "startedAt": "2026-10-10T02:31:28.487Z",
+  "permissionDecision": "allow",
+  "checks": [
+    "all three production CSS provider logos load under native CSP",
+    "production real mode selected through native UI",
+    "native permission allow clicked",
+    "native Alpha question answer submitted",
+    "assistant continued after native answer with Alpha",
+    "Write allowed by hook",
+    "AskUserQuestion answered by hook",
+    "allowed file contains exact requested content",
+    "no native runtime exceptions observed after CDP connection",
+    "no native log errors observed after CDP connection"
+  ],
+  "passiveHostRequests": 1,
+  "runtimeExceptions": [],
+  "logErrors": [],
+  "runtimeObservation": "CDP Runtime/Log events after connection; initial startup before connection is not covered",
+  "passed": true,
+  "claudeVersion": "2.1.296 (Claude Code)",
+  "cdpPort": 60747,
+  "logoLoads": [
+    {
+      "provider": "claude",
+      "loaded": true
+    },
+    {
+      "provider": "codex",
+      "loaded": true
+    },
+    {
+      "provider": "agy",
+      "loaded": true
+    }
+  ],
+  "result": {
+    "subtype": "success",
+    "summary": "Thank you! You selected **Alpha**. I created `probe.txt` in the working directory with the exact contents `capy-proof` (no trailing newline).",
+    "totalCostUsd": 0.00039978
+  },
+  "toolResults": [
+    {
+      "tool": "Write",
+      "part": {
+        "tool_use_id": "toolu_01NCeJVqPE1tvR9AtPHs2kfZ",
+        "type": "tool_result",
+        "content": "File created successfully at: C:\\PProjetos\\Capy\\scratch\\capy-visual-claude-GYAsA1\\probe.txt (file state is current in your context — no need to Read it back)"
+      },
+      "meta": {
+        "id": "toolu_01NCeJVqPE1tvR9AtPHs2kfZ",
+        "permission_decision": {
+          "decision": "accept",
+          "source": "hook",
+          "reason_type": "hook"
+        }
+      }
+    },
+    {
+      "tool": "AskUserQuestion",
+      "part": {
+        "type": "tool_result",
+        "content": "Your questions have been answered: \"Which proof option?\"=\"Alpha\". You can now continue with these answers in mind.",
+        "tool_use_id": "toolu_01KSukoo4s3ZYaUE8Ua6QQeA"
+      },
+      "meta": {
+        "id": "toolu_01KSukoo4s3ZYaUE8Ua6QQeA",
+        "permission_decision": {
+          "decision": "accept",
+          "source": "hook",
+          "reason_type": "hook"
+        }
+      }
+    }
+  ],
+  "finishedAt": "2026-10-10T02:31:53.843Z"
+}

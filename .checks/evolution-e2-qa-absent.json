@@ -1,0 +1,40 @@
+{
+  "case": "absent",
+  "cwd": "C:\\PProjetos\\Capy\\scratch\\claude-capy-sbMymk",
+  "session": "19916de2-6076-4f3a-8590-9c35260bbc88",
+  "startedAt": "2026-10-10T02:20:29.452Z",
+  "passed": true,
+  "executableSha256": "7ff2a235ee38bf01b67604d092193aa1e715f0c54012a8352a5fa03e82d866f0",
+  "checks": [
+    "native hook exited silently without decision",
+    "fallback host alone denied",
+    "file absent",
+    "assistant continuation"
+  ],
+  "hostDecisions": [
+    {
+      "source": "fallback-host-after-hook-exit",
+      "at": 1791598832065,
+      "requestId": "3fdb5b7a-60fa-4a66-add3-00b352e23bbf",
+      "behavior": "deny"
+    }
+  ],
+  "hookDecisions": 0,
+  "claudeVersion": "2.1.296 (Claude Code)",
+  "toolResultMetadata": {
+    "id": "toolu_01R6xMVDEteAbs4oUkYkTEYx",
+    "non_execution_kind": "permission-rule",
+    "permission_decision": {
+      "decision": "reject",
+      "source": "user_reject"
+    }
+  },
+  "nativeHook": {
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "elapsedMs": 53,
+    "endedAt": 1791598832032
+  },
+  "finishedAt": "2026-10-10T02:20:34.078Z"
+}

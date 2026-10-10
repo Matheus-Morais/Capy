@@ -1,0 +1,15 @@
+{
+  "settingsUnchangedSinceCapturedBaseline": true,
+  "smokePassed": true,
+  "remainingTestProcesses": [],
+  "observedAt": "2026-10-09T23:32:46.6623249-03:00",
+  "markerExists": false,
+  "sourceCount": 170,
+  "normalApp": {
+    "startedAt": "2026-10-09T23:32:45.9120232-03:00",
+    "path": "C:\\PProjetos\\Capy\\src-tauri\\target\\release\\capy.exe",
+    "pid": 18604
+  },
+  "sourceChanges": 0,
+  "releaseSha256": "d9c73054082741aafd2fb022334c3fbbdd82660773cf8f10d6bfac35f0ad3165"
+}

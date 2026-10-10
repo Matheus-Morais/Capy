@@ -1,6 +1,6 @@
 # Plano de evolução da Capy — excelência no Windows
 
-Data: 10/10/2026. Status: E1 concluída e verificada; fatia de respostas Claude E2 implementada experimentalmente na fonte e com amostra real print parcial; E2 integral e E3–E8 seguem abertas, sem novo release. Estado reconciliado em [CAPACIDADES.md](CAPACIDADES.md) e artefato/candidato em [ENTREGA_ATUAL.md](ENTREGA_ATUAL.md).
+Data: 10/10/2026. Status: E1 concluída e verificada; fatia de respostas Claude E2 implementada experimentalmente na fonte, com QA real adicional em debug e GUI release; E2 integral e E3–E8 seguem abertas. A build corrigida passou os checks GUI e smoke da rodada. Estado reconciliado em [CAPACIDADES.md](CAPACIDADES.md), [resultados E2](.checks/evolution-e2-qa-results.md) e artefato/candidato em [ENTREGA_ATUAL.md](ENTREGA_ATUAL.md).
 
 ## 1. Objetivo e decisões
 
@@ -23,7 +23,7 @@ Fora deste roteiro: celular, macOS, Linux, música, serviços financeiros, model
 | --- | --- | --- |
 | Claude e Codex | Descoberta e atividade implementadas | Fechar lacunas da auditoria na entrega selecionada |
 | Intervenções Codex | Respostas por pedido exato já existem | Validar integração atual, expiração, desconexão e abertura da origem |
-| Intervenções Claude | Canal experimental; 9 Rust targeted, 47 JS e fixture settings PASS; amostra print Claude 2.1.296 passou deny exato, rejeições de contexto/replay, pergunta Alpha e continuação via permission host passivo | Provar allow, modo interativo/GUI, concorrência/cancelamento/timeout reais e QA nativo; E2 integral também requer revalidar Codex e concluir Antigravity |
+| Intervenções Claude | Canal experimental; 9 Rust targeted, 47 JS e fixture settings PASS; QA adicional provou allow/arquivo exato, desconexão/ausência e timeout real de 110 s no debug, e allow/deny/pergunta Alpha na GUI nativa do release corrigido | Modo interativo, duas sessões reais concorrentes e cancelamento real; revalidar Codex e concluir Antigravity |
 | Antigravity CLI | Descoberta por lock/metadados e atividade por hooks existem | Concluir prova interrompida por 429 e QA nativo |
 | Antigravity IDE | Prova de presença/identidade permanece pendente | Investigar e validar separadamente do CLI |
 | Cotas Antigravity | Coleta inicial/periódica da conta/export configurados já tem prova independente | Preservar a entrega e validar outras configurações quando disponíveis |
@@ -54,13 +54,13 @@ A revisão deste plano foi somente de leitura, com dois subagentes `gpt-6.1-sol`
 
 ### E2 — Concluir sessões e intervenções
 
-**Dependência:** E1. **Resultado:** agente trabalha, pede atenção, recebe a resposta correta e continua. Estado parcial: o canal Claude para PermissionRequest e AskUserQuestion foi implementado experimentalmente na fonte. 9 testes Rust `claude_intervention`, 47 testes JS e fixture de `verify-claude-settings` passaram. Uma amostra Claude Code 2.1.296 print passou deny exato, rejeição de contexto alterado/replay, resposta `Alpha` à pergunta e continuação. Foi usado permission host passivo para disponibilizar AskUserQuestion; não enviou `control_response`. Não comprova allow, modo interativo/GUI, concorrência/cancelamento/timeout reais, QA nativo nem release atual. Consulte [.checks/evolution-e2-claude.md](.checks/evolution-e2-claude.md) e [.checks/evolution-e2-live.md](.checks/evolution-e2-live.md).
+**Dependência:** E1. **Resultado:** agente trabalha, pede atenção, recebe a resposta correta e continua. Estado parcial: o canal Claude para PermissionRequest e AskUserQuestion foi implementado experimentalmente na fonte. 9 testes Rust `claude_intervention`, 47 testes JS e fixture de `verify-claude-settings` passaram. A prova print anterior demonstrou deny exato, rejeição de contexto alterado/replay, resposta `Alpha` e continuação via permission host passivo (sem `control_response`). QA adicional provou allow/arquivo exato, desconexão/ausência e timeout real de 110 s em build debug, além de allow/deny e pergunta Alpha pela GUI nativa. A build com correção CSP passou 10 checks GUI e smoke nativo de 20 checks. A prova debug não certifica o release. Modo interativo, duas sessões concorrentes reais e cancelamento real seguem sem prova. Consulte [resultados E2](.checks/evolution-e2-qa-results.md), [.checks/evolution-e2-claude.md](.checks/evolution-e2-claude.md) e [.checks/evolution-e2-live.md](.checks/evolution-e2-live.md).
 
 **Como fazer:**
 
 - Declarar capacidades por agente e conexão, reaproveitando descoberta, snapshots e apresentação atuais.
 - Revalidar respostas Codex: permissões, perguntas, expiração, desconexão e identidade exata do pedido.
-- Completar a prova isolada Claude: provar `allow`, uso interativo/GUI e concorrência/cancelamento/timeout reais. A amostra de print com permission host passivo comprova somente os casos descritos no registro; não generalizar para uso interativo.
+- Completar a prova isolada Claude: `allow`, desconexão/ausência, timeout real de 110 s e GUI allow/deny/pergunta têm amostras registradas. Ainda provar modo interativo, duas sessões concorrentes reais e cancelamento real. A amostra debug não certifica o release nem os casos não exercitados.
 - Manter respostas Claude opt-in por `Enable -Responses`, timeout de 120 s e marker dedicado; `Enable` sem essa opção e `Disable` removem o canal de resposta, preservando hooks alheios. Se o canal falhar ou não estiver disponível, orientar resposta na origem.
 - Concluir a prova de Antigravity CLI. Investigar a IDE separadamente; lock, histórico, processo e quota não são evidências intercambiáveis de presença.
 - Validar abertura da origem correta. Exibir indisponibilidade quando não for possível selecionar a sessão exata, sem anunciar sucesso apenas porque um dispatcher aceitou a chamada.

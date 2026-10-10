@@ -1,6 +1,6 @@
 # Entrega atual — inventário e candidato local
 
-Recompilação E2 em 09/10/2026. O candidato agora inclui o canal Claude experimental. A [revisão independente E2](.checks/evolution-e2-review.md) distingue contratos, prova real parcial e lacunas. A [revisão E1](.checks/evolution-e1.verified.md) permanece histórica, no escopo documental/proveniência. Referências: [plano](PLANO_EVOLUCAO.md) e [critérios E2](.checks/evolution-e2-claude.md).
+Recompilação após QA em 09/10/2026. O candidato inclui o canal Claude experimental e a correção de logos bloqueados por CSP. O [QA adicional](.checks/evolution-e2-qa-results.md) e sua [revisão independente](.checks/evolution-e2-qa-review.md) registram as provas atuais. A [revisão E2 anterior](.checks/evolution-e2-review.md) e a [revisão E1](.checks/evolution-e1.verified.md) permanecem históricas. Referências: [plano](PLANO_EVOLUCAO.md) e [critérios E2](.checks/evolution-e2-claude.md).
 
 ## Candidato único para a próxima validação
 
@@ -10,15 +10,17 @@ Selecionado: **`src-tauri/target/release/capy.exe`**, recompilado nesta rodada. 
 | --- | --- |
 | Versão Windows | `0.4.0-alpha.3` |
 | Tamanho | 18439168 bytes |
-| SHA-256 | `61b45972c37b1bac74b192e511fedd9e95d6c0bac5b655f860481c4ba3d32557` |
+| SHA-256 | `d9c73054082741aafd2fb022334c3fbbdd82660773cf8f10d6bfac35f0ad3165` |
 | Comando | `npm run desktop:build`, executado por `rtk npm run desktop:build` |
 | Resultado | Exit 0; TypeScript/Vite e Rust release compilados; seis warnings Rust |
-| Fonte | Checkout alterado sobre `8badd11de64218575ac8471a25fd4593f9b15ffd`; 170 entradas com SHA-256 |
+| Fonte | Checkout alterado sobre `4290f30`; 170 entradas com SHA-256 |
 | Correspondência | Manifesto anterior à build conferido novamente após a build; zero entradas alteradas |
 
-Prova atual: [manifesto de entradas e resultado E2](.checks/evolution-e2-build.json), [log](.checks/evolution-e2-build.log) e [smoke nativo](.checks/evolution-e2-native-smoke.json). Zero entradas alteradas durante a build. O HEAD identifica a base Git, não um commit que contenha todas as alterações locais. O manifesto identifica os bytes das fontes inventariadas; não constitui pacote de reprodução completo de toolchain/dependências.
+Prova atual: [manifesto após QA](.checks/evolution-e2-qa-build.json), [log](.checks/evolution-e2-qa-build.log), [smoke nativo](.checks/evolution-e2-qa-smoke.json) e [interface real Claude](.checks/evolution-e2-qa-native-fixed.json). Zero entradas alteradas durante a build. O HEAD identifica a base Git, não um commit que contenha todas as alterações locais. O manifesto identifica os bytes das fontes inventariadas; não constitui pacote de reprodução completo de toolchain/dependências.
 
-A prova real Claude usou uma build debug separada com `intervention-proof`, hash `7ff2a235ee38bf01b67604d092193aa1e715f0c54012a8352a5fa03e82d866f0`. Seu [resultado](.checks/evolution-e2-live-report.json) não valida automaticamente os cartões/interações da build release. O candidato normal não habilita o probe. Não foi criado instalador nem publicada release.
+As provas anteriores e as bordas de desconexão/ausência/timeout usaram uma build debug separada com `intervention-proof`, hash `7ff2a235ee38bf01b67604d092193aa1e715f0c54012a8352a5fa03e82d866f0`. O QA adicional exerceu também os cartões da build release normal: permitir escrita e responder Alpha, com proveniência hook, logos carregados e zero erros observados após conexão CDP. Negação/pergunta foram exercitadas no release anterior. Claude foi lançado em modo print com host passivo; terminal interativo e demais lacunas do relatório permanecem abertos. O candidato normal não habilita o probe. Não foi criado instalador nem publicada release.
+
+O candidato E2 anterior tinha hash `61b45972c37b1bac74b192e511fedd9e95d6c0bac5b655f860481c4ba3d32557`: [manifesto histórico](.checks/evolution-e2-build.json) e [log](.checks/evolution-e2-build.log). Sua prova funcional de interface precedeu a correção CSP.
 
 O candidato E1 anterior tinha hash `06f9ef8f0bcd0381fc9d65e04e828b55c4a6711e777b43ab07c561f1b51df9fd`: [manifesto histórico](.checks/evolution-e1-build.json) e [log](.checks/evolution-e1-build.log).
 

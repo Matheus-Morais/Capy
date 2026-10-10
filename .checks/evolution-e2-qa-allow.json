@@ -1,0 +1,33 @@
+{
+  "case": "allow",
+  "cwd": "C:\\PProjetos\\Capy\\scratch\\claude-capy-RYyBW7",
+  "session": "bf17b968-2c24-440e-b92b-b5cbb6f4d7f6",
+  "startedAt": "2026-10-10T02:20:08.604Z",
+  "passed": true,
+  "executableSha256": "7ff2a235ee38bf01b67604d092193aa1e715f0c54012a8352a5fa03e82d866f0",
+  "checks": [
+    "exact real hook allow",
+    "successful Claude tool result",
+    "exact file content",
+    "assistant continuation"
+  ],
+  "hostDecisions": [],
+  "hookDecisions": 1,
+  "claudeVersion": "2.1.296 (Claude Code)",
+  "toolResultMetadata": {
+    "id": "toolu_01KJgT3ZnmenqDYT2PZPSU4f",
+    "permission_decision": {
+      "decision": "accept",
+      "source": "hook",
+      "reason_type": "hook"
+    }
+  },
+  "nativeHook": {
+    "code": 0,
+    "stdout": "{\"hookSpecificOutput\":{\"decision\":{\"behavior\":\"allow\"},\"hookEventName\":\"PermissionRequest\"}}\n",
+    "stderr": "",
+    "elapsedMs": 323,
+    "endedAt": 1791598812001
+  },
+  "finishedAt": "2026-10-10T02:20:14.218Z"
+}

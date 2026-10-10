@@ -1,0 +1,97 @@
+{
+  "root": "C:\\PProjetos\\Capy\\scratch\\capy-visual-claude-wYRVq9",
+  "sessionId": "54f7f98f-a038-4ea2-8f16-6edfc0efa5d6",
+  "mode": "native WebView2 + Claude print",
+  "permissionTransport": "hooks with passive stdio host",
+  "executable": "C:\\PProjetos\\Capy\\src-tauri\\target\\release\\capy.exe",
+  "executableSha256": "61b45972c37b1bac74b192e511fedd9e95d6c0bac5b655f860481c4ba3d32557",
+  "startedAt": "2026-10-10T02:25:33.787Z",
+  "permissionDecision": "allow",
+  "checks": [
+    "production real mode selected through native UI",
+    "native permission allow clicked",
+    "native Alpha question answer submitted",
+    "assistant continued after native answer with Alpha",
+    "Write allowed by hook",
+    "AskUserQuestion answered by hook",
+    "allowed file contains exact requested content"
+  ],
+  "passiveHostRequests": 1,
+  "runtimeExceptions": [],
+  "logErrors": [
+    {
+      "surface": "http://tauri.localhost/panel.html",
+      "entry": {
+        "source": "security",
+        "level": "error",
+        "text": "Loading the image 'data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23D97757'%3E%3Cpath d='m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.36...246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z'/%3E%3C/svg%3E' violates the following Content Security Policy directive: \"img-src 'self' asset: http://asset.localhost\". The action has been blocked.",
+        "timestamp": 1791599134851.652,
+        "url": "http://tauri.localhost/panel.html"
+      }
+    },
+    {
+      "surface": "http://tauri.localhost/panel.html",
+      "entry": {
+        "source": "security",
+        "level": "error",
+        "text": "Loading the image 'data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310a37f'%3E%3Cpath d='M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 ...2 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z'/%3E%3C/svg%3E' violates the following Content Security Policy directive: \"img-src 'self' asset: http://asset.localhost\". The action has been blocked.",
+        "timestamp": 1791599134852.712,
+        "url": "http://tauri.localhost/panel.html"
+      }
+    },
+    {
+      "surface": "http://tauri.localhost/panel.html",
+      "entry": {
+        "source": "security",
+        "level": "error",
+        "text": "Loading the image 'data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='16 20 146 138'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='1' x2='0' y2='0'%3E%3Cstop offset='0' stop-color='%233b82ff'/%3E%3Cstop offset='.35' stop-color='%233b82ff'/%3E%3Cstop offset='.62' stop-color='%237c6ad8'/%3E%3Cstop offset='.82' stop-color='%23f4503f'/%3E%3Cstop offset='1' stop-color='%23ff8a1a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23g)' d='M144.248 149.062c7.5 5.626 18.75 1.876 8.437-8.437-30.937-30-24.375-112.5-62.812-112.5-38.438 0-31.875 82.5-62.813 112.5-11.25 11.25.938 14.063 8.438 8.437 29.062-19.687 27.187-54.375 54.375-54.375 27.187 0 25.312 34.688 54.375 54.375Z'/%3E%3C/svg%3E' violates the following Content Security Policy directive: \"img-src 'self' asset: http://asset.localhost\". The action has been blocked.",
+        "timestamp": 1791599144957.987,
+        "url": "http://tauri.localhost/panel.html"
+      }
+    }
+  ],
+  "runtimeObservation": "CDP Runtime/Log events after connection; initial startup before connection is not covered",
+  "passed": true,
+  "claudeVersion": "2.1.296 (Claude Code)",
+  "cdpPort": 61296,
+  "result": {
+    "subtype": "success",
+    "summary": "Thank you! You selected **Alpha**. I created `probe.txt` in the working directory with the contents `capy-proof` (no trailing newline).",
+    "totalCostUsd": 0.00047295
+  },
+  "toolResults": [
+    {
+      "tool": "Write",
+      "part": {
+        "tool_use_id": "toolu_01Rbg7yfQ4aV5kf1PxqfGEnj",
+        "type": "tool_result",
+        "content": "File created successfully at: C:\\PProjetos\\Capy\\scratch\\capy-visual-claude-wYRVq9\\probe.txt (file state is current in your context — no need to Read it back)"
+      },
+      "meta": {
+        "id": "toolu_01Rbg7yfQ4aV5kf1PxqfGEnj",
+        "permission_decision": {
+          "decision": "accept",
+          "source": "hook",
+          "reason_type": "hook"
+        }
+      }
+    },
+    {
+      "tool": "AskUserQuestion",
+      "part": {
+        "type": "tool_result",
+        "content": "Your questions have been answered: \"Which proof option?\"=\"Alpha\". You can now continue with these answers in mind.",
+        "tool_use_id": "toolu_01W6cNV2imY8aSxj5SpK4y2A"
+      },
+      "meta": {
+        "id": "toolu_01W6cNV2imY8aSxj5SpK4y2A",
+        "permission_decision": {
+          "decision": "accept",
+          "source": "hook",
+          "reason_type": "hook"
+        }
+      }
+    }
+  ],
+  "finishedAt": "2026-10-10T02:25:47.467Z"
+}

@@ -1,0 +1,17 @@
+{
+  "sourceChanges": 0,
+  "sourceCount": 170,
+  "phase": "after initial allow/disconnect/absent/native deny; before native allow/timeout",
+  "observedAt": "2026-10-09T23:23:01.7034915-03:00",
+  "settingsBaselineLimitation": "No settings byte hash captured before first four tests; LastWriteTime and runner inspection are evidence for earlier tests.",
+  "markerExists": false,
+  "releaseSha256": "61b45972c37b1bac74b192e511fedd9e95d6c0bac5b655f860481c4ba3d32557",
+  "settings": {
+    "lastWriteTimeUtc": "2026-10-09T20:48:02.4670227Z",
+    "exists": true,
+    "sha256": "f48d074b9172198718b35a83e874566115d4dc558c5777e4aade28d618c33f58",
+    "path": "C:\\Users\\MOBILTEC\\.claude\\settings.json"
+  },
+  "normalAppReopenPending": true,
+  "initialNormalAppPid": 34236
+}

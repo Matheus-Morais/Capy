@@ -1,0 +1,64 @@
+{
+  "root": "C:\\PProjetos\\Capy\\scratch\\capy-visual-claude-rsrWEJ",
+  "sessionId": "06f3ecbc-1e4f-4781-942f-ba73a5a9b8c7",
+  "mode": "native WebView2 + Claude print",
+  "permissionTransport": "hooks with passive stdio host",
+  "executable": "C:\\PProjetos\\Capy\\src-tauri\\target\\release\\capy.exe",
+  "executableSha256": "61b45972c37b1bac74b192e511fedd9e95d6c0bac5b655f860481c4ba3d32557",
+  "startedAt": "2026-10-10T02:20:39.206Z",
+  "checks": [
+    "production real mode selected through native UI",
+    "native permission deny clicked",
+    "native Alpha question answer submitted",
+    "assistant continued after native answer with Alpha",
+    "Write denied by hook",
+    "AskUserQuestion answered by hook",
+    "denied file absent"
+  ],
+  "passiveHostRequests": 1,
+  "passed": true,
+  "claudeVersion": "2.1.296 (Claude Code)",
+  "cdpPort": 54222,
+  "result": {
+    "subtype": "success",
+    "summary": "Thank you for answering. You selected **Alpha**.\n\nThe Write to create probe.txt was denied, so I didn't retry it and no file was created.",
+    "totalCostUsd": 0.00038829
+  },
+  "toolResults": [
+    {
+      "tool": "Write",
+      "part": {
+        "type": "tool_result",
+        "content": "User denied the request",
+        "is_error": true,
+        "tool_use_id": "toolu_01AT5VFrtV8XgKgUsBSxDo6Q"
+      },
+      "meta": {
+        "id": "toolu_01AT5VFrtV8XgKgUsBSxDo6Q",
+        "non_execution_kind": "permission-rule",
+        "permission_decision": {
+          "decision": "reject",
+          "source": "hook",
+          "reason_type": "hook"
+        }
+      }
+    },
+    {
+      "tool": "AskUserQuestion",
+      "part": {
+        "type": "tool_result",
+        "content": "Your questions have been answered: \"Which proof option?\"=\"Alpha\". You can now continue with these answers in mind.",
+        "tool_use_id": "toolu_01E7n7ynBbzidN4G4Hbap5C3"
+      },
+      "meta": {
+        "id": "toolu_01E7n7ynBbzidN4G4Hbap5C3",
+        "permission_decision": {
+          "decision": "accept",
+          "source": "hook",
+          "reason_type": "hook"
+        }
+      }
+    }
+  ],
+  "finishedAt": "2026-10-10T02:20:52.848Z"
+}

@@ -1,0 +1,47 @@
+{
+  "case": "timeout",
+  "cwd": "C:\\PProjetos\\Capy\\scratch\\claude-capy-cAdNM3",
+  "session": "d30cf202-b4c6-4cbb-851b-f0c6c3f83cf8",
+  "startedAt": "2026-10-10T02:23:11.896Z",
+  "passed": true,
+  "executableSha256": "7ff2a235ee38bf01b67604d092193aa1e715f0c54012a8352a5fa03e82d866f0",
+  "checks": [
+    "native hook exited silently without decision",
+    "fallback host alone denied",
+    "file absent",
+    "assistant continuation",
+    "real pending permission expired at production 110-second timeout",
+    "service remained alive through native hook closure"
+  ],
+  "hostDecisions": [
+    {
+      "source": "fallback-host-after-hook-exit",
+      "at": 1791599115088,
+      "requestId": "c23f86d1-102a-46f6-a900-d0be4ce4c7ce",
+      "behavior": "deny"
+    }
+  ],
+  "hookDecisions": 0,
+  "claudeVersion": "2.1.296 (Claude Code)",
+  "timeout": {
+    "productionSeconds": 110,
+    "outerHookSeconds": 120,
+    "actualHookElapsedMs": 110073
+  },
+  "toolResultMetadata": {
+    "id": "toolu_01YaPGARrFSDHSYN6cpipExW",
+    "non_execution_kind": "permission-rule",
+    "permission_decision": {
+      "decision": "reject",
+      "source": "user_reject"
+    }
+  },
+  "nativeHook": {
+    "code": 0,
+    "stdout": "",
+    "stderr": "",
+    "elapsedMs": 110073,
+    "endedAt": 1791599114990
+  },
+  "finishedAt": "2026-10-10T02:25:16.996Z"
+}
