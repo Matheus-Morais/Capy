@@ -1,0 +1,34 @@
+# E2 — verificação de sessões concorrentes e terminal interativo
+
+**Verdict: PASS no escopo C1–C6.**
+**Profile:** light. **Diff:** `4774f5c..e9f548c`. **Round:** 1, completo.
+**Verifier:** subagente independente, somente leitura; única escrita: este relatório.
+
+## Método e limite da execução
+
+Abri checklist, `references/verify.md`, resultados, relatórios de sucesso/falha, runners e evidência bruta. Não iniciei app, Claude ou chamadas ao provider novamente: a instrução explícita desta verificação restringiu a execução a inspeção e validação local dos artefatos. Portanto os 16 checks concorrentes e 10 interativos são execuções preservadas pelo autor, **não uma repetição independente do E2E**. Independente foi a conferência dos JSONL, snapshots, arquivos, stdout do hook, transcript ANSI, proveniência ConPTY e hashes. Executei também `node --check` nos dois runners e `ast.parse` no Python: todos passaram.
+
+Perfil light: comparação UI contra fontes binding, Coverage/Test policy e injeção de falhas não executadas por perfil. Não há seção binding ou Test policy no checklist. Conferi o diff final: somente QA/evidências/documentação; nenhuma modificação de produção nessa faixa. O workspace contém alterações de produção anteriores à base, cobertas pelo manifesto do release, sem atribuí-las a esta rodada.
+
+## Critérios
+
+| Check | Evidência localizada e expressão decisiva | Resultado |
+|---|---|---|
+| C1 | `scripts/verify-claude-concurrent.mjs:189`: `sessions.every(session=>simultaneous.interventions.some(r=>r.sessionId===\`claude:${session.id}\`&&r.nonce===session.request.nonce&&r.status==='pending'))`. Revalidei `simultaneous-pending.json`: cenário real, dois UUIDs diferentes, origens A/B diferentes, Write/conteúdo próprio. Inspecionei `simultaneous-pending.png`, que mostra ambos os cartões no monitor nativo. | PASS |
+| C2 | `scripts/verify-claude-concurrent.mjs:210`: `write.meta?.permission_decision?.source==='hook'&&write.meta.permission_decision.decision===(session===a?'accept':'reject')`; `:212`: `session.hostWrites.length===1&&session.hostWrites.every(message=>message.type==='user')`; `:215–216`: conteúdo A exato e arquivo B ausente. Recalculei pelos stdout/stdin JSONL brutos: B reject/erro e continuação; A accept e continuação; somente mensagem user no stdin de cada sessão. Timestamps B decisão 14:37:05.038Z, B continuação 14:37:06.548Z, A decisão 14:37:07.609Z. `after-b-deny.json` confirma A ainda pendente. | PASS |
+| C3 | `scripts/verify-claude-interactive.mjs:188–193`: `assert.equal(permission.request.body.toolName,'Write')`, caminho próprio, snapshot e screenshot. Revalidei `pending-snapshot.json`, screenshot `permission.png`, `tty-probe.json` (stdin/stdout/stderr true), `conpty-provenance.json`, transcript ANSI e `launch-interactive.ps1:7`: Claude sem `-p`, `--setting-sources=`. O probe e Claude herdam o mesmo terminal ConPTY; não houve host SDK interativo. | PASS |
+| C4 | `scripts/verify-claude-interactive.mjs:206–212`: exit 0, `hookEventName==='PermissionRequest'`, `decision.behavior===allowWrite?'allow':'deny'` (expressão do arquivo: `assert.equal(...,allowWrite?'allow':'deny')`) e arquivo com `capy-interactive-proof`. Conferi `.stdin.raw/.stdout.raw`, wrapper que encaminha stdin/stdout ao `capy.exe --claude-intervention`, e JSONL próprio com resultado Write seguido por assistant `INTERACTIVE_FINISHED` (`:229–239`). O terminal bruto mostra “Allowed by PermissionRequest hook” e resposta posterior; o arquivo tem exatamente os bytes esperados. Input preservado contém apenas `/exit\r`. | PASS, allow |
+| C5 | `.checks/evolution-e2-sessions-environment.json:4–8,13–22`: settings hash igual, marker false, release igual, `sourceCount:170`, `sourceChanges:0`, `remainingTestProcesses:[]`, app reaberto. Recalculei SHA256 de **todas as 170 fontes** contra `evolution-e2-qa-build.json`, e do release: zero divergências; release `d9c73054082741aafd2fb022334c3fbbdd82660773cf8f10d6bfac35f0ad3165`. Settings atual confere `f48d074b9172198718b35a83e874566115d4dc558c5777e4aade28d618c33f58`; marker atualmente ausente. Consulta read-only confirma app normal PID 35460 no caminho do release e Claude externo PID 29476 ainda vivo. Encerramento dos processos próprios é evidência de ambiente preservada, além do ConPTY exit 0/readerFinished true. | PASS |
+| C6 | Este relatório contém verificação independente por critério, expressões localizadas, evidência bruta e limites explícitos. | PASS |
+
+## Limites e falhas preservadas
+
+- `after-b-deny.json` ainda retém **B pending**, apesar de B já ter recebido reject e terminado. A correção de roteamento/continuação está provada; remoção imediata do cartão/latência de atualização da GUI não está provada. Não interpretei o snapshot como prova de B removido.
+- Concorrência: duas sessões Claude **print**, ferramenta Write, B negar antes de A permitir. Interativo: **uma sessão, Write permitido**. Não cobre negação/perguntas interativas, cancelamento/reinício, matriz DPI/teclado, Codex ou Antigravity. Screenshots têm conteúdo horizontal recortado, sem invalidar a identidade e o pedido corroborados nos snapshots; não são aprovação global de layout.
+- Primeiro runner concorrente falhou antes de iniciar Claude por prefixo scratch inválido (0 checks). Primeiro runner interativo ficou bloqueado no lançador TTY/AccessDenied e expirou (2 checks, sem pedido Claude). No primeiro ConPTY, PowerShell descartou argumento vazio e Claude recusou `--setting-sources`; transcript `terminal-emptyarg-failure.raw` registra o erro. O lançamento seguinte corrigido usa `--setting-sources=`. `report.claudeArgv` conserva o plano anterior: a correção está explicitamente registrada em `terminalProof.launcherCorrection` e no script efetivamente lançado. O gerador atual já usa a forma corrigida.
+- O erro do observador ao tentar ReadAllText no transcript aberto não constitui falha do provider: o terminal persistido e o JSONL próprio corroboram a continuação. Não baseei o resultado apenas em `terminal-proof.json`.
+- Zero erros CDP é limitado ao período posterior à conexão; não cobre startup. Sem fixtures/mocks de presença ou decisões fabricadas: providers e hooks reais nos artefatos inspecionados. Prompts/conteúdos únicos são entradas de QA. Não houve recompilação/publicação nesta faixa.
+
+## Gate independente
+
+Hashes: 170/170 fontes iguais + release igual. Sintaxe: 2 JS + 1 Python PASS. Validação local de metadados/snapshots/ordem/arquivos/TTY/hook/continuação: PASS. Uma asserção exploratória mais forte, “B já não aparece pending no snapshot”, falhou; foi retirada da validação do critério porque C2 exige entrega isolada, e permanece acima como limite explícito. Um primeiro validador inline teve erro de sintaxe e não executou; foi substituído por validação Python somente leitura. Sem rerun de provider, sem fault injection por perfil light.
