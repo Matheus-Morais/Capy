@@ -5,8 +5,8 @@ import fixture from '../assets/demo.json';
 export interface Session { id: string; project: string; agent: string; symbol: string; kind: string; origin: string; state: string; request: string | null; message: string; command: string | null; hidden: boolean; completion?: string | null; source_action?: { label: string; available: boolean; reason: string | null } }
 export interface Integration { agent: string; message: string }
 export interface QuotaRow { provider: string; account: string | null; bucket: string | null; period: string | null; window: { usedPercent: number; windowDurationMins: number; resetsAt: number } | null; observedAt: number | null; state: string; message: string }
-export interface InterventionQuestion { id: string; header: string; question: string; options: Array<{ label: string; description: string }>; isOther: boolean; isSecret: boolean }
-export interface Intervention { nonce: string; generation: string; sessionId: string; threadId: string; turnId: string; itemId: string; status: string; body: { kind: string; questions?: InterventionQuestion[]; command?: string; cwd?: string; reason?: string; changes?: unknown }; decisions: string[] }
+export interface InterventionQuestion { id: string; header: string; question: string; options: Array<{ label: string; description: string }>; isOther: boolean; isSecret: boolean; multiSelect?: boolean; allowFreeText?: boolean }
+export interface Intervention { nonce: string; generation: string; sessionId: string; threadId: string; turnId: string; itemId: string; status: string; body: { kind: string; questions?: InterventionQuestion[]; command?: string; cwd?: string; reason?: string; changes?: unknown; toolName?: string; toolInput?: unknown }; decisions: string[] }
 export interface Subscription { sessionId: string; status: string; message: string }
 export interface QuotaRule { provider: string; account: string; thresholds: Array<{percent: number; enabled: boolean}>; fiveHourTrigger: number | null; weeklyTrigger: number | null; fallback: Array<{profileId: string; model: string}> }
 export interface Preferences { sounds: boolean; reduceMotion: boolean; quotaRules: QuotaRule[] }

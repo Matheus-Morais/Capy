@@ -1,10 +1,16 @@
-import type { Intervention, Snapshot } from './bridge';
+import type { Intervention, InterventionQuestion, Snapshot } from './bridge';
 
 export function pendingIntervention(snapshot: Snapshot | undefined, nonce: string): Intervention | undefined {
   if (!snapshot || snapshot.scenario !== 'real') return undefined;
   const request = snapshot.interventions.find(candidate => candidate.nonce === nonce && candidate.status === 'pending');
-  if (!request || request.generation === '' || request.nonce === '' || request.sessionId !== `codex:${request.threadId}`) return undefined;
-  if (!snapshot.sessions.some(session => session.id === request.sessionId && session.kind === 'codex' && !session.hidden)) return undefined;
+  if (!request || request.generation === '' || request.nonce === '') return undefined;
+  const claude = request.generation.startsWith('claude:');
+  const identityMatches = claude
+    ? request.sessionId === `claude:${request.threadId}`
+    : request.sessionId === `codex:${request.threadId}`;
+  if (!identityMatches) return undefined;
+  const kind = claude ? 'claude' : 'codex';
+  if (!snapshot.sessions.some(session => session.id === request.sessionId && session.kind === kind && !session.hidden)) return undefined;
   return request;
 }
 
@@ -24,7 +30,16 @@ type AnswerInput = HTMLInputElement;
 function answerKey(input: AnswerInput): string {
   return input.dataset.freeAnswer
     ? `free:${input.dataset.freeAnswer}`
-    : `choice:${input.dataset.questionAnswer}:${input.name}`;
+    : input.dataset.answerOption !== undefined
+      ? `choice:${input.dataset.questionAnswer}:${input.name}:option:${input.dataset.answerOption}`
+      : `choice:${input.dataset.questionAnswer}:${input.name}`;
+}
+
+export function questionAnswer(question: InterventionQuestion, freeText: string, selected: string[]): string | string[] | undefined {
+  const text = freeText.trim();
+  if (text) return text;
+  if (question.multiSelect) return selected.length ? selected : undefined;
+  return selected[0];
 }
 export function captureInterventionAnswers(inputs: Iterable<AnswerInput>, activeElement: Element | null): AnswerFields {
   const result: AnswerFields = new Map();

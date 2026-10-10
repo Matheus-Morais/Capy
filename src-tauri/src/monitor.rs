@@ -137,6 +137,17 @@ pub fn schedule(app: tauri::AppHandle) {
             let (mut interventions, mut subscriptions) = app
                 .state::<Arc<crate::interventions::service::Service>>()
                 .snapshot();
+            if let Some(service) = app.state::<Option<Arc<crate::claude_interventions::Service>>>().as_ref() {
+                let claude_requests = service.snapshot();
+                for request in &claude_requests {
+                    if let Some(session) = report.sessions.iter_mut().find(|session| session.id == request.context.session_id) {
+                        session.state = "waiting".into();
+                        session.request = Some(if request.body["kind"] == "question" { "question" } else { "permission" }.into());
+                        session.message = "O Claude aguarda sua resposta neste pedido.".into();
+                    }
+                }
+                interventions.extend(claude_requests);
+            }
             let _ = (|| {
                 let mut data = state.demo.lock().ok()?;
                 if data.scenario != "real" {

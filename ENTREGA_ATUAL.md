@@ -1,6 +1,6 @@
 # Entrega atual — inventário e candidato local
 
-Inspeção e recompilação em 09/10/2026. A proveniência do candidato atual está registrada; [revisão independente E1](.checks/evolution-e1.verified.md) aprovou C1–C6 no escopo documental/proveniência. Referências: [plano E1/E5](PLANO_EVOLUCAO.md) e [critérios E1](.checks/evolution-e1.md).
+Recompilação E2 em 09/10/2026. O candidato agora inclui o canal Claude experimental. A [revisão independente E2](.checks/evolution-e2-review.md) distingue contratos, prova real parcial e lacunas. A [revisão E1](.checks/evolution-e1.verified.md) permanece histórica, no escopo documental/proveniência. Referências: [plano](PLANO_EVOLUCAO.md) e [critérios E2](.checks/evolution-e2-claude.md).
 
 ## Candidato único para a próxima validação
 
@@ -9,14 +9,18 @@ Selecionado: **`src-tauri/target/release/capy.exe`**, recompilado nesta rodada. 
 | Campo | Valor atual |
 | --- | --- |
 | Versão Windows | `0.4.0-alpha.3` |
-| Tamanho | 18238464 bytes |
-| SHA-256 | `06f9ef8f0bcd0381fc9d65e04e828b55c4a6711e777b43ab07c561f1b51df9fd` |
+| Tamanho | 18439168 bytes |
+| SHA-256 | `61b45972c37b1bac74b192e511fedd9e95d6c0bac5b655f860481c4ba3d32557` |
 | Comando | `npm run desktop:build`, executado por `rtk npm run desktop:build` |
-| Resultado | Exit 0; TypeScript/Vite e Rust release compilados; quatro warnings Rust |
-| Fonte | Checkout alterado sobre `f349f706b57063d6bc53510724046537797508bb`; 167 entradas com SHA-256 |
+| Resultado | Exit 0; TypeScript/Vite e Rust release compilados; seis warnings Rust |
+| Fonte | Checkout alterado sobre `8badd11de64218575ac8471a25fd4593f9b15ffd`; 170 entradas com SHA-256 |
 | Correspondência | Manifesto anterior à build conferido novamente após a build; zero entradas alteradas |
 
-Prova: [manifesto de entradas e resultado](.checks/evolution-e1-build.json) e [log de compilação](.checks/evolution-e1-build.log). O HEAD identifica a base Git, não um commit que contenha todas as alterações locais. O manifesto identifica os bytes das fontes inventariadas; não constitui pacote de reprodução completo de toolchain/dependências.
+Prova atual: [manifesto de entradas e resultado E2](.checks/evolution-e2-build.json), [log](.checks/evolution-e2-build.log) e [smoke nativo](.checks/evolution-e2-native-smoke.json). Zero entradas alteradas durante a build. O HEAD identifica a base Git, não um commit que contenha todas as alterações locais. O manifesto identifica os bytes das fontes inventariadas; não constitui pacote de reprodução completo de toolchain/dependências.
+
+A prova real Claude usou uma build debug separada com `intervention-proof`, hash `7ff2a235ee38bf01b67604d092193aa1e715f0c54012a8352a5fa03e82d866f0`. Seu [resultado](.checks/evolution-e2-live-report.json) não valida automaticamente os cartões/interações da build release. O candidato normal não habilita o probe. Não foi criado instalador nem publicada release.
+
+O candidato E1 anterior tinha hash `06f9ef8f0bcd0381fc9d65e04e828b55c4a6711e777b43ab07c561f1b51df9fd`: [manifesto histórico](.checks/evolution-e1-build.json) e [log](.checks/evolution-e1-build.log).
 
 `Capy.exe` na raiz permanece a cópia anterior e **não é o candidato atual**. Todos os executáveis em `releases/` também diferem do novo candidato. As notas de alpha.3 permanecem históricas e não comprovam a build nova, apesar da mesma versão declarada.
 

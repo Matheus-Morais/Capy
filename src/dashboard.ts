@@ -2,7 +2,7 @@ import './style.css';
 import { action, desktopCommand, native, showError, snapshot, subscribe, respondIntervention, setInterventionSubscription, type Snapshot } from './bridge';
 import { escape, sessionRow } from './presentation';
 import { renderQuotaBoard } from './quota-board';
-import { pendingIntervention, interventionContext, captureInterventionAnswers, restoreInterventionAnswers } from './interventions-ui';
+import { pendingIntervention, interventionContext, captureInterventionAnswers, restoreInterventionAnswers, questionAnswer } from './interventions-ui';
 import { runInterventionSubscriptionClick } from './intervention-subscription';
 import { renderPreferences } from './settings-ui';
 import { initializeAccounts } from './accounts-ui';
@@ -87,18 +87,18 @@ sessions.addEventListener('click', event => {
     const nonce = requestElement?.dataset.request;
     const request = nonce && pendingIntervention(latestSnapshot, nonce);
     if (!request || request.status !== 'pending' || !requestElement || submitting.has(nonce!)) {
-      notice.textContent = 'Este pedido expirou. Confira o estado atualizado do Codex.';
+      notice.textContent = 'Este pedido expirou. Confira o estado atualizado do agente.';
       return;
     }
     let response: Record<string, unknown>;
     if (button.dataset.action === 'decide-intervention') response = { decision: button.dataset.decision };
     else {
-      const answers: Record<string, string> = {};
+      const answers: Record<string, string | string[]> = {};
       for (const q of request.body.questions ?? []) {
         const free = requestElement.querySelector<HTMLInputElement>(`[data-free-answer="${CSS.escape(q.id)}"]`);
-        const choice = requestElement.querySelector<HTMLInputElement>(`[data-question-answer="${CSS.escape(q.id)}"]:checked`);
-        const value = free?.value.trim() ?? choice?.value;
-        if (!value) { notice.textContent = `Responda à pergunta “${q.header}” antes de enviar.`; (free ?? requestElement.querySelector<HTMLInputElement>(`[data-question-answer="${CSS.escape(q.id)}"]`))?.focus(); return; }
+        const selected = [...requestElement.querySelectorAll<HTMLInputElement>(`[data-question-answer="${CSS.escape(q.id)}"]:checked`)].map(input => input.value);
+        const value = questionAnswer(q, free?.value ?? '', selected);
+        if (value === undefined || value.length === 0) { notice.textContent = `Responda à pergunta “${q.header}” antes de enviar.`; (free ?? requestElement.querySelector<HTMLInputElement>(`[data-question-answer="${CSS.escape(q.id)}"]`))?.focus(); return; }
         answers[q.id] = value;
       }
       response = { answers };
@@ -107,7 +107,7 @@ sessions.addEventListener('click', event => {
     requestElement.querySelectorAll<HTMLButtonElement>('button').forEach(b => b.disabled = true);
     const requestNonce = request.nonce;
     void respondIntervention(interventionContext(request), response).then(() => {
-      notice.textContent = 'Pedido resolvido no Codex.';
+      notice.textContent = 'Pedido resolvido no agente.';
     }).catch(showError).finally(() => {
       submitting.delete(requestNonce);
       void snapshot().then(render).catch(showError);

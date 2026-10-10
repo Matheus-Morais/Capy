@@ -16,6 +16,7 @@ mod chat_routing;
 mod exit_review;
 mod antigravity;
 mod claude_activity;
+mod claude_interventions;
 mod demo;
 mod discovery;
 mod geometry;
@@ -418,6 +419,12 @@ fn intervention_source(
     interventions::registry::Source::from_session(session, data.scenario == "real")
         .map_err(|_| "Esta sessão não está disponível para respostas reais.".into())
 }
+
+fn claude_intervention_identity(identity: &claude_interventions::Identity, request: &claude_interventions::protocol::Request) -> bool {
+    discovery::process_birth(identity.hook_pid) == Some(identity.hook_birth)
+        && claude_activity::hook_ancestor(identity.hook_pid) == Some((identity.claude_pid, identity.claude_birth))
+        && claude_activity::intervention_presence(&request.session_id, &request.cwd, identity.claude_pid, identity.claude_birth)
+}
 #[tauri::command]
 async fn connect_interventions(
     app: tauri::AppHandle,
@@ -445,6 +452,12 @@ async fn respond_intervention(
     context: interventions::registry::Context,
     response: serde_json::Value,
 ) -> Result<(), String> {
+    if context.generation.starts_with("claude:") {
+        let service = app.state::<Option<Arc<claude_interventions::Service>>>()
+            .as_ref().cloned().ok_or("Respostas Claude indisponíveis. Confira o pedido na origem.")?;
+        return tauri::async_runtime::spawn_blocking(move || service.respond(&context, response))
+            .await.map_err(|_| "A entrega não foi confirmada. Confira na origem.".to_owned())?;
+    }
     let source = intervention_source(&app, &context.session_id)?;
     let service = app
         .state::<Arc<interventions::service::Service>>()
@@ -454,6 +467,7 @@ async fn respond_intervention(
         .await
         .map_err(|_| "A entrega não foi confirmada. Confira na origem.".to_owned())?
 }
+
 #[tauri::command]
 async fn open_source(app:tauri::AppHandle,state: State<'_, DesktopState>, id: String) -> Result<(), String> {
     let expected = {
@@ -546,6 +560,9 @@ fn demo_action(
         }
         data.clone()
     };
+    if action == "scenario" && answer != "real" {
+        if let Some(service) = app.state::<Option<Arc<claude_interventions::Service>>>().as_ref() { service.reset(); }
+    }
     app.emit("demo-updated", snapshot)
         .map_err(|e| e.to_string())
 }
@@ -605,6 +622,21 @@ fn main() {
         .and_then(|i| args.get(i + 1))
     {
         antigravity::collect(event);
+        return;
+    }
+    if let Some(at) = args.iter().position(|a| a == "--claude-intervention-probe") {
+        #[cfg(feature = "intervention-proof")]
+        {
+            let result = args.get(at + 1).zip(args.get(at + 2)).ok_or("Missing proof session/root".to_owned())
+                .and_then(|(session, root)| claude_intervention_probe(session, &PathBuf::from(root)));
+            if let Err(error) = result { eprintln!("{error}"); std::process::exit(1); }
+        }
+        #[cfg(not(feature = "intervention-proof"))]
+        { let _ = at; eprintln!("Claude probe requires isolated proof build."); std::process::exit(1); }
+        return;
+    }
+    if args.iter().any(|a| a == "--claude-intervention") {
+        claude_interventions::collect();
         return;
     }
     if args.iter().any(|a| a == "--claude-hook") {
@@ -790,6 +822,25 @@ fn main() {
                 },
             );
             app.manage(Arc::new(service));
+            let claude_guard = app.handle().clone();
+            let endpoint = if std::env::var_os("CAPY_CLAUDE_INTERVENTION_ROOT").is_some() {
+                claude_interventions::default_endpoint()
+            } else { position_path.with_file_name("claude-interventions.json") };
+            let claude_service = claude_interventions::Service::start(endpoint, move |identity, request| {
+                if !claude_intervention_identity(identity, request) {
+                    return false;
+                }
+                let state = claude_guard.state::<DesktopState>();
+                if !state.demo.lock().is_ok_and(|data| data.scenario == "real") { return false; }
+                let mut report = discovery::scan(&discovery::Sources::local());
+                let Ok(preferences) = state.preferences.lock() else { return false; };
+                preferences.apply(&mut report.sessions);
+                drop(preferences);
+                let valid = report.sessions.iter().any(|session| session.id == format!("claude:{}", request.session_id)
+                    && session.kind == "claude" && session.origin == request.cwd && !session.hidden);
+                valid && state.demo.lock().is_ok_and(|data| data.scenario == "real")
+            }).map(Arc::new).map_err(|error| eprintln!("Respostas Claude: {error}" )).ok();
+            app.manage(claude_service);
             monitor::schedule(app.handle().clone());
             let menu = Menu::with_items(
                 app,
@@ -861,11 +912,61 @@ fn main() {
         .run(|app, event| {
             if matches!(event, tauri::RunEvent::ExitRequested { .. }) {
                 app.state::<Arc<interventions::service::Service>>().stop();
+                if let Some(service) = app.state::<Option<Arc<claude_interventions::Service>>>().as_ref() { service.stop(); }
                 if let Err(e) = persist_pet(app) {
                     eprintln!("Position save: {e}");
                 }
             }
         });
+}
+
+#[cfg(feature = "intervention-proof")]
+fn claude_intervention_probe(session: &str, root: &std::path::Path) -> Result<(), String> {
+    use std::io::{BufRead, Write};
+    let proof_root = std::fs::canonicalize(root).map_err(|e| e.to_string())?;
+    let scratch = std::fs::canonicalize(std::env::current_dir().map_err(|e| e.to_string())?.join("scratch")).map_err(|e| e.to_string())?;
+    if !discovery::uuid(session) || !proof_root.starts_with(&scratch)
+        || !proof_root.file_name().and_then(|name| name.to_str()).is_some_and(|name| name.starts_with("claude-capy-")) {
+        return Err("Only own scratch/claude-capy-* proof roots are accepted.".into());
+    }
+    let expected_session = session.to_owned();
+    let expected_root = proof_root.clone();
+    let service = claude_interventions::Service::start(proof_root.join("claude-interventions.json"), move |identity, request| {
+        request.session_id == expected_session && std::path::Path::new(&request.cwd).canonicalize().ok().as_ref() == Some(&expected_root)
+            && claude_intervention_identity(identity, request)
+    })?;
+    let (input, receiver) = std::sync::mpsc::sync_channel::<String>(8);
+    std::thread::spawn(move || {
+        for line in std::io::stdin().lock().lines() {
+            let Ok(line) = line else { break; };
+            if input.send(line).is_err() { break; }
+        }
+    });
+    let mut emitted = HashSet::new();
+    let started = std::time::Instant::now();
+    println!("{{\"event\":\"connected\"}}");
+    let _ = std::io::stdout().flush();
+    while started.elapsed() < std::time::Duration::from_secs(200) {
+        for request in service.snapshot() {
+            if emitted.insert(request.context.nonce.clone()) {
+                println!("{}", serde_json::json!({"event":"request","request":request}));
+                let _ = std::io::stdout().flush();
+            }
+        }
+        match receiver.recv_timeout(std::time::Duration::from_millis(100)) {
+            Ok(line) => {
+                let command: serde_json::Value = serde_json::from_str(&line).map_err(|e| e.to_string())?;
+                let context = serde_json::from_value(command["context"].clone()).map_err(|e| e.to_string())?;
+                let result = service.respond(&context, command["response"].clone());
+                println!("{}", match result { Ok(()) => serde_json::json!({"event":"resolved"}), Err(message) => serde_json::json!({"event":"rejected","message":message}) });
+                let _ = std::io::stdout().flush();
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => { service.stop(); return Ok(()); }
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+        }
+    }
+    service.stop();
+    Err("Claude proof timed out.".into())
 }
 
 #[cfg(feature = "intervention-proof")]

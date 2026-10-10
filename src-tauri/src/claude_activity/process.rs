@@ -16,6 +16,10 @@ pub(super) fn claude_ancestor() -> Option<(u32, u64)> {
 }
 
 pub(crate) fn ancestor_named(names: &[&str]) -> Option<(u32, u64)> {
+    ancestor_named_from(std::process::id(), names)
+}
+
+pub(crate) fn ancestor_named_from(start_pid: u32, names: &[&str]) -> Option<(u32, u64)> {
     unsafe {
         let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if snapshot == INVALID_HANDLE_VALUE {
@@ -30,7 +34,7 @@ pub(crate) fn ancestor_named(names: &[&str]) -> Option<(u32, u64)> {
             ok = Process32NextW(snapshot, &mut entry);
         }
         CloseHandle(snapshot);
-        let mut pid = std::process::id();
+        let mut pid = start_pid;
         let mut child_birth = process_birth(pid)?;
         for _ in 0..8 {
             let parent = *parents.get(&pid)?;

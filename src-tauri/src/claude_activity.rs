@@ -344,6 +344,37 @@ fn enrich_with(
 }
 #[cfg(windows)]
 pub(crate) mod process;
+
+pub(crate) fn hook_ancestor(pid: u32) -> Option<(u32, u64)> {
+    #[cfg(windows)]
+    { process::ancestor_named_from(pid, &["claude.exe"]) }
+    #[cfg(not(windows))]
+    { let _ = pid; None }
+}
+
+pub(crate) fn intervention_presence(session_id: &str, cwd: &str, pid: u32, birth: u64) -> bool {
+    if !uuid(session_id) || discovery::process_birth(pid) != Some(birth) { return false; }
+    let sources = Sources::local();
+    if directory(&sources).join("disabled").exists() { return false; }
+    let marker = directory(&sources).join("responses-enabled");
+    let Ok(marker_meta) = fs::symlink_metadata(&marker) else { return false; };
+    if !marker_meta.is_file() || marker_meta.file_type().is_symlink() { return false; }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if marker_meta.file_attributes() & 0x400 != 0 { return false; }
+    }
+    let path = sources.claude.join("sessions").join(format!("{pid}.json"));
+    let Ok(meta) = fs::symlink_metadata(&path) else { return false; };
+    if meta.file_type().is_symlink() || !meta.is_file() { return false; }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if meta.file_attributes() & 0x400 != 0 { return false; }
+    }
+    File::open(path).ok().and_then(|file| read_json::<Presence>(file, RECORD_LIMIT).ok())
+        .is_some_and(|p| p.pid == pid && p.session_id == session_id && p.cwd == cwd && p.proc_start == birth.to_string())
+}
 #[cfg(not(windows))]
 mod process {
     pub fn claude_ancestor() -> Option<(u32, u64)> {

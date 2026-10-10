@@ -1,14 +1,20 @@
 # Retomada do Capy
 
+## Estado atual em 10/10/2026 — E2 Claude experimental
+
+O canal experimental de respostas Claude foi implementado na fonte para PermissionRequest e AskUserQuestion. Evidência direcionada: 9 testes Rust `claude_intervention` PASS, 47 testes JS PASS e fixture `verify-claude-settings` PASS. Uma sessão Claude Code 2.1.296 em print passou deny exato, rejeição de contexto alterado/replay, resposta `Alpha` ao AskUserQuestion e continuação do agente. Para a pergunta, o runner usou permission host passivo; ele recebeu `can_use_tool` mas não enviou `control_response`, e o deny veio do hook Capy. Amostras anteriores permanecem classificadas como pergunta indisponível/runner FAIL e corrida SDK. Consulte [registro das amostras](.checks/evolution-e2-live.md) e [escopo e critérios](.checks/evolution-e2-claude.md). `allow`, sessão interativa, GUI, concorrência/cancelamento/timeout reais e QA nativo seguem sem prova; não há validação do release atual. `-Responses` explícito habilita respostas com timeout de 120 s e marker opt-in; observação de 2 s continua padrão. Se a entrega falhar, responda na origem. Reinicie sessões após mudar hooks; Disable ou Enable sem `-Responses` retira o canal de resposta. O uso interativo permanece experimental e E2 integral segue aberta: revalidação Codex, Antigravity e validações Claude visuais/nativas.
+
+O candidato release foi recompilado com E2: 154 testes Rust passaram (3 live opt-in ignorados), 47 JS passaram e smoke nativo passou em 20 checks. Manifesto de 170 entradas, sem alteração durante a build, e hash do candidato em [ENTREGA_ATUAL.md](ENTREGA_ATUAL.md). A prova Claude real usou build debug de harness separada; não valida os cartões reais desse release. Não houve empacotamento/publicação. Consulte [CAPACIDADES.md](CAPACIDADES.md) para limites por integração.
+
 ## Estado de retomada em 09/10/2026 — evolução E1
 
 Roteiro ativo: [PLANO_EVOLUCAO.md](PLANO_EVOLUCAO.md), com foco Windows confirmado: consolidar Claude/Codex/Antigravity antes de expandir para atividade detalhada, Cursor/Gemini e GitHub. [CAPACIDADES.md](CAPACIDADES.md) reconcilia código, provas históricas e lacunas; [ENTREGA_ATUAL.md](ENTREGA_ATUAL.md) identifica o candidato de trabalho e diferencia as cópias antigas.
 
-Respostas Codex e coleta automática de cotas Antigravity já existem. Aprovações Claude, presença IDE Antigravity e continuidade de sessões externas não devem ser inferidas dessas entregas. Chat/tarefas próprios têm alcance distinto de observação de sessões externas. Leia a matriz antes de reiniciar um trabalho descrito como pendente nos registros antigos abaixo.
+Respostas Codex e coleta automática de cotas Antigravity já existem. Aprovações e perguntas Claude estão implementadas experimentalmente na fonte, com amostra real print parcial; uso interativo permanece experimental. Presença IDE Antigravity e continuidade de sessões externas não devem ser inferidas dessas entregas. Chat/tarefas próprios têm alcance distinto de observação de sessões externas. Leia a matriz antes de reiniciar um trabalho descrito como pendente nos registros antigos abaixo.
 
 E1 concluída com [revisão independente C1–C6 PASS](.checks/evolution-e1.verified.md): documentação reconciliada, inventário histórico registrado e candidato recompilado com sucesso. Manifesto de 167 entradas sem alteração durante a build em [.checks/evolution-e1-build.json](.checks/evolution-e1-build.json); hash atual em ENTREGA_ATUAL. E2–E8 não foram implementadas por esta rodada. Alterações de interface/backend já presentes no checkout foram preservadas; a build não equivale a QA nativo.
 
-Próximo trabalho: E2, começando pela prova isolada do canal de respostas Claude. [Pesquisa preliminar](.checks/evolution-e2-research.md) registra os contratos oficiais e distingue PermissionRequest, PreToolUse/AskUserQuestion e SDK. Definir e provar transporte Windows, identidade e timeout antes de ligar o canal à interface; não reutilizar implicitamente o hook observacional de dois segundos.
+Próximo trabalho: continuar E2 integral, completar os casos Claude ausentes e QA nativo, além de revalidar Codex e concluir Antigravity CLI/IDE. [Pesquisa preliminar](.checks/evolution-e2-research.md) registra os contratos oficiais; [checklist Claude](.checks/evolution-e2-claude.md) e [amostra real](.checks/evolution-e2-live.md) registram escopo e evidência.
 
 ## Histórico até 08/10/2026
 

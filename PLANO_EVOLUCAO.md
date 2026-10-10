@@ -1,6 +1,6 @@
 # Plano de evolução da Capy — excelência no Windows
 
-Data: 09/10/2026. Status: E1 concluída e verificada; E2–E8 planejadas. Estado reconciliado em [CAPACIDADES.md](CAPACIDADES.md) e candidato local em [ENTREGA_ATUAL.md](ENTREGA_ATUAL.md).
+Data: 10/10/2026. Status: E1 concluída e verificada; fatia de respostas Claude E2 implementada experimentalmente na fonte e com amostra real print parcial; E2 integral e E3–E8 seguem abertas, sem novo release. Estado reconciliado em [CAPACIDADES.md](CAPACIDADES.md) e artefato/candidato em [ENTREGA_ATUAL.md](ENTREGA_ATUAL.md).
 
 ## 1. Objetivo e decisões
 
@@ -23,7 +23,7 @@ Fora deste roteiro: celular, macOS, Linux, música, serviços financeiros, model
 | --- | --- | --- |
 | Claude e Codex | Descoberta e atividade implementadas | Fechar lacunas da auditoria na entrega selecionada |
 | Intervenções Codex | Respostas por pedido exato já existem | Validar integração atual, expiração, desconexão e abertura da origem |
-| Intervenções Claude | Observação de hooks existe; serviço de respostas atual é específico de Codex | Provar e implementar canal de resposta suportado |
+| Intervenções Claude | Canal experimental; 9 Rust targeted, 47 JS e fixture settings PASS; amostra print Claude 2.1.296 passou deny exato, rejeições de contexto/replay, pergunta Alpha e continuação via permission host passivo | Provar allow, modo interativo/GUI, concorrência/cancelamento/timeout reais e QA nativo; E2 integral também requer revalidar Codex e concluir Antigravity |
 | Antigravity CLI | Descoberta por lock/metadados e atividade por hooks existem | Concluir prova interrompida por 429 e QA nativo |
 | Antigravity IDE | Prova de presença/identidade permanece pendente | Investigar e validar separadamente do CLI |
 | Cotas Antigravity | Coleta inicial/periódica da conta/export configurados já tem prova independente | Preservar a entrega e validar outras configurações quando disponíveis |
@@ -54,14 +54,14 @@ A revisão deste plano foi somente de leitura, com dois subagentes `gpt-6.1-sol`
 
 ### E2 — Concluir sessões e intervenções
 
-**Dependência:** E1. **Resultado:** agente trabalha, pede atenção, recebe a resposta correta e continua.
+**Dependência:** E1. **Resultado:** agente trabalha, pede atenção, recebe a resposta correta e continua. Estado parcial: o canal Claude para PermissionRequest e AskUserQuestion foi implementado experimentalmente na fonte. 9 testes Rust `claude_intervention`, 47 testes JS e fixture de `verify-claude-settings` passaram. Uma amostra Claude Code 2.1.296 print passou deny exato, rejeição de contexto alterado/replay, resposta `Alpha` à pergunta e continuação. Foi usado permission host passivo para disponibilizar AskUserQuestion; não enviou `control_response`. Não comprova allow, modo interativo/GUI, concorrência/cancelamento/timeout reais, QA nativo nem release atual. Consulte [.checks/evolution-e2-claude.md](.checks/evolution-e2-claude.md) e [.checks/evolution-e2-live.md](.checks/evolution-e2-live.md).
 
 **Como fazer:**
 
 - Declarar capacidades por agente e conexão, reaproveitando descoberta, snapshots e apresentação atuais.
 - Revalidar respostas Codex: permissões, perguntas, expiração, desconexão e identidade exata do pedido.
-- Antes de construir respostas Claude, consultar a documentação oficial da versão instalada e realizar uma prova isolada do protocolo, correlação e resposta ao pedido vivo. O registro atual exige identidade Codex; a generalização precisa preservar suas proteções.
-- Implementar respostas Claude somente para tipos de pedido demonstrados pela prova. Se o contrato não permitir uma resposta, manter orientação para responder na origem e registrar a limitação.
+- Completar a prova isolada Claude: provar `allow`, uso interativo/GUI e concorrência/cancelamento/timeout reais. A amostra de print com permission host passivo comprova somente os casos descritos no registro; não generalizar para uso interativo.
+- Manter respostas Claude opt-in por `Enable -Responses`, timeout de 120 s e marker dedicado; `Enable` sem essa opção e `Disable` removem o canal de resposta, preservando hooks alheios. Se o canal falhar ou não estiver disponível, orientar resposta na origem.
 - Concluir a prova de Antigravity CLI. Investigar a IDE separadamente; lock, histórico, processo e quota não são evidências intercambiáveis de presença.
 - Validar abertura da origem correta. Exibir indisponibilidade quando não for possível selecionar a sessão exata, sem anunciar sucesso apenas porque um dispatcher aceitou a chamada.
 - Preservar estados desconhecidos e evidência vencida. Não inferir conclusão de `idle`, `Stop`, silêncio ou desaparecimento da sessão.
@@ -205,10 +205,10 @@ Cada conclusão deve apontar para comando, resultado, versão/artefato, cenário
 
 ## 6. Acompanhamento, dependências e execução com subagentes
 
-| Item | Estado inicial | Evidência de conclusão |
+| Item | Estado atual | Evidência de conclusão |
 | --- | --- | --- |
 | E1 — Base reconciliada | Concluída: documentação/proveniência; revisão independente C1–C6 PASS | [.checks/evolution-e1.verified.md](.checks/evolution-e1.verified.md) |
-| E2 — Sessões/intervenções | Planejado; pesquisa preliminar Claude registrada | [.checks/evolution-e2-research.md](.checks/evolution-e2-research.md); implementação/provas pendentes |
+| E2 — Sessões/intervenções | Parcial: canal Claude experimental; E2 integral aberta | [Critérios](.checks/evolution-e2-claude.md), [amostra real parcial](.checks/evolution-e2-live.md), [revisão](.checks/evolution-e2-review.md) |
 | E3 — Cotas/continuidade | Planejado; reaproveita implementação e provas existentes | Pendente |
 | E4 — Experiência | Planejado | Pendente |
 | E5 — Instalador / Marco A | Planejado | Pendente |
@@ -216,7 +216,7 @@ Cada conclusão deve apontar para comando, resultado, versão/artefato, cenário
 | E7 — Cursor/Gemini | Planejado | Pendente |
 | E8 — GitHub / Marco B | Planejado | Pendente |
 
-Ordem: **E1 → E2/E3 → E4 → E5 → E6 → E7/E8**. O paralelismo exige arquivos e responsabilidades separados; dependências de integração continuam sequenciais.
+Ordem: **E1 → E2/E3 → E4 → E5 → E6 → E7/E8**. E2 continua aberta apesar da fatia Claude já implementada: faltam completar a prova Claude real e QA nativo, revalidar Codex e concluir Antigravity CLI/IDE. O candidato E2 foi recompilado, com proveniência em ENTREGA_ATUAL; não há nova release empacotada/publicada. O paralelismo exige arquivos e responsabilidades separados; dependências de integração continuam sequenciais.
 
 O agente principal atua como orquestrador. Usar subagentes `gpt-6.1-sol`, conforme solicitado, com contexto mínimo, escopo delimitado, arquivos sob responsabilidade e critério de entrega. Não duplicar pesquisas nem permitir edições concorrentes no mesmo arquivo. Revisão independente deve concentrar-se nas mudanças e evidências relevantes; testes nativos que compartilhem processos/configurações devem ser sequenciais.
 

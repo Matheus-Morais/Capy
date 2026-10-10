@@ -1,0 +1,27 @@
+{
+  "mode": "print",
+  "permissionTransport": "hooks-with-passive-host",
+  "passiveHostRequests": 1,
+  "sessionId": "9d5bc656-3849-4a3b-8d62-8d905d37ca73",
+  "cwd": "C:\\PProjetos\\Capy\\scratch\\claude-capy-w96xYJ",
+  "model": "haiku",
+  "maxBudgetUsd": 1,
+  "claudeVersion": "2.1.296 (Claude Code)",
+  "executableSha256": "7ff2a235ee38bf01b67604d092193aa1e715f0c54012a8352a5fa03e82d866f0",
+  "startedAt": "2026-10-10T02:03:44.811Z",
+  "checks": [
+    "altered context rejected",
+    "exact permission denied",
+    "replay rejected",
+    "exact question answered",
+    "assistant continued with selected answer",
+    "denied file absent"
+  ],
+  "passed": true,
+  "result": {
+    "subtype": "success",
+    "summary": "Thank you! You selected **Alpha**.\n\nI should be upfront about the first step, though: the write of `probe.txt` was denied, so that file was not created. I didn't retry, as you asked.",
+    "totalCostUsd": 0.00039043
+  },
+  "finishedAt": "2026-10-10T02:03:53.768Z"
+}

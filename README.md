@@ -8,7 +8,7 @@ Consulte [capacidades e provas](CAPACIDADES.md), [executáveis e candidato para 
 
 Clique na capivara para abrir o resumo; arraste para mover ou use as setas quando ela tiver foco. O resumo abre o painel completo. Na bandeja, abra/oculte a mascote e as janelas ou escolha Sair. Fechar uma janela a oculta; uma segunda abertura reutiliza a instância. Posição e sessões ocultas são preservadas.
 
-O desktop inicia em **Sessões reais**. Claude Code e Codex têm descoberta e atividade; fontes experimentais podem mudar com versões dos agentes. Claude exige hooks opcionais para atividade recente. Codex observa o daemon existente e permite conectar respostas a perguntas/aprovações suportadas pelo pedido exato. A prova funcional dessas respostas existe; QA visual nativo dos cartões reais permanece aberto. O botão de origem Codex depende do protocolo registrado no Windows, e o despacho do link não prova seleção visual da conversa.
+O desktop inicia em **Sessões reais**. Claude Code e Codex têm descoberta e atividade; fontes experimentais podem mudar com versões dos agentes. Claude exige hooks opcionais para atividade recente. O canal experimental de respostas Claude aceita aprovações e perguntas AskUserQuestion quando habilitado explicitamente. Uma amostra Claude Code 2.1.296 em modo print provou deny de permissão exata, rejeição de contexto alterado/replay e resposta AskUserQuestion com continuação do agente. O fluxo print usou permission host passivo para disponibilizar AskUserQuestion; o host não enviou resposta de controle, e o deny veio do hook. `allow`, modo interativo, GUI, concorrência/cancelamento/timeout reais e QA nativo seguem sem prova. O uso em sessão externa interativa permanece experimental ([detalhes e amostras classificadas](.checks/evolution-e2-live.md)). Isso não amplia as provas Codex. O botão de origem Codex depende do protocolo registrado no Windows, e o despacho do link não prova seleção visual da conversa.
 
 Antigravity CLI tem descoberta por lock/metadados e atividade por hooks, ainda experimental: houve working real, mas a prova completa terminou em 429. Presença/atividade da IDE permanecem sem prova real. **As cotas Antigravity são uma capacidade separada já validada na conta/export configurados**: consulta automática inicial e a cada minuto, sem abrir terminal. Isso não prova sessões IDE nem outras contas.
 
@@ -37,13 +37,19 @@ Checks disponíveis: `npm test`, `cargo test --manifest-path src-tauri/Cargo.tom
 
 ## Hooks Claude
 
-Após compilar, habilite a observação opcional:
+Após compilar, habilite a observação opcional (respostas continuam desligadas):
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/claude-hooks.ps1 -Action Enable
 ```
 
-Reinicie as sessões Claude para carregar os hooks. Para remover, use o mesmo comando com `-Action Disable`. O script preserva hooks alheios e respeita `CLAUDE_CONFIG_DIR`; Codex respeita `CODEX_HOME`. O caminho do executável fica na configuração: remova antes de mover o checkout e habilite no novo caminho. Evidências Claude expiram em 30 s; respostas externas continuam na origem. A configuração Antigravity e suas limitações estão no [checklist específico](.checks/antigravity.md).
+Para habilitar também respostas experimentais, escolha isso explicitamente:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/claude-hooks.ps1 -Action Enable -Responses
+```
+
+O canal usa timeout de 120 s; o observador permanece com timeout de 2 s. Reinicie as sessões Claude para carregar qualquer alteração. Se Capy estiver fechada, desconectada ou não conseguir entregar a resposta, responda na sessão Claude de origem. `-Action Disable` remove os hooks Capy; executar `-Action Enable` sem `-Responses` também desabilita o canal de respostas e mantém somente observação. O script preserva hooks alheios e respeita `CLAUDE_CONFIG_DIR`; Codex respeita `CODEX_HOME`. O caminho do executável fica na configuração: remova antes de mover o checkout e habilite no novo caminho. A prova Claude real permanece parcial e QA nativo segue pendente; esses resultados não validam o release atual. A configuração Antigravity e suas limitações estão no [checklist específico](.checks/antigravity.md).
 
 ## Diagnóstico e demonstração
 
