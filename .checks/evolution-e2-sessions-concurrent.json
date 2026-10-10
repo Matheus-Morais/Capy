@@ -1,0 +1,176 @@
+{
+  "root": "C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5",
+  "sessions": [
+    {
+      "label": "A",
+      "id": "16e2ab4d-ac27-4e93-aae9-52686de8aeb1",
+      "cwd": "C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5\\A",
+      "content": "capy-concurrent-A-e8d99e29-c563-4b88-ba31-354b700552f5",
+      "toolResults": [
+        {
+          "tool": "Write",
+          "part": {
+            "tool_use_id": "toolu_01GjjyjbLBmYmPSbQM6bx9HN",
+            "type": "tool_result",
+            "content": "File created successfully at: C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5\\A\\probe.txt (file state is current in your context — no need to Read it back)"
+          },
+          "meta": {
+            "id": "toolu_01GjjyjbLBmYmPSbQM6bx9HN",
+            "permission_decision": {
+              "decision": "accept",
+              "source": "hook",
+              "reason_type": "hook"
+            }
+          }
+        }
+      ],
+      "hostWrites": [
+        {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": "Use Write exactly ONCE to create probe.txt in the current directory containing exactly capy-concurrent-A-e8d99e29-c563-4b88-ba31-354b700552f5 with no newline. Wait for the user's decision. Do not retry if denied. Then respond with the exact phrase \"Session A continued\" and describe whether the write was allowed or denied. Do not use any other tools."
+          }
+        }
+      ],
+      "controlRequests": 1,
+      "request": {
+        "nonce": "4d66a02e-9173-4339-a1c0-de126a90e86c",
+        "generation": "claude:71451c44-e310-4699-9101-c15257ffeebe",
+        "sessionId": "claude:16e2ab4d-ac27-4e93-aae9-52686de8aeb1",
+        "threadId": "16e2ab4d-ac27-4e93-aae9-52686de8aeb1",
+        "turnId": "4d66a02e-9173-4339-a1c0-de126a90e86c",
+        "itemId": "4d66a02e-9173-4339-a1c0-de126a90e86c",
+        "status": "pending",
+        "body": {
+          "cwd": "C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5\\A",
+          "kind": "claudePermission",
+          "toolInput": {
+            "content": "capy-concurrent-A-e8d99e29-c563-4b88-ba31-354b700552f5",
+            "file_path": "C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5\\A\\probe.txt"
+          },
+          "toolName": "Write"
+        },
+        "decisions": [
+          "allow",
+          "deny",
+          "cancel"
+        ]
+      },
+      "decisionClickedAt": "2026-10-10T14:37:07.609Z",
+      "continued": true,
+      "result": {
+        "subtype": "success",
+        "summary": "Session A continued\n\nThe write was allowed. `probe.txt` was created in `C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5\\A` with the content `capy-concurrent-A-e8d99e29-c563-4b88-ba31-354b700552f5` and no trailing newline.",
+        "totalCostUsd": 0.00053594
+      }
+    },
+    {
+      "label": "B",
+      "id": "de8f5ef1-d945-4507-85db-ae5d2cf5d00a",
+      "cwd": "C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5\\B",
+      "content": "capy-concurrent-B-6d38d8d5-f986-4fea-8620-38dcdf5fa168",
+      "toolResults": [
+        {
+          "tool": "Write",
+          "part": {
+            "type": "tool_result",
+            "content": "User denied the request",
+            "is_error": true,
+            "tool_use_id": "toolu_01DgtibtynbiA7s94hicvVYR"
+          },
+          "meta": {
+            "id": "toolu_01DgtibtynbiA7s94hicvVYR",
+            "non_execution_kind": "permission-rule",
+            "permission_decision": {
+              "decision": "reject",
+              "source": "hook",
+              "reason_type": "hook"
+            }
+          }
+        }
+      ],
+      "hostWrites": [
+        {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": "Use Write exactly ONCE to create probe.txt in the current directory containing exactly capy-concurrent-B-6d38d8d5-f986-4fea-8620-38dcdf5fa168 with no newline. Wait for the user's decision. Do not retry if denied. Then respond with the exact phrase \"Session B continued\" and describe whether the write was allowed or denied. Do not use any other tools."
+          }
+        }
+      ],
+      "controlRequests": 1,
+      "request": {
+        "nonce": "f3982c6e-ad43-4e6d-822c-3f06ecfef2aa",
+        "generation": "claude:71451c44-e310-4699-9101-c15257ffeebe",
+        "sessionId": "claude:de8f5ef1-d945-4507-85db-ae5d2cf5d00a",
+        "threadId": "de8f5ef1-d945-4507-85db-ae5d2cf5d00a",
+        "turnId": "f3982c6e-ad43-4e6d-822c-3f06ecfef2aa",
+        "itemId": "f3982c6e-ad43-4e6d-822c-3f06ecfef2aa",
+        "status": "pending",
+        "body": {
+          "cwd": "C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5\\B",
+          "kind": "claudePermission",
+          "toolInput": {
+            "content": "capy-concurrent-B-6d38d8d5-f986-4fea-8620-38dcdf5fa168",
+            "file_path": "C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5\\B\\probe.txt"
+          },
+          "toolName": "Write"
+        },
+        "decisions": [
+          "allow",
+          "deny",
+          "cancel"
+        ]
+      },
+      "decisionClickedAt": "2026-10-10T14:37:05.038Z",
+      "continued": true,
+      "result": {
+        "subtype": "success",
+        "summary": "Session B continued\n\nThe write was denied. The user rejected the request to create `probe.txt` in `C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5\\B`, so the file was not created. I did not retry.",
+        "totalCostUsd": 0.00036689000000000003
+      }
+    }
+  ],
+  "mode": "concurrent native WebView2 + Claude print",
+  "permissionTransport": "hooks with passive stdio host",
+  "executable": "C:\\PProjetos\\Capy\\src-tauri\\target\\release\\capy.exe",
+  "executableSha256": "d9c73054082741aafd2fb022334c3fbbdd82660773cf8f10d6bfac35f0ad3165",
+  "startedAt": "2026-10-10T14:36:52.213Z",
+  "decisionOrder": [
+    "B deny",
+    "A allow"
+  ],
+  "checks": [
+    "production real mode selected through native UI",
+    "both distinct sessions pending in one production snapshot",
+    "session B denied first through its native permission card",
+    "B denial completes while A is still pending",
+    "neither file exists before A approval",
+    "session A allowed second through its native permission card",
+    "A finished successfully and continued after UI decision",
+    "A decision attributed to real hook",
+    "A received no host control_response",
+    "B finished successfully and continued after UI decision",
+    "B decision attributed to real hook",
+    "B received no host control_response",
+    "only A wrote its exact unique content",
+    "B denied file absent",
+    "no native runtime exceptions observed after CDP connection",
+    "no native log errors observed after CDP connection"
+  ],
+  "passiveHostRequests": 2,
+  "runtimeExceptions": [],
+  "logErrors": [],
+  "runtimeObservation": "CDP Runtime/Log events after connection; initial startup before connection is not covered",
+  "passed": true,
+  "claudeVersion": "2.1.296 (Claude Code)",
+  "cdpPort": 53155,
+  "endpoint": {
+    "root": "C:\\PProjetos\\Capy\\scratch\\capy-visual-concurrent-fCmnQ5",
+    "addr": "127.0.0.1:61385",
+    "pid": 41240,
+    "birth": 134361166123248290
+  },
+  "finishedAt": "2026-10-10T14:37:11.577Z"
+}

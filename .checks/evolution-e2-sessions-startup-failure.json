@@ -1,0 +1,42 @@
+{
+  "root": "C:\\PProjetos\\Capy\\scratch\\capy-concurrent-claude-tep7ng",
+  "sessions": [
+    {
+      "label": "A",
+      "id": "17acaf01-620b-449d-ab39-99bf066aec32",
+      "cwd": "C:\\PProjetos\\Capy\\scratch\\capy-concurrent-claude-tep7ng\\A",
+      "content": "capy-concurrent-A-6964c1cb-d0a9-442f-bc60-c15f54381258",
+      "toolResults": [],
+      "hostWrites": [],
+      "controlRequests": 0
+    },
+    {
+      "label": "B",
+      "id": "d3405e02-6963-45bc-9b90-484536cfe0e5",
+      "cwd": "C:\\PProjetos\\Capy\\scratch\\capy-concurrent-claude-tep7ng\\B",
+      "content": "capy-concurrent-B-71b8deda-6d92-42df-8764-b31307bd331d",
+      "toolResults": [],
+      "hostWrites": [],
+      "controlRequests": 0
+    }
+  ],
+  "mode": "concurrent native WebView2 + Claude print",
+  "permissionTransport": "hooks with passive stdio host",
+  "executable": "C:\\PProjetos\\Capy\\src-tauri\\target\\release\\capy.exe",
+  "executableSha256": "d9c73054082741aafd2fb022334c3fbbdd82660773cf8f10d6bfac35f0ad3165",
+  "startedAt": "2026-10-10T14:36:26.946Z",
+  "decisionOrder": [
+    "B deny",
+    "A allow"
+  ],
+  "checks": [],
+  "passiveHostRequests": 0,
+  "runtimeExceptions": [],
+  "logErrors": [],
+  "runtimeObservation": "CDP Runtime/Log events after connection; initial startup before connection is not covered",
+  "passed": false,
+  "claudeVersion": "2.1.296 (Claude Code)",
+  "cdpPort": 64261,
+  "error": "Error: Own Capy exited during Own native pet/CDP; close the other instance before proof\n    at waitFor (file:///C:/PProjetos/Capy/scripts/verify-claude-concurrent.mjs:66:25)\n    at async file:///C:/PProjetos/Capy/scripts/verify-claude-concurrent.mjs:159:27",
+  "finishedAt": "2026-10-10T14:36:27.188Z"
+}

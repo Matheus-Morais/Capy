@@ -1,0 +1,196 @@
+{
+  "root": "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9",
+  "sessionId": "9edf7a63-c6a3-4dfd-8681-77d531eca160",
+  "mode": "native WebView2 + externally launched interactive Claude TTY",
+  "permissionTransport": "native hook raw stdio forwarding",
+  "executable": "C:\\PProjetos\\Capy\\src-tauri\\target\\release\\capy.exe",
+  "executableSha256": "d9c73054082741aafd2fb022334c3fbbdd82660773cf8f10d6bfac35f0ad3165",
+  "startedAt": "2026-10-10T14:41:37.766Z",
+  "permissionDecision": "allow",
+  "checks": [
+    "all three production CSS provider logos load under native CSP",
+    "production real mode selected through native UI",
+    "real session Write visible in native app",
+    "native interactive permission allow clicked",
+    "actual native hook stdout carries selected decision",
+    "interactive file matches native decision",
+    "own session transcript contains assistant completion after Write tool result",
+    "orchestrator observed real interactive TTY and assistant continuation",
+    "no native runtime exceptions observed after CDP connection",
+    "no native log errors observed after CDP connection"
+  ],
+  "passiveHostRequests": 0,
+  "runtimeExceptions": [],
+  "logErrors": [],
+  "runtimeObservation": "CDP Runtime/Log events after connection; initial startup before connection is not covered",
+  "passed": true,
+  "claudeVersion": "2.1.296 (Claude Code)",
+  "cdpPort": 51794,
+  "logoLoads": [
+    {
+      "provider": "claude",
+      "loaded": true
+    },
+    {
+      "provider": "codex",
+      "loaded": true
+    },
+    {
+      "provider": "agy",
+      "loaded": true
+    }
+  ],
+  "claudeArgv": [
+    "--session-id",
+    "9edf7a63-c6a3-4dfd-8681-77d531eca160",
+    "--settings",
+    "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9\\settings.json",
+    "--setting-sources",
+    "",
+    "--strict-mcp-config",
+    "--tools",
+    "Write",
+    "--permission-mode",
+    "manual",
+    "--model",
+    "haiku",
+    "--system-prompt",
+    "You are an isolated integration test. Follow the exact tool sequence. No subagents, network, retries, or other tools.",
+    "Use Write exactly ONCE to create interactive-proof.txt in the current directory containing exactly capy-interactive-proof with no newline. The user will allow it using the external permission hook. Do not retry or use any other tool. After the tool result, state whether the write succeeded or was denied, then say INTERACTIVE_FINISHED. Stay in this interactive session."
+  ],
+  "terminalEvidence": "Real TTY and post-decision assistant continuation observed by orchestrator; transcript preserved at terminalProof.transcriptFile",
+  "hookCapture": {
+    "base": "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9\\hook-9be45031-81ef-4744-b7c9-6c2a9054a17f",
+    "input": {
+      "session_id": "9edf7a63-c6a3-4dfd-8681-77d531eca160",
+      "transcript_path": "C:\\Users\\MOBILTEC\\.claude\\projects\\C--PProjetos-Capy-scratch-capy-visual-interactive-kd5VW9\\9edf7a63-c6a3-4dfd-8681-77d531eca160.jsonl",
+      "cwd": "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9",
+      "scratchpad_dir": "C:\\Users\\MOBILTEC\\AppData\\Local\\Temp\\claude\\C--PProjetos-Capy-scratch-capy-visual-interactive-kd5VW9\\9edf7a63-c6a3-4dfd-8681-77d531eca160\\scratchpad",
+      "prompt_id": "72a78c2a-7be2-4146-9b17-0f362f7109d9",
+      "permission_mode": "default",
+      "effort": {
+        "level": "medium"
+      },
+      "hook_event_name": "PermissionRequest",
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9\\interactive-proof.txt",
+        "content": "capy-interactive-proof"
+      },
+      "permission_suggestions": [
+        {
+          "type": "setMode",
+          "mode": "acceptEdits",
+          "destination": "session"
+        }
+      ]
+    },
+    "output": {
+      "hookSpecificOutput": {
+        "decision": {
+          "behavior": "allow"
+        },
+        "hookEventName": "PermissionRequest"
+      }
+    },
+    "exit": {
+      "code": 0,
+      "finishedAt": "2026-10-10T14:42:34.647Z"
+    }
+  },
+  "sessionTrace": {
+    "source": "C:\\Users\\MOBILTEC\\.claude\\projects\\C--PProjetos-Capy-scratch-capy-visual-interactive-kd5VW9\\9edf7a63-c6a3-4dfd-8681-77d531eca160.jsonl",
+    "captured": "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9\\claude-session.jsonl",
+    "resultIndex": 19,
+    "continuation": {
+      "parentUuid": "e588f584-7467-4b7b-a7a5-ce6e2f7b3644",
+      "isSidechain": false,
+      "message": {
+        "model": "claude-haiku-5-5",
+        "id": "msg_011CftjU3pdLBsBfnQFpazwi",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "The write succeeded. I created `interactive-proof.txt` in the current directory with the content `capy-interactive-proof` and no trailing newline.\n\nINTERACTIVE_FINISHED"
+          }
+        ],
+        "container": null,
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "stop_details": null,
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 314,
+          "cache_read_input_tokens": 14371,
+          "output_tokens": 64,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 314,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "global",
+          "iterations": [
+            {
+              "input_tokens": 2,
+              "output_tokens": 64,
+              "cache_read_input_tokens": 14371,
+              "cache_creation_input_tokens": 314,
+              "cache_creation": {
+                "ephemeral_5m_input_tokens": 0,
+                "ephemeral_1h_input_tokens": 314
+              },
+              "type": "message"
+            }
+          ],
+          "speed": "standard",
+          "fallback_credit": null
+        },
+        "input_transformations": [],
+        "diagnostics": null,
+        "context_management": null
+      },
+      "apiBlockIndex": 0,
+      "requestId": "req_011CftjU3Ym6FvmSsgqQrWb6",
+      "requestedModel": "claude-haiku-5-5",
+      "type": "assistant",
+      "uuid": "495f6296-e411-4d89-917a-8a8fb65dd084",
+      "timestamp": "2026-10-10T14:42:35.829Z",
+      "advisorModel": "claude-opus-5-5",
+      "effort": "medium",
+      "perTurnEffort": "medium",
+      "session_id": "9edf7a63-c6a3-4dfd-8681-77d531eca160",
+      "userType": "external",
+      "entrypoint": "cli",
+      "cwd": "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9",
+      "sessionId": "9edf7a63-c6a3-4dfd-8681-77d531eca160",
+      "version": "2.1.296",
+      "gitBranch": "master"
+    }
+  },
+  "terminalProof": {
+    "tty": true,
+    "assistantContinued": true,
+    "transcriptFile": "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9\\terminal.raw",
+    "observedAt": "2026-10-10T11:42:50.6485023-03:00",
+    "transport": "Windows CreatePseudoConsole",
+    "ttyProof": {
+      "stdin": true,
+      "stdout": true,
+      "stderr": true,
+      "pid": 5160,
+      "recordedAt": "2026-10-10T14:42:18.757Z"
+    },
+    "observation": "Observed post-tool terminal: Wrote 1 line; Allowed by PermissionRequest hook; assistant stated write succeeded and INTERACTIVE_FINISHED, returned to prompt. No terminal permission input sent.",
+    "launcherCorrection": "PowerShell 5 dropped separate empty argument. Actual successful invocation uses --setting-sources=; original report argv is superseded only for this flag by launch-interactive.ps1."
+  },
+  "finishedAt": "2026-10-10T14:42:51.499Z"
+}

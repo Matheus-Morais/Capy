@@ -1,0 +1,24 @@
+{
+  "before": {
+    "at": "2026-10-10T11:35:22.9265955-03:00",
+    "settingsSha256": "f48d074b9172198718b35a83e874566115d4dc558c5777e4aade28d618c33f58",
+    "markerExists": false,
+    "releaseSha256": "d9c73054082741aafd2fb022334c3fbbdd82660773cf8f10d6bfac35f0ad3165",
+    "sourceCount": 170,
+    "sourceChanges": 0,
+    "normalAppPid": 18604
+  },
+  "after": {
+    "at": "2026-10-10T11:43:23.3665761-03:00",
+    "settingsSha256": "f48d074b9172198718b35a83e874566115d4dc558c5777e4aade28d618c33f58",
+    "settingsUnchanged": true,
+    "markerExists": false,
+    "releaseSha256": "d9c73054082741aafd2fb022334c3fbbdd82660773cf8f10d6bfac35f0ad3165",
+    "sourceCount": 170,
+    "sourceChanges": 0,
+    "remainingTestProcesses": [],
+    "normalAppPid": 35460,
+    "normalAppPath": "C:\\PProjetos\\Capy\\src-tauri\\target\\release\\capy.exe",
+    "externalClaudeStillRunning": true
+  }
+}

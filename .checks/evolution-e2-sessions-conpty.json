@@ -1,0 +1,22 @@
+{
+  "transport": "Windows CreatePseudoConsole",
+  "pid": 26592,
+  "argv": [
+    "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9\\launch-interactive.ps1"
+  ],
+  "launchScript": "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9\\launch-interactive.ps1",
+  "startedAt": 1791643338.42639,
+  "dimensions": [
+    120,
+    40
+  ],
+  "transcript": "C:\\PProjetos\\Capy\\scratch\\capy-visual-interactive-kd5VW9\\terminal.raw",
+  "exitCode": 0,
+  "finishedAt": 1791643378.4675775,
+  "readerFinished": true
+}
