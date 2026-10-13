@@ -1,10 +1,32 @@
 /* ===== Capy V5 - Estilos e Animações da Capivara Proporcional com Olhos Grandes Kawaii & Novos Comportamentos ===== */
 :root { --fur:#cf9565; --fur-dark:#b87d52; --muzzle:#a8693f; --foot:#8a5530; --belly:#e2b98f; --ink:#3a2214; --line:#5d3a22; --blush:#f2a1a1; --grass:#6f9a54; }
 
-#pet #rig { transform-origin: 135px 183px; }
-#pet #shadow { transform-origin: 135px 184px; transition: transform .3s ease-out; }
-#pet #ear { transform-origin: 135px 44px; }
-#pet #orange { transform-origin: 135px 23px; }
+#pet #rig {
+  transform-origin: 135px 183px;
+  will-change: transform;
+  transform: translateZ(0);
+}
+#pet #shadow {
+  transform-origin: 135px 184px;
+  transition: transform .35s cubic-bezier(0.25, 1, 0.5, 1), opacity .35s ease-out;
+  will-change: transform, opacity;
+}
+#pet #faceAnim {
+  transform-origin: 135px 85px;
+  will-change: transform;
+}
+#pet #ear {
+  transform-origin: 135px 44px;
+  will-change: transform;
+}
+#pet #orange {
+  transform-origin: 135px 23px;
+  will-change: transform;
+}
+#pet .eye-open,
+#pet .eye-wide {
+  will-change: translate;
+}
 
 /* Por padrão, variações de olhos, sobrancelhas, boca de bocejo, itens especiais, guarda-roupa e partículas ficam rigorosamente ocultas */
 #pet .eye-open,
@@ -135,77 +157,77 @@
 
 /* Movimento corporal vivo contínuo no idle: respiração visível, balanço suave e presença marcante */
 #pet.s-idle:not(.s-sleeping) #rig {
-  animation: capy-idle-lively 3.2s ease-in-out infinite;
+  animation: capy-idle-lively 3.4s cubic-bezier(0.37, 0, 0.63, 1) infinite;
   transform-origin: 135px 183px;
 }
 @keyframes capy-idle-lively {
   0%, 100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
-  25% { transform: translateY(-3.2px) scale(1.025, 1.035) rotate(-1.2deg); }
-  50% { transform: translateY(0.4px) scale(0.985, 0.985) rotate(0deg); }
-  75% { transform: translateY(-2.8px) scale(1.02, 1.03) rotate(1.2deg); }
+  28% { transform: translateY(-3.5px) scale(1.026, 1.038) rotate(-1.3deg); }
+  52% { transform: translateY(0.5px) scale(0.982, 0.982) rotate(0deg); }
+  78% { transform: translateY(-3px) scale(1.022, 1.032) rotate(1.3deg); }
 }
 
-/* Cabeça olhando curiosamente ao redor acompanhando o balanço */
+/* Cabeça olhando curiosamente ao redor acompanhando o balanço com defasagem orgânica */
 #pet.s-idle:not(.s-sleeping) #faceAnim {
-  animation: capy-idle-look 4.8s ease-in-out infinite;
+  animation: capy-idle-look 4.8s cubic-bezier(0.37, 0, 0.63, 1) -0.5s infinite;
   transform-origin: 135px 85px;
 }
 @keyframes capy-idle-look {
   0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(-2.5px, -1px) rotate(-2deg); }
-  50% { transform: translate(0, 0.5px) rotate(0deg); }
-  75% { transform: translate(2.5px, -0.8px) rotate(2deg); }
+  26% { transform: translate(-2.6px, -1.2px) rotate(-2.2deg); }
+  52% { transform: translate(0.3px, 0.6px) rotate(0.4deg); }
+  76% { transform: translate(2.6px, -1px) rotate(2.2deg); }
 }
 
-/* Orelhinhas sacudindo com frequência e charme pantaneiro */
+/* Orelhinhas sacudindo com frequência e charme pantaneiro descompassado */
 #pet.s-idle:not(.s-sleeping) #ear {
-  animation: capy-ear-twitch 3s ease-in-out infinite;
+  animation: capy-ear-twitch 3.8s ease-in-out -0.9s infinite;
   transform-origin: 135px 44px;
 }
 @keyframes capy-ear-twitch {
-  0%, 75%, 100% { transform: rotate(0deg); }
-  79% { transform: rotate(-8deg); }
-  83% { transform: rotate(7deg); }
-  87% { transform: rotate(-4deg); }
-  91% { transform: rotate(2deg); }
+  0%, 78%, 100% { transform: rotate(0deg); }
+  82% { transform: rotate(-8deg); }
+  86% { transform: rotate(7deg); }
+  90% { transform: rotate(-4deg); }
+  94% { transform: rotate(2deg); }
 }
 
 /* Focinho fungando ativamente */
 #pet.s-idle:not(.s-sleeping) .capy-nostrils {
-  animation: capy-sniff 3.2s ease-in-out infinite;
+  animation: capy-sniff 3.6s ease-in-out -0.3s infinite;
   transform-origin: 135px 88px;
 }
 @keyframes capy-sniff {
-  0%, 80%, 100% { transform: scale(1); }
-  85% { transform: scale(1.15, 0.85); }
-  90% { transform: scale(0.9, 1.1); }
+  0%, 82%, 100% { transform: scale(1); }
+  87% { transform: scale(1.16, 0.84); }
+  92% { transform: scale(0.92, 1.08); }
 }
 
-/* Laranjinha no topo da cabeça balançando em sincronia viva com o corpinho */
+/* Laranjinha no topo da cabeça com inércia física, atraso de fase e overshoot elástico */
 #pet #orange {
   transform: none;
   transform-origin: 135px 23px;
-  animation: capy-orange-sway 3.2s ease-in-out infinite;
+  animation: capy-orange-sway 3.4s cubic-bezier(0.34, 1.25, 0.64, 1) -0.22s infinite;
 }
 @keyframes capy-orange-sway {
   0%, 100% { transform: rotate(0deg) translateY(0); }
-  25% { transform: rotate(-5deg) translateY(-2.2px); }
-  50% { transform: rotate(0deg) translateY(0.4px); }
-  75% { transform: rotate(4.5deg) translateY(-1.8px); }
+  28% { transform: rotate(-6.5deg) translateY(-2.8px) scale(1.02); }
+  52% { transform: rotate(0.5deg) translateY(0.8px) scale(0.99); }
+  78% { transform: rotate(5.8deg) translateY(-2.3px) scale(1.02); }
 }
 
 /* Patinhas dianteiras com micro-apoio suave alternando peso */
 #pet.s-idle:not(.s-sleeping) .front-paws .fnA {
-  animation: capy-paw-shift 3.2s ease-in-out infinite alternate;
+  animation: capy-paw-shift 3.4s cubic-bezier(0.37, 0, 0.63, 1) -0.15s infinite alternate;
   transform-origin: 94px 128px;
 }
 #pet.s-idle:not(.s-sleeping) .front-paws .ffA {
-  animation: capy-paw-shift 3.2s ease-in-out infinite alternate-reverse;
+  animation: capy-paw-shift 3.4s cubic-bezier(0.37, 0, 0.63, 1) -0.15s infinite alternate-reverse;
   transform-origin: 176px 128px;
 }
 @keyframes capy-paw-shift {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px) scale(0.98, 1.02); }
+  50% { transform: translateY(-2.2px) scale(0.98, 1.02); }
 }
 
 /* ===== NOVO COMPORTAMENTO: LANCHINHO / MASTIGANDO GRAMINHA (S-SNACK) ===== */
@@ -244,20 +266,24 @@
 #pet.g-yawn .mouth-yawn-group { display: inline !important; }
 #pet.g-yawn .capy-mouth { display: none !important; }
 #pet.g-yawn .eye-closed { display: inline !important; }
-#pet.g-yawn #rig { animation: capy-stretch 1.6s ease-in-out 1; }
+#pet.g-yawn #rig { animation: capy-stretch 1.6s cubic-bezier(0.25, 1, 0.5, 1) 1; }
 @keyframes capy-stretch {
-  0%, 100% { transform: scale(1, 1); }
-  45% { transform: translateY(-4px) scale(.98, 1.05); }
+  0% { transform: scale(1, 1) translateY(0); }
+  15% { transform: translateY(1px) scale(1.02, 0.98); }
+  45% { transform: translateY(-4.5px) scale(0.97, 1.06); }
+  75% { transform: translateY(0.5px) scale(1.01, 0.99); }
+  100% { transform: scale(1, 1) translateY(0); }
 }
 
 /* ===== NOVO COMPORTAMENTO: SACUDIDA DE PELOS (G-SHAKE) ===== */
-#pet.g-shake #rig { animation: capy-shake .6s ease-in-out 1; }
+#pet.g-shake #rig { animation: capy-shake 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) 1; }
 @keyframes capy-shake {
-  0%, 100% { transform: rotate(0); }
-  20% { transform: rotate(-4deg); }
-  40% { transform: rotate(4deg); }
-  60% { transform: rotate(-3deg); }
-  80% { transform: rotate(2deg); }
+  0%, 100% { transform: rotate(0) scale(1); }
+  15% { transform: rotate(-5deg) scale(1.02, 0.98); }
+  35% { transform: rotate(5deg) scale(0.98, 1.02); }
+  55% { transform: rotate(-3.5deg) scale(1.01, 0.99); }
+  75% { transform: rotate(2deg) scale(0.99, 1.01); }
+  90% { transform: rotate(-0.8deg); }
 }
 
 /* ===== NOVO ESTADO: PAUSA PRO CAFÉ / CHÁ (S-COFFEE) ===== */
@@ -581,7 +607,7 @@
 #pet.g-wiggle .zzz { display: none !important; }
 #pet.g-wiggle .hearts .heart { animation: capy-heart-rise 1.2s ease-out both; }
 #pet.g-wiggle #rig {
-  animation: capy-wiggle-fast 0.6s ease-in-out 3;
+  animation: capy-wiggle-fast 0.6s cubic-bezier(0.34, 1.3, 0.64, 1) 3;
   transform-origin: 135px 183px;
 }
 #pet.g-wiggle #ear {
@@ -591,9 +617,9 @@
 
 @keyframes capy-wiggle-fast {
   0%, 100% { transform: rotate(0deg) scale(1, 1); }
-  25% { transform: rotate(-5deg) scale(1.02, 0.98); }
+  25% { transform: rotate(-5.5deg) scale(1.025, 0.975); }
   50% { transform: rotate(0deg) scale(0.98, 1.02); }
-  75% { transform: rotate(5deg) scale(1.02, 0.98); }
+  75% { transform: rotate(5.5deg) scale(1.025, 0.975); }
 }
 @keyframes capy-wiggle-ears {
   0%, 100% { transform: rotate(0deg); }
@@ -620,7 +646,6 @@
 /* Quando passa o mouse por cima: Capy ACORDA na hora com olhinhos grandes abertos e curiosidade! */
 #pet .eye-open, #pet .eye-wide {
   translate: var(--gaze-x, 0px) var(--gaze-y, 0px);
-  transition: translate .22s cubic-bezier(0.25, 1, 0.5, 1);
 }
 #pet.is-hovered .eye-open, #pet.is-hovered .eye-wide {
   display: inline !important;
@@ -984,13 +1009,14 @@
 
 /* Pouso amortecido ao soltar (Landing bounce) */
 #pet.g-bounce-land #rig {
-  animation: capy-land-bounce 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 1 !important;
+  animation: capy-land-bounce 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) 1 !important;
 }
 @keyframes capy-land-bounce {
-  0% { transform: scale(1.12, 0.86); }
-  40% { transform: scale(0.95, 1.05); }
-  70% { transform: scale(1.02, 0.98); }
-  100% { transform: scale(1, 1); }
+  0% { transform: scale(1.14, 0.84) translateY(2px); }
+  35% { transform: scale(0.94, 1.06) translateY(-3px); }
+  65% { transform: scale(1.025, 0.975) translateY(0.5px); }
+  85% { transform: scale(0.99, 1.01) translateY(-0.5px); }
+  100% { transform: scale(1, 1) translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {

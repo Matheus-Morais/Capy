@@ -114,6 +114,73 @@ function applySkin(skin: string) {
 }
 
 let pet: HTMLElement;
+
+// ===== Continuous Gaze Lerp Loop (rAF Exponential Smoothing) =====
+let targetGazeX = 0;
+let targetGazeY = 0;
+let currentGazeX = 0;
+let currentGazeY = 0;
+let gazeRafId: number | null = null;
+
+function updateGazeLoop() {
+  const dx = targetGazeX - currentGazeX;
+  const dy = targetGazeY - currentGazeY;
+
+  // Settle threshold: when within 0.02px, sleep the rAF loop to consume 0% CPU at rest
+  if (Math.abs(dx) < 0.02 && Math.abs(dy) < 0.02) {
+    currentGazeX = targetGazeX;
+    currentGazeY = targetGazeY;
+    if (pet?.style) {
+      pet.style.setProperty('--gaze-x', `${currentGazeX.toFixed(2)}px`);
+      pet.style.setProperty('--gaze-y', `${currentGazeY.toFixed(2)}px`);
+    }
+    gazeRafId = null;
+    return;
+  }
+
+  // Exponential smoothing factor (0.16 gives buttery smooth tracking at 60-144Hz)
+  currentGazeX += dx * 0.16;
+  currentGazeY += dy * 0.16;
+  if (pet?.style) {
+    pet.style.setProperty('--gaze-x', `${currentGazeX.toFixed(2)}px`);
+    pet.style.setProperty('--gaze-y', `${currentGazeY.toFixed(2)}px`);
+  }
+
+  if (typeof requestAnimationFrame !== 'undefined') {
+    gazeRafId = requestAnimationFrame(updateGazeLoop);
+  } else {
+    gazeRafId = null;
+  }
+}
+
+function applySmoothGaze(targetX: number, targetY: number) {
+  if (latest?.reduceMotion || (pet && pet.classList.contains('s-sleeping'))) {
+    targetX = 0;
+    targetY = 0;
+  }
+  targetGazeX = targetX;
+  targetGazeY = targetY;
+
+  if (typeof requestAnimationFrame === 'undefined') {
+    // Fallback for Node.js test environment where rAF is absent
+    currentGazeX = targetX;
+    currentGazeY = targetY;
+    if (pet?.style) {
+      pet.style.setProperty('--gaze-x', `${targetX}px`);
+      pet.style.setProperty('--gaze-y', `${targetY}px`);
+    }
+    return;
+  }
+
+  if (gazeRafId === null) {
+    gazeRafId = requestAnimationFrame(updateGazeLoop);
+  }
+}
+
+function resetSmoothGaze() {
+  applySmoothGaze(0, 0);
+}
+
 applySkin(currentSkin);
 const badge = document.getElementById('petBadge')!;
 const behavior = new PetBehavior(Date.now());
@@ -134,8 +201,7 @@ const lifeEngine = new PetLifeEngine({
   },
   setGaze(x, y) {
     if (latest?.reduceMotion || pet.classList.contains('is-hovered')) return;
-    pet.style.setProperty('--gaze-x', `${x}px`);
-    pet.style.setProperty('--gaze-y', `${y}px`);
+    applySmoothGaze(x, y);
   },
   canFidget() {
     if (!latest || latest.reduceMotion || document.hidden || !windowVisible) return false;
@@ -154,6 +220,9 @@ function render(data: Snapshot) {
   const {state, waiting, gesture} = frame;
   if (state !== 'idle' || gesture !== '' || waiting > 0) {
     lifeEngine.cancelActiveGesture();
+  }
+  if (state === 'sleeping' || data.reduceMotion) {
+    resetSmoothGaze();
   }
   for (const value of ['idle', 'working', 'waiting', 'done', 'sleeping']) pet.classList.toggle(`s-${value}`, state === value);
   for (const pose of ['sit', 'lie', 'stand']) pet.classList.toggle(`p-${pose}`, pose === (state === 'working' ? 'sit' : state === 'sleeping' ? 'lie' : 'stand'));
@@ -189,15 +258,13 @@ button.addEventListener('pointerenter', () => {
 button.addEventListener('pointerleave', () => {
   pet.classList.remove('is-hovered');
   lifeEngine.clearGlobalGaze();
-  pet.style.removeProperty('--gaze-x');
-  pet.style.removeProperty('--gaze-y');
+  resetSmoothGaze();
 });
 button.addEventListener('pointermove', event => {
   if (pointer || !pet.classList.contains('is-hovered')) return;
   const rect = button.getBoundingClientRect();
   const [x, y] = hoverGaze(event.clientX - rect.left, event.clientY - rect.top, rect.width, rect.height);
-  pet.style.setProperty('--gaze-x', `${x}px`);
-  pet.style.setProperty('--gaze-y', `${y}px`);
+  applySmoothGaze(x, y);
 });
 button.addEventListener('pointermove', event => {
   if (!pointer || !event.buttons) return;
@@ -438,6 +505,7 @@ async function start() {
       windowVisible=event.payload;
       document.body.classList.toggle('pet-paused',document.hidden||!windowVisible);
       if(windowVisible){behavior.interact(Date.now());if(latest)render(latest);}
+      else { resetSmoothGaze(); }
     });
     await listen('attention-viewed',()=>{behavior.acknowledge();behavior.interact(Date.now());if(latest)render(latest);});
     await listen<{ x: number; y: number }>('global-gaze', event => {
@@ -453,6 +521,7 @@ async function start() {
   document.addEventListener('visibilitychange', () => {
     document.body.classList.toggle('pet-paused', document.hidden||!windowVisible);
     if (!document.hidden && windowVisible && latest) render(latest);
+    else { resetSmoothGaze(); }
   });
   await desktopCommand('ui_ready');
 }
