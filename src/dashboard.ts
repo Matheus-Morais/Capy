@@ -1,5 +1,5 @@
 import './style.css';
-import { action, desktopCommand, native, showError, snapshot, subscribe, respondIntervention, setInterventionSubscription, type Snapshot } from './bridge';
+import { action, desktopCommand, emitEvent, native, showError, snapshot, subscribe, respondIntervention, setInterventionSubscription, type Snapshot } from './bridge';
 import { escape, sessionRow } from './presentation';
 import { renderQuotaBoard, renderSummaryQuotas } from './quota-board';
 import { pendingIntervention, interventionContext, captureInterventionAnswers, restoreInterventionAnswers, questionAnswer } from './interventions-ui';
@@ -210,6 +210,10 @@ async function start() {
     try{await (await import('./chat-ui')).initializeChat();}catch(error){showError(error);}
   }
   try{await initializeAccounts();}catch(error){showError(error);}
+  if (document.body.dataset.surface === 'summary') {
+    document.addEventListener('pointerenter', () => { void emitEvent('summary-mouse-enter'); });
+    document.addEventListener('pointerleave', () => { void emitEvent('summary-mouse-leave'); });
+  }
   await desktopCommand('ui_ready');
 }
 void start().catch(showError);

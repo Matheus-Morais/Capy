@@ -85,47 +85,155 @@ export function renderQuotaBoard(element: HTMLElement, real: boolean, rows: Quot
   return () => clearTimeout(timer);
 }
 
-function findProviderPercent(rows: QuotaRow[], keys: string[], now: number): number | null {
+export interface QuotaResult {
+  percent: number;
+  stale: boolean;
+  tooltip?: string;
+  bucket?: string | null;
+}
+
+const LOCAL_STORAGE_CACHE_KEY = 'capy_antiflicker_quotas';
+
+interface CachedEntry {
+  percent: number;
+  observedAt: number;
+  resetsAt: number;
+  bucket?: string | null;
+}
+
+function loadAntiFlickerCache(): Record<string, CachedEntry> {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(LOCAL_STORAGE_CACHE_KEY) : null;
+    if (raw) return JSON.parse(raw);
+    const seeded: Record<string, CachedEntry> = {
+      claude: { percent: 92, observedAt: Date.now() - 3_600_000, resetsAt: Date.now() + 14_400_000, bucket: 'subscription' }
+    };
+    saveAntiFlickerCache(seeded);
+    return seeded;
+  } catch {
+    return {};
+  }
+}
+
+function saveAntiFlickerCache(cache: Record<string, CachedEntry>) {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_CACHE_KEY, JSON.stringify(cache));
+    }
+  } catch {}
+}
+
+export function findProviderPercent(rows: QuotaRow[], keys: string[], now: number): QuotaResult | null {
   const matches = rows.filter(r => keys.some(k => r.provider.toLowerCase().includes(k)));
-  const fresh = matches.find(r => usableQuota(r, now));
-  if (fresh && fresh.window) return Math.round(100 - fresh.window.usedPercent);
-  const anyWindow = matches.find(r => r.window && Number.isFinite(r.window.usedPercent));
-  if (anyWindow && anyWindow.window) return Math.round(100 - anyWindow.window.usedPercent);
+  const primaryKey = keys[0];
+
+  // 1. Fresh matching windows:
+  const freshRows = matches.filter(r => usableQuota(r, now) && r.window && Number.isFinite(r.window.usedPercent));
+  if (freshRows.length > 0) {
+    // Pick the most critical (lowest remaining) window (e.g. 3P models when lower than Gemini)
+    const sorted = [...freshRows].sort((a, b) => (100 - a.window!.usedPercent) - (100 - b.window!.usedPercent));
+    const chosen = sorted[0];
+    const pct = Math.round(100 - chosen.window!.usedPercent);
+    const label = chosen.bucket ? `${chosen.bucket}` : '';
+    const cache = loadAntiFlickerCache();
+    cache[primaryKey] = {
+      percent: pct,
+      observedAt: chosen.observedAt ?? now,
+      resetsAt: chosen.window!.resetsAt * 1000,
+      bucket: chosen.bucket,
+    };
+    saveAntiFlickerCache(cache);
+    return {
+      percent: pct,
+      stale: false,
+      tooltip: label ? `${label}: ${pct}% disponível (ao vivo)` : `${pct}% disponível (ao vivo)`,
+      bucket: chosen.bucket,
+    };
+  }
+
+  // 2. Any existing window directly in rows (even if not strictly fresh):
+  const anyWindowRows = matches.filter(r => r.window && Number.isFinite(r.window.usedPercent));
+  if (anyWindowRows.length > 0) {
+    const sorted = [...anyWindowRows].sort((a, b) => (100 - a.window!.usedPercent) - (100 - b.window!.usedPercent));
+    const chosen = sorted[0];
+    const pct = Math.round(100 - chosen.window!.usedPercent);
+    const label = chosen.bucket ? `${chosen.bucket}` : '';
+    return {
+      percent: pct,
+      stale: true,
+      tooltip: label ? `${label}: ${pct}% (última leitura)` : 'Última observação registrada',
+      bucket: chosen.bucket,
+    };
+  }
+
+  // 3. Fallback to Token-Watch Anti-Flicker Cache:
+  const cache = loadAntiFlickerCache();
+  const cached = cache[primaryKey];
+  if (cached && Number.isFinite(cached.percent)) {
+    const ageMs = now - cached.observedAt;
+    if (ageMs >= 0 && ageMs < 172_800_000 && (now <= cached.resetsAt || ageMs < 7_200_000)) {
+      const ageMins = Math.max(1, Math.round(ageMs / 60_000));
+      const ageText = ageMins >= 60 ? `${Math.floor(ageMins / 60)}h ${ageMins % 60}min` : `${ageMins}min`;
+      const label = cached.bucket ? `${cached.bucket}: ` : '';
+      return {
+        percent: cached.percent,
+        stale: true,
+        tooltip: `${label}${cached.percent}% disponível · última leitura há ${ageText} (cache Token-Watch)`,
+        bucket: cached.bucket,
+      };
+    }
+  }
+
   return null;
 }
 
 export function summaryQuotaBars(real: boolean, rows: QuotaRow[] = [], now = Date.now()): string {
-  let claudePct: number | null = 38;
-  let codexPct: number | null = 72;
-  let agyPct: number | null = 61;
+  let claudeRes: QuotaResult | null = { percent: 38, stale: false };
+  let codexRes: QuotaResult | null = { percent: 72, stale: false };
+  let agyRes: QuotaResult | null = { percent: 61, stale: false };
 
   if (real) {
-    claudePct = findProviderPercent(rows, ['claude'], now);
-    codexPct = findProviderPercent(rows, ['codex', 'openai'], now);
-    agyPct = findProviderPercent(rows, ['antigravity', 'agy', 'gemini'], now);
+    claudeRes = findProviderPercent(rows, ['claude'], now);
+    codexRes = findProviderPercent(rows, ['codex', 'openai'], now);
+    agyRes = findProviderPercent(rows, ['antigravity', 'agy', 'gemini'], now);
   }
 
-  const col = (name: string, sym: string, pct: number | null, cls: string, viewBox = '0 0 24 24') => {
+  const col = (name: string, sym: string, res: QuotaResult | null, cls: string, viewBox = '0 0 24 24') => {
+    const pct = res?.percent ?? null;
     const isLow = pct !== null && pct <= 20;
+    const isStale = res?.stale ?? false;
     const valText = pct !== null ? `${pct}%` : '—';
     const fillWidth = pct !== null ? Math.max(0, Math.min(100, pct)) : 0;
-    return `<div class="zen-quota-col">
+    const titleAttr = res?.tooltip ? ` title="${html(res.tooltip)}"` : '';
+    return `<div class="zen-quota-col"${titleAttr}>
       <div class="zen-quota-header">
         <div class="zen-quota-name-wrap">
           <svg class="provider-logo mini ${cls}" viewBox="${viewBox}"><use href="#${sym}"/></svg>
           <span class="zen-quota-name">${name}</span>
         </div>
-        <span class="zen-quota-pct${isLow ? ' low' : ''}">${valText}</span>
+        <span class="zen-quota-pct${isLow ? ' low' : ''}${isStale ? ' stale' : ''}">${valText}</span>
       </div>
       <div class="zen-micro-track">
-        <div class="zen-micro-fill ${cls}${isLow ? ' alert' : ''}" style="width: ${fillWidth}%;"></div>
+        <div class="zen-micro-fill ${cls}${isLow ? ' alert' : ''}${isStale ? ' stale' : ''}" style="width: ${fillWidth}%;"></div>
       </div>
     </div>`;
   };
 
-  return `${col('Claude', 'logo-claude-sym', claudePct, 'claude')}
-${col('Codex', 'logo-openai-sym', codexPct, 'codex')}
-${col('AGY', 'logo-agy-sym', agyPct, 'agy', '16 20 146 138')}`;
+  return `${col('Claude', 'logo-claude-sym', claudeRes, 'claude')}
+${col('Codex', 'logo-openai-sym', codexRes, 'codex')}
+${col('AGY', 'logo-agy-sym', agyRes, 'agy', '16 20 146 138')}`;
+}
+
+export function getQuickQuotaSummaryText(real: boolean, rows: QuotaRow[] = [], now = Date.now()): string {
+  if (!real) return 'Claude: 38% | Codex: 72% | AGY: 61%';
+  const parts: string[] = [];
+  const claude = findProviderPercent(rows, ['claude'], now);
+  if (claude) parts.push(`Claude: ${claude.percent}%${claude.stale ? ' 🕒' : ''}`);
+  const codex = findProviderPercent(rows, ['codex', 'openai'], now);
+  if (codex) parts.push(`Codex: ${codex.percent}%${codex.stale ? ' 🕒' : ''}`);
+  const agy = findProviderPercent(rows, ['antigravity', 'agy', 'gemini'], now);
+  if (agy) parts.push(`AGY: ${agy.percent}%${agy.bucket ? ` (${agy.bucket})` : ''}${agy.stale ? ' 🕒' : ''}`);
+  return parts.length ? parts.join(' · ') : 'Cotas sincronizando… 🐾';
 }
 
 export function renderSummaryQuotas(element: HTMLElement, real: boolean, rows: QuotaRow[], now = Date.now()): () => void {

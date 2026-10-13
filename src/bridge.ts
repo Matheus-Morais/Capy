@@ -1,5 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { emit, listen } from '@tauri-apps/api/event';
 import fixture from '../assets/demo.json';
 
 export interface Session { id: string; project: string; agent: string; symbol: string; kind: string; origin: string; state: string; request: string | null; message: string; command: string | null; hidden: boolean; completion?: string | null; source_action?: { label: string; available: boolean; reason: string | null } }
@@ -30,6 +30,9 @@ export async function subscribe(callback: (data: Snapshot) => void): Promise<voi
 }
 export async function subscribeVisibility(callback: (open: boolean) => void): Promise<void> {
   if (native) await listen<boolean>('summary-visibility', event => callback(event.payload));
+}
+export async function emitEvent(event: string, payload?: unknown): Promise<void> {
+  if (native) await emit(event, payload);
 }
 export async function action(action: string, id = '', answer = ''): Promise<void> {
   if (native) { await invoke('demo_action', { action, id, answer }); return; }

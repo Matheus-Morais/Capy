@@ -12,6 +12,7 @@ import { PetBehavior, hoverGaze } from './pet-behavior';
 import { playPetSound } from './pet-sound';
 import { PetLifeEngine } from './pet-life';
 import { checkAndApplyUpdates } from './updater';
+import { getQuickQuotaSummaryText } from './quota-board';
 
 let currentSkin = (typeof localStorage !== 'undefined' && localStorage.getItem('capy_pet_skin')) || 'v5';
 let currentHat = (typeof localStorage !== 'undefined' && localStorage.getItem('capy_hat')) || 'none';
@@ -220,8 +221,40 @@ const lifeEngine = new PetLifeEngine({
   }
 });
 
+const announcedQuotaAlerts = new Map<string, number>();
+
+function checkQuotaAlertSpeech(data: Snapshot) {
+  if (data.scenario !== 'real' || !data.quotas) return;
+  const now = Date.now();
+  for (const q of data.quotas) {
+    if (!q.window || !Number.isFinite(q.window.usedPercent)) continue;
+    const remaining = Math.round(100 - q.window.usedPercent);
+    if (remaining <= 20 && remaining >= 0) {
+      const key = `${q.provider}-${q.bucket ?? ''}-${q.period ?? ''}`;
+      const last = announcedQuotaAlerts.get(key) ?? 0;
+      if (now - last > 600_000) {
+        announcedQuotaAlerts.set(key, now);
+        const name = q.bucket ? `${q.provider} (${q.bucket})` : q.provider;
+        let speech = '';
+        if (remaining <= 5) {
+          speech = `🚨 Cota de ${name} esgotando: só resta ${remaining}%!`;
+        } else if (remaining <= 10) {
+          speech = `⚠️ Cota crítica: ${name} em ${remaining}%!`;
+        } else {
+          speech = `Atenção: cota de ${name} em ${remaining}%! ☕`;
+        }
+        showSpeechBubble(speech, 5000);
+        if (data.preferences?.sounds) playPetSound('chirp');
+        triggerPlayfulGesture('g-ear-twitch', 1200);
+        break;
+      }
+    }
+  }
+}
+
 function render(data: Snapshot) {
   latest = data;
+  checkQuotaAlertSpeech(data);
   const frame = behavior.update(data, Date.now());
   let {state, waiting, gesture} = frame;
   if (forcePauseWork && state === 'working') {
@@ -253,6 +286,12 @@ function render(data: Snapshot) {
 
 let pointer: { x: number; y: number; dragged: boolean } | null = null;
 let suppressClick = false;
+let hoverPeekTimeout: number | undefined;
+let hoverLeaveTimeout: number | undefined;
+let hoverPeekActive = false;
+let summaryPinned = false;
+let mouseInSummaryWindow = false;
+
 button.addEventListener('pointerdown', event => {
   if (event.button !== 0) return;
   pointer = { x: event.clientX, y: event.clientY, dragged: false };
@@ -263,6 +302,28 @@ button.addEventListener('pointerenter', () => {
   behavior.interact(Date.now());
   pet.classList.add('is-hovered');
   if (latest) render(latest);
+
+  // Exibe fala com resumo rápido no balão da Capy ao passar o mouse
+  if (!pet.classList.contains('has-speech') && latest) {
+    const summaryText = getQuickQuotaSummaryText(latest.scenario === 'real', latest.quotas ?? []);
+    showSpeechBubble(summaryText, 3500);
+  }
+
+  if (hoverLeaveTimeout) {
+    clearTimeout(hoverLeaveTimeout);
+    hoverLeaveTimeout = undefined;
+  }
+
+  // Abre o popover de resumo automaticamente após 250ms de hover
+  if (hoverPeekTimeout) clearTimeout(hoverPeekTimeout);
+  hoverPeekTimeout = window.setTimeout(() => {
+    if (pet.classList.contains('is-hovered')) {
+      hoverPeekActive = true;
+      void desktopCommand('peek_summary').catch(() => {
+        void desktopCommand('toggle_summary').catch(showError);
+      });
+    }
+  }, 250);
 });
 button.addEventListener('pointerleave', () => {
   pet.classList.remove('is-hovered');
@@ -274,6 +335,22 @@ button.addEventListener('pointerleave', () => {
   currentGazeX = 0;
   currentGazeY = 0;
   gazeRafId = null;
+
+  if (hoverPeekTimeout) {
+    clearTimeout(hoverPeekTimeout);
+    hoverPeekTimeout = undefined;
+  }
+
+  // Se o resumo foi aberto por hover e não clicado/fixado, esconde ao afastar o mouse
+  if (hoverPeekActive && !summaryPinned) {
+    if (hoverLeaveTimeout) clearTimeout(hoverLeaveTimeout);
+    hoverLeaveTimeout = window.setTimeout(() => {
+      if (!mouseInSummaryWindow && !summaryPinned) {
+        void desktopCommand('hide_window', { label: 'summary' }).catch(showError);
+        hoverPeekActive = false;
+      }
+    }, 450);
+  }
 });
 button.addEventListener('pointermove', event => {
   if (pointer || !pet.classList.contains('is-hovered')) return;
@@ -313,6 +390,8 @@ button.addEventListener('click', () => {
   if (suppressClick) { suppressClick = false; return; }
   behavior.interact(Date.now(), true);
   if (latest) render(latest);
+  summaryPinned = true;
+  hoverPeekActive = false;
   void desktopCommand('toggle_summary').catch(showError);
 });
 function triggerPlayfulGesture(gestureClass: string, durationMs: number) {
@@ -558,9 +637,31 @@ async function start() {
   await subscribe(render);
   await subscribeVisibility(open => {
     button.setAttribute('aria-expanded', String(open));
+    if (!open) {
+      summaryPinned = false;
+      hoverPeekActive = false;
+    }
     if (open) { behavior.acknowledge(); behavior.interact(Date.now()); if (latest) render(latest); }
   });
   if(native){
+    await listen('summary-mouse-enter', () => {
+      mouseInSummaryWindow = true;
+      if (hoverLeaveTimeout) {
+        clearTimeout(hoverLeaveTimeout);
+        hoverLeaveTimeout = undefined;
+      }
+    });
+    await listen('summary-mouse-leave', () => {
+      mouseInSummaryWindow = false;
+      if (hoverPeekActive && !summaryPinned) {
+        hoverLeaveTimeout = window.setTimeout(() => {
+          if (!mouseInSummaryWindow && !summaryPinned) {
+            void desktopCommand('hide_window', { label: 'summary' }).catch(showError);
+            hoverPeekActive = false;
+          }
+        }, 350);
+      }
+    });
     windowVisible=await getCurrentWindow().isVisible();
     await listen<boolean>('pet-visibility',event=>{
       windowVisible=event.payload;

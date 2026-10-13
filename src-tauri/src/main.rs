@@ -239,6 +239,18 @@ fn toggle_summary(app: tauri::AppHandle) -> Result<(), String> {
     }
 }
 #[tauri::command]
+fn peek_summary(app: tauri::AppHandle) -> Result<(), String> {
+    let pet = window(&app, "pet")?;
+    if !pet.is_visible().map_err(|e| e.to_string())? {
+        show_pet(&app)?;
+    }
+    position_summary(&app)?;
+    let summary = window(&app, "summary")?;
+    summary.show().map_err(|e| e.to_string())?;
+    app.emit("summary-visibility", true)
+        .map_err(|e| e.to_string())
+}
+#[tauri::command]
 fn show_panel(app: tauri::AppHandle) -> Result<(), String> {
     let panel = window(&app, "panel")?;
     panel.center().map_err(|e| e.to_string())?;
@@ -1046,6 +1058,7 @@ fn main() {
             chat_commands::approve_chat_transfer,
             chat_commands::cancel_chat_transfer,
             toggle_summary,
+            peek_summary,
             resize_summary,
             show_panel,
             hide_window,
