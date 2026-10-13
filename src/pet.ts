@@ -10,6 +10,7 @@ import './style.css';
 import { desktopCommand, native, showError, snapshot, subscribe, subscribeVisibility, type Snapshot } from './bridge';
 import { PetBehavior, hoverGaze } from './pet-behavior';
 import { playPetSound } from './pet-sound';
+import { PetLifeEngine } from './pet-life';
 
 let currentSkin = (typeof localStorage !== 'undefined' && localStorage.getItem('capy_pet_skin')) || 'v5';
 let currentHat = (typeof localStorage !== 'undefined' && localStorage.getItem('capy_hat')) || 'none';
@@ -119,10 +120,41 @@ const behavior = new PetBehavior(Date.now());
 let latest: Snapshot | undefined;
 let lastGestureId = -1;
 let windowVisible = true;
+
+const lifeEngine = new PetLifeEngine({
+  applyGesture(className, durationMs, sound) {
+    if (latest?.reduceMotion || !windowVisible || document.hidden) return;
+    pet.classList.add(className);
+    if (sound && latest?.preferences?.sounds) {
+      playPetSound(sound as any);
+    }
+  },
+  removeGesture(className) {
+    pet.classList.remove(className);
+  },
+  setGaze(x, y) {
+    if (latest?.reduceMotion || pet.classList.contains('is-hovered')) return;
+    pet.style.setProperty('--gaze-x', `${x}px`);
+    pet.style.setProperty('--gaze-y', `${y}px`);
+  },
+  canFidget() {
+    if (!latest || latest.reduceMotion || document.hidden || !windowVisible) return false;
+    const isSleeping = pet.classList.contains('s-sleeping');
+    const isWorking = pet.classList.contains('s-working');
+    const isWaiting = pet.classList.contains('s-waiting');
+    const isHovered = pet.classList.contains('is-hovered');
+    const waitingCount = parseInt(badge.textContent || '0', 10);
+    return !isSleeping && !isWorking && !isWaiting && !isHovered && waitingCount === 0;
+  }
+});
+
 function render(data: Snapshot) {
   latest = data;
   const frame = behavior.update(data, Date.now());
   const {state, waiting, gesture} = frame;
+  if (state !== 'idle' || gesture !== '' || waiting > 0) {
+    lifeEngine.cancelActiveGesture();
+  }
   for (const value of ['idle', 'working', 'waiting', 'done', 'sleeping']) pet.classList.toggle(`s-${value}`, state === value);
   for (const pose of ['sit', 'lie', 'stand']) pet.classList.toggle(`p-${pose}`, pose === (state === 'working' ? 'sit' : state === 'sleeping' ? 'lie' : 'stand'));
   if (lastGestureId !== frame.gestureId) {
@@ -147,6 +179,7 @@ button.addEventListener('pointerdown', event => {
   if (event.button !== 0) return;
   pointer = { x: event.clientX, y: event.clientY, dragged: false };
   suppressClick = false;
+  lifeEngine.onDragStart(event.clientX, event.clientY);
 });
 button.addEventListener('pointerenter', () => {
   behavior.interact(Date.now());
@@ -155,6 +188,7 @@ button.addEventListener('pointerenter', () => {
 });
 button.addEventListener('pointerleave', () => {
   pet.classList.remove('is-hovered');
+  lifeEngine.clearGlobalGaze();
   pet.style.removeProperty('--gaze-x');
   pet.style.removeProperty('--gaze-y');
 });
@@ -166,14 +200,33 @@ button.addEventListener('pointermove', event => {
   pet.style.setProperty('--gaze-y', `${y}px`);
 });
 button.addEventListener('pointermove', event => {
-  if (!pointer || pointer.dragged || !event.buttons) return;
-  if (Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) <= 5) return;
-  pointer.dragged = true;
-  suppressClick = true;
-  if (native) void getCurrentWindow().startDragging().catch(showError);
+  if (!pointer || !event.buttons) return;
+  if (!pointer.dragged && Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 5) {
+    pointer.dragged = true;
+    suppressClick = true;
+    pet.classList.add('is-dragging');
+    if (native) void getCurrentWindow().startDragging().catch(showError);
+  }
+  if (pointer.dragged) {
+    const dynamics = lifeEngine.onDragMove(event.clientX, event.clientY);
+    pet.style.setProperty('--drag-tilt', `${dynamics.tilt}deg`);
+    pet.style.setProperty('--drag-scale-x', `${dynamics.scaleX}`);
+    pet.style.setProperty('--drag-scale-y', `${dynamics.scaleY}`);
+  }
 });
-button.addEventListener('pointerup', () => { pointer = null; });
-button.addEventListener('pointercancel', () => { pointer = null; });
+function endDrag() {
+  if (pointer?.dragged) {
+    pet.classList.remove('is-dragging');
+    pet.style.removeProperty('--drag-tilt');
+    pet.style.removeProperty('--drag-scale-x');
+    pet.style.removeProperty('--drag-scale-y');
+    pet.classList.add('g-bounce-land');
+    setTimeout(() => pet.classList.remove('g-bounce-land'), 450);
+  }
+  pointer = null;
+}
+button.addEventListener('pointerup', endDrag);
+button.addEventListener('pointercancel', endDrag);
 button.addEventListener('click', () => {
   if (suppressClick) { suppressClick = false; return; }
   behavior.interact(Date.now(), true);
@@ -181,6 +234,7 @@ button.addEventListener('click', () => {
   void desktopCommand('toggle_summary').catch(showError);
 });
 function triggerPlayfulGesture(gestureClass: string, durationMs: number) {
+  lifeEngine.cancelActiveGesture();
   for (const value of ['g-love', 'g-yawn', 'g-shake', 'g-click', 'g-wave', 'g-hello', 'g-orange-trick', 'g-highfive', 'g-dream', 'g-dance', 'g-waddle', 'g-spin', 'g-stretch', 'g-wiggle', 'g-tap']) pet.classList.remove(value);
   void pet.getBoundingClientRect();
   pet.classList.add(gestureClass);
@@ -386,9 +440,15 @@ async function start() {
       if(windowVisible){behavior.interact(Date.now());if(latest)render(latest);}
     });
     await listen('attention-viewed',()=>{behavior.acknowledge();behavior.interact(Date.now());if(latest)render(latest);});
+    await listen<{ x: number; y: number }>('global-gaze', event => {
+      if (!pet.classList.contains('is-hovered') && !pet.classList.contains('s-sleeping') && !latest?.reduceMotion) {
+        lifeEngine.setGlobalGaze(event.payload.x, event.payload.y);
+      }
+    });
   }
   document.body.classList.toggle('pet-paused',document.hidden||!windowVisible);
   render(await snapshot());
+  lifeEngine.start();
   setInterval(() => { if (latest && !document.hidden && windowVisible) render(latest); }, 1_000);
   document.addEventListener('visibilitychange', () => {
     document.body.classList.toggle('pet-paused', document.hidden||!windowVisible);

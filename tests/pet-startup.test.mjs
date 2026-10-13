@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {stripTypeScriptTypes} from 'node:module';
 import {PetBehavior, hoverGaze} from '../src/pet-behavior.ts';
+import {PetLifeEngine} from '../src/pet-life.ts';
 
 // Execute the entry point with a minimal window, retaining lexical initialization semantics.
 function boot() {
@@ -27,7 +28,7 @@ function boot() {
   Object.defineProperty(elements.get('petArtwork'),'innerHTML',{set(){elements.set('pet',element());}});
   class Clock extends Date { static now() { return 0; } }
   const data = {scenario:'real',sessions:[],interventions:[],reduceMotion:false,preferences:{sounds:true}};
-  const context = vm.createContext({PetBehavior,hoverGaze,Date:Clock,Math,
+  const context = vm.createContext({PetBehavior,hoverGaze,PetLifeEngine,Date:Clock,Math,
     artwork:'v5',artworkV1:'v1',artworkV2:'v2',artworkV3:'v3',artworkV4:'v4',
     localStorage:{getItem:()=>null,setItem(){}},
     document:{getElementById:id=>elements.get(id),body:element(),hidden:false,addEventListener(){}},

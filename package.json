@@ -10,6 +10,7 @@
     "tauri": "tauri",
     "desktop": "tauri dev",
     "desktop:build": "tauri build --no-bundle",
+    "desktop:package": "tauri build -b nsis",
     "test": "node --test tests/*.test.mjs",
     "verify:native": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-native.ps1",
     "verify:pet-native": "node scripts/verify-pet-native.mjs"

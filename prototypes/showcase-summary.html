@@ -1,0 +1,1586 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Capy: Showcase do Novo Painel de Resumo Simplificado (Zen Popover com Logos Token-Watch)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="pet.css">
+  <link rel="stylesheet" href="front-pet.css">
+  <style>
+    :root {
+      --bg: #f4efe4;
+      --card-bg: #faf7ed;
+      --card-border: #ded5c2;
+      --text: #2f281e;
+      --sub: #786d5c;
+      --accent: #4a6639;
+      --accent-badge: #d8e6cc;
+      --accent-soft: #eaf2e3;
+      --alert: #a05c14;
+      --alert-badge: #fae7cb;
+      --alert-bg: #fff8eb;
+      --alert-border: #eed5a4;
+      --ink: #302b21;
+      --rule: #e5ded0;
+      --claude-color: #d97757;
+      --codex-color: #10a37f;
+      --agy-color: #3b82ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px 28px 64px;
+      min-height: 100vh;
+    }
+    header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .badge-top {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: var(--accent-badge);
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    p.lead {
+      font-size: 14.5px;
+      color: var(--sub);
+      max-width: 890px;
+      margin: 0 auto 14px;
+      line-height: 1.5;
+    }
+    .keyboard-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      background: #eadecd;
+      border-radius: 24px;
+      font-size: 12.5px;
+      color: #4a3825;
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .keyboard-hint kbd {
+      background: #fff;
+      padding: 2px 7px;
+      border-radius: 5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      border: 1px solid #c9bda9;
+      font-family: inherit;
+      color: #2f281e;
+      font-weight: 700;
+    }
+
+    /* Container de Seção */
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 32px 0 14px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 1280px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .section-title svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    /* Sandbox Interativo */
+    .sandbox-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      background: #202420;
+      border-radius: 18px;
+      border: 1px solid #3c443c;
+      box-shadow: 0 12px 36px rgba(15, 20, 15, 0.25);
+      padding: 24px 28px;
+      color: #edf0e8;
+      position: relative;
+      overflow: hidden;
+    }
+    .sandbox-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #353d34;
+    }
+    .sandbox-header-info h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #edf0e8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sandbox-header-info p {
+      font-size: 12.5px;
+      color: #9cb09b;
+      margin-top: 3px;
+    }
+    .scenario-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .scenario-btn {
+      background: #2b332a;
+      border: 1px solid #485446;
+      color: #d1dbcf;
+      padding: 7px 13px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .scenario-btn:hover {
+      background: #394437;
+      color: #fff;
+    }
+    .scenario-btn.active {
+      background: #d8e6cc;
+      color: #1e3314;
+      border-color: #d8e6cc;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .scenario-btn .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Área da Mesa de Trabalho / Desktop Simulado */
+    .desktop-stage {
+      height: 490px;
+      position: relative;
+      background: radial-gradient(circle at 80% 80%, #262c26 0%, #1c201c 100%);
+      border-radius: 12px;
+      margin-top: 20px;
+      border: 1px solid #2e362d;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .desktop-watermark {
+      text-align: center;
+      color: #434e42;
+      user-select: none;
+      pointer-events: none;
+    }
+    .desktop-watermark p {
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    /* Mascote Capy e Balão Posicionado */
+    .companion-rig {
+      position: absolute;
+      right: 48px;
+      bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      z-index: 10;
+    }
+
+    /* Botão da Capy */
+    .pet-interactive-btn {
+      position: relative;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      padding: 0;
+      outline: none;
+      display: block;
+      transition: transform 0.15s ease;
+    }
+    .pet-interactive-btn:hover {
+      transform: scale(1.03);
+    }
+    .pet-interactive-btn:active {
+      transform: scale(0.97);
+    }
+    .pet-interactive-btn svg {
+      width: 145px;
+      height: 128px;
+      display: block;
+    }
+    .click-prompt {
+      position: absolute;
+      left: -130px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #2b3528;
+      border: 1px solid #586b53;
+      color: #dce7d9;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: nudge 2s ease-in-out infinite;
+    }
+    .click-prompt::after {
+      content: '';
+      position: absolute;
+      right: -5px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-left: 6px solid #586b53;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+    @keyframes nudge {
+      0%, 100% { transform: translateY(-50%) translateX(0); }
+      50% { transform: translateY(-50%) translateX(-5px); }
+    }
+
+    /* Badge flutuante na Capy */
+    .capy-floating-badge {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      background: #b2451f;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #202420;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      transition: all 0.2s ease;
+    }
+
+    /* =========================================================
+       O NOVO PAINEL SIMPLIFICADO (ZEN POPOVER)
+       ========================================================= */
+    .zen-popover {
+      width: 328px;
+      background: var(--card-bg);
+      border: 1px solid #d4cbb8;
+      border-radius: 16px;
+      box-shadow: 0 16px 42px rgba(10, 15, 10, 0.45);
+      color: var(--ink);
+      margin-bottom: 12px;
+      overflow: hidden;
+      transform-origin: bottom right;
+      transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .zen-popover.hidden {
+      opacity: 0;
+      transform: scale(0.92) translateY(10px);
+      pointer-events: none;
+      display: none;
+    }
+
+    /* Logos dos Provedores (Padrão Token-Watch) */
+    .provider-logo {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      display: inline-block;
+      vertical-align: middle;
+      object-fit: contain;
+    }
+    .provider-logo.mini {
+      width: 13px;
+      height: 13px;
+    }
+    .provider-logo.large {
+      width: 24px;
+      height: 24px;
+    }
+    .provider-logo.claude {
+      color: var(--claude-color);
+    }
+    .provider-logo.openai {
+      color: var(--codex-color);
+    }
+    .provider-logo.agy {
+      color: var(--agy-color);
+    }
+    /* Estilo de imagem quando usada via tag <img> */
+    img.provider-logo.openai-img {
+      filter: brightness(0.25);
+    }
+
+    /* 1. Header Compacto */
+    .zen-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--rule);
+      background: #fbf9f2;
+    }
+    .zen-header-left {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .zen-mascot-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ebd8c2;
+      border: 1px solid #c9b197;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    .zen-title {
+      font-size: 13.5px;
+      font-weight: 750;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .zen-status-pill {
+      font-size: 10.5px;
+      font-weight: 650;
+      padding: 2.5px 8px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4.5px;
+      line-height: 1.2;
+    }
+    .zen-status-pill.waiting {
+      background: var(--alert-badge);
+      color: #7d3f07;
+    }
+    .zen-status-pill.working {
+      background: var(--accent-badge);
+      color: var(--accent);
+    }
+    .zen-status-pill.idle {
+      background: #e9e4d6;
+      color: #635848;
+    }
+    .zen-status-pill .pulse-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .zen-status-pill.working .pulse-dot {
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    .zen-close-btn {
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      color: #8c806e;
+      padding: 3px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .zen-close-btn:hover {
+      background: #eee6d4;
+      color: var(--text);
+    }
+    .zen-close-btn svg {
+      width: 15px;
+      height: 15px;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      fill: none;
+    }
+
+    /* 2. Card de Ação Prioritária (Apenas quando houver pendência) */
+    .zen-priority-box {
+      padding: 12px 14px;
+      background: var(--alert-bg);
+      border-bottom: 1px solid var(--alert-border);
+      position: relative;
+    }
+    .zen-priority-tag {
+      font-size: 9.5px;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #925313;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .zen-priority-agent {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+    .zen-agent-badge {
+      font-size: 10.5px;
+      font-weight: 750;
+      padding: 2.5px 7px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid transparent;
+    }
+    .zen-agent-badge.claude {
+      background: #faebe5;
+      color: #a33e21;
+      border-color: #eed0c5;
+    }
+    .zen-agent-badge.codex {
+      background: #e6f6ee;
+      color: #0b6b53;
+      border-color: #bee5d1;
+    }
+    .zen-agent-badge.agy {
+      background: #ebf3ff;
+      color: #1e529e;
+      border-color: #c7defa;
+    }
+
+    .zen-project-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .zen-priority-msg {
+      font-size: 11.5px;
+      color: #5a4b37;
+      line-height: 1.35;
+      margin-bottom: 8px;
+    }
+    .zen-cmd-snippet {
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      background: #faefe0;
+      padding: 5px 8px;
+      border-radius: 5px;
+      border: 1px solid #ebd4b0;
+      color: #4a3620;
+      margin-bottom: 9px;
+      overflow-wrap: anywhere;
+      display: block;
+    }
+    .zen-action-buttons {
+      display: flex;
+      gap: 6px;
+    }
+    .zen-btn-allow {
+      flex: 1;
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background 0.15s ease;
+    }
+    .zen-btn-allow:hover {
+      background: #374e2b;
+    }
+    .zen-btn-deny {
+      background: transparent;
+      border: 1px solid #d8bda9;
+      color: #8c4331;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .zen-btn-deny:hover {
+      background: #fbf0ea;
+    }
+
+    /* 3. Fita de Agentes Ativos (Visão Compacta com Logos) */
+    .zen-agents-section {
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .zen-section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .zen-agent-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 11.5px;
+    }
+    .zen-agent-row + .zen-agent-row {
+      border-top: 1px dashed #eae2d3;
+    }
+    .zen-agent-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .zen-agent-name {
+      font-weight: 650;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 110px;
+    }
+    .zen-agent-task {
+      font-size: 11px;
+      color: var(--sub);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 115px;
+    }
+    .zen-agent-state-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .zen-agent-state-dot.working { background: #4a7c38; box-shadow: 0 0 5px #72ab5d; }
+    .zen-agent-state-dot.done { background: #8a806d; }
+    .zen-agent-state-dot.waiting { background: #d97706; }
+
+    /* Estado Vazio / Zen Total */
+    .zen-empty-state {
+      padding: 16px 14px;
+      text-align: center;
+      border-bottom: 1px solid var(--rule);
+      background: #faf8f2;
+    }
+    .zen-empty-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 3px;
+    }
+    .zen-empty-desc {
+      font-size: 11px;
+      color: var(--sub);
+      line-height: 1.4;
+    }
+
+    /* 4. Barra de Cotas Minimalista (Micro-Bars com Logos) */
+    .zen-quota-section {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--rule);
+      background: #fdfcf9;
+    }
+    .zen-quota-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .zen-quota-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .zen-quota-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--sub);
+    }
+    .zen-quota-name-wrap {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .zen-quota-name {
+      font-weight: 650;
+      color: var(--text);
+    }
+    .zen-quota-pct {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .zen-quota-pct.low {
+      color: #b2451f;
+    }
+    .zen-micro-track {
+      height: 4px;
+      background: #e8e1d2;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .zen-micro-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    .zen-micro-fill.claude { background: var(--claude-color); }
+    .zen-micro-fill.codex { background: var(--codex-color); }
+    .zen-micro-fill.agy { background: var(--agy-color); }
+    .zen-micro-fill.alert { background: #b2451f; }
+
+    /* 5. Rodapé Minimalista */
+    .zen-footer {
+      padding: 7px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f5efe3;
+      font-size: 10.5px;
+      color: var(--sub);
+    }
+    .zen-footer-left {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .zen-full-link {
+      background: transparent;
+      border: 0;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 750;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: background 0.15s ease;
+    }
+    .zen-full-link:hover {
+      background: #e6ddcb;
+    }
+    .zen-full-link svg {
+      width: 11px;
+      height: 11px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+    }
+
+    /* Feedback de Ação Rápida */
+    .zen-toast {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1b2618;
+      border: 1px solid #456138;
+      color: #e4f0de;
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 600;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .zen-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(4px);
+    }
+
+    /* =========================================================
+       SEÇÕES DE ANÁLISE E LOGOS OFICIAIS (SHOWCASE)
+       ========================================================= */
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); max-width: 1280px; margin: 0 auto; }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); max-width: 1280px; margin: 0 auto; }
+    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); max-width: 1280px; margin: 0 auto; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      box-shadow: 0 4px 16px rgba(60, 45, 20, 0.05);
+      position: relative;
+    }
+    .card-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2.5px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .card-badge.before { background: #fce1d9; color: #a13012; }
+    .card-badge.after { background: var(--accent-badge); color: var(--accent); }
+    .card-badge.metric { background: #e0e7ff; color: #3730a3; }
+    .card-badge.decision { background: #fef3c7; color: #92400e; }
+    .card-badge.brand { background: #e2f0d9; color: #2e5927; }
+
+    .card h3 {
+      font-size: 16px;
+      font-weight: 750;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .card p {
+      font-size: 13px;
+      color: var(--sub);
+      line-height: 1.55;
+      margin-bottom: 14px;
+    }
+
+    /* Cards especiais de Marca */
+    .brand-hero {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: #f7f3e8;
+      border-radius: 10px;
+      border: 1px solid #e2dac8;
+      margin-bottom: 12px;
+    }
+    .brand-icon-box {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      flex-shrink: 0;
+    }
+
+    .comparison-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 12.5px;
+    }
+    .comparison-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.45;
+    }
+    .comparison-list li .icon {
+      flex-shrink: 0;
+      font-size: 13px;
+      margin-top: 1px;
+    }
+    .comparison-list.before li { color: #6b4c42; }
+    .comparison-list.after li { color: #2e4d22; }
+
+    /* Rodapé da Página */
+    footer.showcase-footer {
+      max-width: 1280px;
+      margin: 48px auto 0;
+      padding-top: 20px;
+      border-top: 1px solid var(--card-border);
+      text-align: center;
+      font-size: 13px;
+      color: var(--sub);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- DEFINIÇÕES SVG DOS LOGOS DAS EMPRESAS (REUTILIZÁVEIS E COMPATÍVEIS COM O TOKEN-WATCH) -->
+  <svg style="display: none;" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <!-- Logo Claude (Anthropic) -->
+      <g id="logo-claude-sym">
+        <path fill="#D97757" d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/>
+      </g>
+      <!-- Logo OpenAI / Codex -->
+      <g id="logo-openai-sym">
+        <path fill="#10a37f" d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/>
+      </g>
+      <!-- Logo Antigravity / Google -->
+      <linearGradient id="g-agy-inline" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stop-color="#3b82ff"/>
+        <stop offset=".35" stop-color="#3b82ff"/>
+        <stop offset=".62" stop-color="#7c6ad8"/>
+        <stop offset=".82" stop-color="#f4503f"/>
+        <stop offset="1" stop-color="#ff8a1a"/>
+      </linearGradient>
+      <g id="logo-agy-sym">
+        <path fill="url(#g-agy-inline)" d="M144.248 149.062c7.5 5.626 18.75 1.876 8.437-8.437-30.937-30-24.375-112.5-62.812-112.5-38.438 0-31.875 82.5-62.813 112.5-11.25 11.25.938 14.063 8.438 8.437 29.062-19.687 27.187-54.375 54.375-54.375 27.187 0 25.312 34.688 54.375 54.375Z"/>
+      </g>
+    </defs>
+  </svg>
+
+  <!-- CABEÇALHO PADRÃO SHOWCASE -->
+  <header>
+    <div class="badge-top">Design System · Logos Oficiais Token-Watch</div>
+    <h1>Capy: Novo Painel de Resumo Simplificado (Zen Popover)</h1>
+    <p class="lead">
+      Reorganização visual com redução drástica de sobrecarga cognitiva e inclusão dos <strong>logos oficiais das empresas</strong> (Anthropic Claude, OpenAI Codex e Google Antigravity), seguindo exatamente a identidade comprovada do <em>Token-Watch</em>.
+    </p>
+    <div class="keyboard-hint">
+      <span>💡 Experimente:</span> Clique diretamente na <strong>Capy</strong> abaixo ou use os botões de cenário para testar todos os estados.
+    </div>
+  </header>
+
+  <!-- SEÇÃO 1: SANDBOX INTERATIVO -->
+  <div class="section-title">
+    <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+    Ambiente Interativo: O Novo Resumo com Logos Oficiais
+  </div>
+
+  <div class="sandbox-container">
+    <div class="sandbox-top">
+      <div class="sandbox-header-info">
+        <h2>Área de Trabalho com Companheiro Capy</h2>
+        <p>Simulação real do comportamento ao clicar no mascote no canto da tela.</p>
+      </div>
+
+      <div class="scenario-toolbar" role="toolbar" aria-label="Alternar cenários da demonstração">
+        <button class="scenario-btn active" data-scenario="waiting">
+          <span class="dot" style="background: #e68a00;"></span> ⚡ Ação Necessária
+        </button>
+        <button class="scenario-btn" data-scenario="working">
+          <span class="dot" style="background: #4a9e34;"></span> 🟢 IAs Trabalhando
+        </button>
+        <button class="scenario-btn" data-scenario="idle">
+          <span class="dot" style="background: #8e8472;"></span> 💤 Tudo Zen / Parado
+        </button>
+        <button class="scenario-btn" data-scenario="quota-alert">
+          <span class="dot" style="background: #d94828;"></span> ⚠️ Alerta de Cota Baixa
+        </button>
+      </div>
+    </div>
+
+    <!-- PALCO DO DESKTOP -->
+    <div class="desktop-stage" id="desktopStage">
+      <div class="desktop-watermark">
+        <p style="font-size: 15px; font-weight: 600; color: #5a6659;">Área de Trabalho Simulada</p>
+        <p>Clique na Capivara para abrir ou fechar o novo Resumo Zen</p>
+      </div>
+
+      <div id="zenToast" class="zen-toast" role="status">Ação registrada com sucesso!</div>
+
+      <!-- COMPANION + NOVO POPOVER -->
+      <div class="companion-rig">
+        
+        <!-- O NOVO POPOVER SIMPLIFICADO -->
+        <aside id="zenPopover" class="zen-popover" aria-label="Resumo rápido Capy">
+          <!-- 1. Header Compacto -->
+          <header class="zen-header">
+            <div class="zen-header-left">
+              <span class="zen-mascot-avatar" aria-hidden="true">🐾</span>
+              <strong class="zen-title">Capy</strong>
+              <span id="zenStatusPill" class="zen-status-pill waiting">
+                <span class="pulse-dot"></span> <span id="zenStatusText">1 pendente</span>
+              </span>
+            </div>
+            <button id="closePopoverBtn" class="zen-close-btn" title="Fechar resumo (Esc)" aria-label="Fechar">
+              <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </header>
+
+          <!-- 2. Card de Ação Prioritária (Condicional com Logo Claude) -->
+          <div id="zenPriorityBox" class="zen-priority-box">
+            <div class="zen-priority-tag">
+              <span>⚠️ Requer Atenção Imediata</span>
+            </div>
+            <div class="zen-priority-agent">
+              <span class="zen-agent-badge claude" id="zenPriorityAgentBadge">
+                <svg class="provider-logo" viewBox="0 0 24 24"><use href="#logo-claude-sym"/></svg>
+                Claude Code
+              </span>
+              <span class="zen-project-name" id="zenPriorityProject">Token-Watch</span>
+            </div>
+            <p class="zen-priority-msg" id="zenPriorityMessage">Solicita permissão para executar a suíte de testes do projeto:</p>
+            <code class="zen-cmd-snippet" id="zenPriorityCommand">python -m pytest tests/</code>
+            <div class="zen-action-buttons">
+              <button id="zenBtnAllow" class="zen-btn-allow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                Permitir
+              </button>
+              <button id="zenBtnDeny" class="zen-btn-deny">Negar</button>
+            </div>
+          </div>
+
+          <!-- 3. Fita de Agentes Ativos com Logos Oficiais -->
+          <div class="zen-agents-section" id="zenAgentsSection">
+            <div class="zen-section-label">
+              <span>Agentes Acompanhados</span>
+              <span id="zenAgentsCount">2 ativos</span>
+            </div>
+            <div id="zenAgentsList">
+              <div class="zen-agent-row">
+                <div class="zen-agent-info">
+                  <svg class="provider-logo" viewBox="0 0 24 24"><use href="#logo-openai-sym"/></svg>
+                  <span class="zen-agent-name">Terminal-Hub</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span class="zen-agent-task">gerando resposta</span>
+                  <span class="zen-agent-state-dot working"></span>
+                </div>
+              </div>
+              <div class="zen-agent-row">
+                <div class="zen-agent-info">
+                  <svg class="provider-logo" viewBox="16 20 146 138"><use href="#logo-agy-sym"/></svg>
+                  <span class="zen-agent-name">Capy</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span class="zen-agent-task">compilando código</span>
+                  <span class="zen-agent-state-dot working"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Estado Vazio / Zen Total (Condicional) -->
+          <div id="zenEmptyState" class="zen-empty-state" style="display: none;">
+            <p class="zen-empty-title">🌿 Tudo tranquilo por aqui</p>
+            <p class="zen-empty-desc">Nenhum agente em execução no momento.<br>A Capy está descansando em segundo plano.</p>
+          </div>
+
+          <!-- 4. Micro-Barra de Cotas com Mini-Logos Oficiais -->
+          <div class="zen-quota-section">
+            <div class="zen-section-label">
+              <span>Cotas Rápidas</span>
+              <span id="zenQuotaStatusLabel" style="font-weight: 500; font-size: 9.5px; color: #887b68;">Renovam hoje</span>
+            </div>
+            <div class="zen-quota-grid">
+              <!-- Claude -->
+              <div class="zen-quota-col">
+                <div class="zen-quota-header">
+                  <div class="zen-quota-name-wrap">
+                    <svg class="provider-logo mini" viewBox="0 0 24 24"><use href="#logo-claude-sym"/></svg>
+                    <span class="zen-quota-name">Claude</span>
+                  </div>
+                  <span id="claudeQuotaPct" class="zen-quota-pct">38%</span>
+                </div>
+                <div class="zen-micro-track">
+                  <div id="claudeQuotaBar" class="zen-micro-fill claude" style="width: 38%;"></div>
+                </div>
+              </div>
+              <!-- Codex -->
+              <div class="zen-quota-col">
+                <div class="zen-quota-header">
+                  <div class="zen-quota-name-wrap">
+                    <svg class="provider-logo mini" viewBox="0 0 24 24"><use href="#logo-openai-sym"/></svg>
+                    <span class="zen-quota-name">Codex</span>
+                  </div>
+                  <span id="codexQuotaPct" class="zen-quota-pct">72%</span>
+                </div>
+                <div class="zen-micro-track">
+                  <div id="codexQuotaBar" class="zen-micro-fill codex" style="width: 72%;"></div>
+                </div>
+              </div>
+              <!-- AGY -->
+              <div class="zen-quota-col">
+                <div class="zen-quota-header">
+                  <div class="zen-quota-name-wrap">
+                    <svg class="provider-logo mini" viewBox="16 20 146 138"><use href="#logo-agy-sym"/></svg>
+                    <span class="zen-quota-name">AGY</span>
+                  </div>
+                  <span id="agyQuotaPct" class="zen-quota-pct">61%</span>
+                </div>
+                <div class="zen-micro-track">
+                  <div id="agyQuotaBar" class="zen-micro-fill agy" style="width: 61%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Rodapé Minimalista -->
+          <footer class="zen-footer">
+            <div class="zen-footer-left">
+              <span>● Auto-sync ativo</span>
+            </div>
+            <button id="openFullMockBtn" class="zen-full-link" title="Abrir histórico e configurações detalhadas">
+              Painel completo
+              <svg viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+            </button>
+          </footer>
+        </aside>
+
+        <!-- A CAPIVARA CLICÁVEL -->
+        <button id="petToggleBtn" class="pet-interactive-btn" aria-label="Abrir ou fechar o resumo Capy" aria-expanded="true">
+          <div class="click-prompt" id="clickPrompt">Clique para alternar 👈</div>
+          <span id="capyBadge" class="capy-floating-badge">1</span>
+          
+          <!-- SVG Capy V5 -->
+          <svg id="pet" class="s-waiting p-stand" viewBox="0 -30 270 240" role="img" aria-label="Capivara animada">
+            <line x1="20" y1="183" x2="250" y2="183" stroke="#e3d6b4" stroke-width="2"/>
+            <path d="M42 188 l3 -7 3 7 3 -5 3 5 M215 188 l3 -7 3 7 3 -5 3 5" fill="var(--grass)" opacity=".7"/>
+            <ellipse id="shadow" cx="135" cy="184" rx="55" ry="5.5" fill="#000" opacity=".2"/>
+            <g id="rig">
+              <path class="capy-body" d="M96 92 C84 108 80 136 84 162 C87 182 105 184 135 184 C165 184 183 182 186 162 C190 136 186 108 174 92 Z" fill="var(--fur)" stroke="var(--line)" stroke-width="2.2"/>
+              <path class="capy-belly" d="M110 118 C100 134 98 158 106 172 C118 177 152 177 164 172 C172 158 170 134 160 118 Z" fill="var(--belly)" opacity=".75"/>
+              <g id="ear">
+                <g class="ear-left">
+                  <path d="M84 50 C75 44 77 32 87 34 C94 35 98 42 94 51 C90 54 87 53 84 50 Z" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2.2"/>
+                  <path d="M86 48 C80 43 81 36 87 37 C90 39 92 44 89 49 Z" fill="#e0a48a"/>
+                </g>
+                <g class="ear-right">
+                  <path d="M186 50 C195 44 193 32 183 34 C176 35 172 42 176 51 C180 54 183 53 186 50 Z" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2.2"/>
+                  <path d="M184 48 C190 43 189 36 183 37 C180 39 178 44 181 49 Z" fill="#e0a48a"/>
+                </g>
+              </g>
+              <g id="faceAnim">
+                <path class="capy-head" d="M104 35 C118 31 152 31 166 35 C183 40 189 52 189 73 L189 92 C189 113 172 121 135 121 C98 121 81 113 81 92 L81 73 C81 52 87 40 104 35 Z" fill="var(--fur)" stroke="var(--line)" stroke-width="2.2"/>
+                <path class="capy-snout-base" d="M93 72 C108 66 162 66 177 72 C188 77 190 88 186 100 C182 114 164 120 135 120 C106 120 88 114 84 100 C80 88 82 77 93 72 Z" fill="var(--fur-dark)"/>
+                <path class="capy-snout-plate" d="M101 77 C114 73 156 73 169 77 C179 81 180 90 177 99 C173 108 157 114 135 114 C113 114 97 108 93 99 C90 90 91 81 101 77 Z" fill="var(--muzzle)" opacity=".75"/>
+                <g class="capy-nostrils" fill="var(--ink)">
+                  <ellipse cx="124" cy="88" rx="4.2" ry="2.8" transform="rotate(-10 124 88)"/>
+                  <ellipse cx="146" cy="88" rx="4.2" ry="2.8" transform="rotate(10 146 88)"/>
+                </g>
+                <path class="capy-mouth" d="M135 91 v5 M125 98 Q130 102 135 97 Q140 102 145 98" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linecap="round"/>
+                <ellipse class="blush-left" cx="89" cy="82" rx="7" ry="3.5" fill="var(--blush)" opacity=".5"/>
+                <ellipse class="blush-right" cx="181" cy="82" rx="7" ry="3.5" fill="var(--blush)" opacity=".5"/>
+                
+                <!-- Olhos bem arregalados / curiosos quando em espera -->
+                <g class="eye-wide">
+                  <ellipse cx="107" cy="60.5" rx="12.2" ry="12.8" fill="var(--ink)"/>
+                  <ellipse cx="163" cy="60.5" rx="12.2" ry="12.8" fill="var(--ink)"/>
+                  <circle cx="111" cy="57" r="4.4" fill="#ffffff"/>
+                  <circle cx="167" cy="57" r="4.4" fill="#ffffff"/>
+                  <circle cx="103" cy="65" r="2.2" fill="#ffffff" opacity=".95"/>
+                  <circle cx="159" cy="65" r="2.2" fill="#ffffff" opacity=".95"/>
+                </g>
+
+                <!-- Olhos abertos normais -->
+                <g class="eye-open">
+                  <ellipse cx="107" cy="60.5" rx="10.5" ry="11.2" fill="var(--ink)"/>
+                  <ellipse cx="163" cy="60.5" rx="10.5" ry="11.2" fill="var(--ink)"/>
+                  <circle cx="110.5" cy="57.5" r="3.8" fill="#ffffff"/>
+                  <circle cx="166.5" cy="57.5" r="3.8" fill="#ffffff"/>
+                </g>
+
+                <!-- Olhos semicerrados (trabalhando ou zen) -->
+                <g class="eye-half">
+                  <ellipse cx="107" cy="62.5" rx="9.5" ry="6.2" fill="var(--ink)"/>
+                  <ellipse cx="163" cy="62.5" rx="9.5" ry="6.2" fill="var(--ink)"/>
+                  <circle cx="110" cy="60.5" r="2.4" fill="#ffffff"/>
+                  <circle cx="166" cy="60.5" r="2.4" fill="#ffffff"/>
+                </g>
+
+                <!-- Olhos fechados dormindo -->
+                <path class="eye-closed" d="M96 61 Q107 72 118 61 M152 61 Q163 72 174 61" fill="none" stroke="var(--ink)" stroke-width="3.0" stroke-linecap="round"/>
+              </g>
+
+              <!-- Patinhas -->
+              <g class="front-paws" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2" stroke-linecap="round">
+                <g class="anim fnA"><path d="M94 128 Q90 142 96 156 Q104 163 112 155 L108 133"/></g>
+                <g class="anim ffA"><path d="M176 128 Q180 142 174 156 Q166 163 158 155 L162 133"/></g>
+              </g>
+              <g fill="var(--foot)" stroke="var(--line)" stroke-width="2" stroke-linecap="round">
+                <path d="M90 170 Q80 182 94 184 H116 Q124 181 118 175 Z"/>
+                <path d="M180 170 Q190 182 176 184 H154 Q146 181 152 175 Z"/>
+              </g>
+              <!-- Laranja na cabeça -->
+              <g id="orange">
+                <g class="orange">
+                  <circle cx="135" cy="23" r="9.2" fill="#ffa21f" stroke="var(--line)" stroke-width="2"/>
+                  <path d="M135 15 q3.5 -6 9.5 -4 q-2.7 5 -9.5 4z" fill="#6aa84f" stroke="var(--line)" stroke-width="1.4"/>
+                </g>
+              </g>
+            </g>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- SEÇÃO 2: LOGOS OFICIAIS COMO NO TOKEN-WATCH -->
+  <div class="section-title">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 14.14 14.14"/></svg>
+    Identidade dos Provedores (Padrão Token-Watch)
+  </div>
+
+  <div class="grid grid-3">
+    <!-- Claude / Anthropic -->
+    <div class="card">
+      <span class="card-badge brand">Anthropic</span>
+      <div class="brand-hero">
+        <div class="brand-icon-box">
+          <svg class="provider-logo large" viewBox="0 0 24 24"><use href="#logo-claude-sym"/></svg>
+        </div>
+        <div>
+          <strong style="font-size: 14px; color: var(--text);">Claude Code</strong>
+          <p style="font-size: 11.5px; color: var(--sub); margin: 0;">Asterisco Terracotta (#D97757)</p>
+        </div>
+      </div>
+      <p>
+        Símbolo oficial com traços radiantes. Utilizado no popover no card de atenção, na lista de agentes e na micro-barra de cota da assinatura.
+      </p>
+    </div>
+
+    <!-- OpenAI / Codex -->
+    <div class="card">
+      <span class="card-badge brand">OpenAI</span>
+      <div class="brand-hero">
+        <div class="brand-icon-box">
+          <svg class="provider-logo large" viewBox="0 0 24 24"><use href="#logo-openai-sym"/></svg>
+        </div>
+        <div>
+          <strong style="font-size: 14px; color: var(--text);">Codex</strong>
+          <p style="font-size: 11.5px; color: var(--sub); margin: 0;">Roseta Espiral (#10A37F)</p>
+        </div>
+      </div>
+      <p>
+        Espiral geométrica oficial da OpenAI. Substitui tags genéricas de texto e proporciona reconhecimento instantâneo em fundos claros e escuros.
+      </p>
+    </div>
+
+    <!-- Google / Antigravity -->
+    <div class="card">
+      <span class="card-badge brand">Google / DeepMind</span>
+      <div class="brand-hero">
+        <div class="brand-icon-box">
+          <svg class="provider-logo large" viewBox="16 20 146 138"><use href="#logo-agy-sym"/></svg>
+        </div>
+        <div>
+          <strong style="font-size: 14px; color: var(--text);">Antigravity</strong>
+          <p style="font-size: 11.5px; color: var(--sub); margin: 0;">Gradiente Linear (#3B82FF → #FF8A1A)</p>
+        </div>
+      </div>
+      <p>
+        Curva em gradiente oficial do Antigravity CLI e IDE. Mantém alinhamento exato com a leitura de 4 janelas do Token-Watch.
+      </p>
+    </div>
+  </div>
+
+
+  <!-- SEÇÃO 3: COMPARATIVO LADO A LADO (ANTES VS DEPOIS) -->
+  <div class="section-title">
+    <svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+    Comparativo de Arquitetura de Informação
+  </div>
+
+  <div class="grid grid-2">
+    <!-- Card ANTES -->
+    <div class="card">
+      <span class="card-badge before">Antes · Resumo Atual (Sobrecarregado)</span>
+      <h3>Excesso de Ruído e Falta de Identidade Visual</h3>
+      <p>
+        O resumo original ocupava até 540px de altura vertical, sem ícones oficiais reconhecíveis (usava apenas letrinhas isoladas como <code>[C]</code>, <code>[O]</code>, <code>[A]</code>) e mostradores de cotas desproporcionais.
+      </p>
+      <ul class="comparison-list before">
+        <li>
+          <span class="icon">🛑</span>
+          <div><strong>Sem logos das empresas:</strong> Apenas marcadores genéricos de texto e letras, dificultando saber de imediato qual IA estava rodando.</div>
+        </li>
+        <li>
+          <span class="icon">🛑</span>
+          <div><strong>Mostradores circulares pesados:</strong> 3 dials circulares ocupavam 180px de altura apenas para indicar porcentagem.</div>
+        </li>
+        <li>
+          <span class="icon">🛑</span>
+          <div><strong>Caminhos absolutos e metadados no card:</strong> Exibia <code>C:\PProjetos\Token-Watch</code> e tags de terminal ocupando 2 a 3 linhas por sessão.</div>
+        </li>
+        <li>
+          <span class="icon">🛑</span>
+          <div><strong>Textos institucionais e disclaimers:</strong> Banners como <em>"Demonstração · sessões e cotas simuladas"</em> e introduções longas de cota no popover rápido.</div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Card DEPOIS -->
+    <div class="card" style="border: 2px solid var(--accent); background: #fbfdf9;">
+      <span class="card-badge after">Depois · Resumo Simplificado (Zen Popover)</span>
+      <h3>Logos Oficiais do Token-Watch e Foco em 1 Clique</h3>
+      <p>
+        Pensado para o contexto de uso real: o usuário clica na capivara para saber em 1 segundo <strong>qual IA precisa de ação</strong> e <strong>como estão os saldos de cota</strong>.
+      </p>
+      <ul class="comparison-list after">
+        <li>
+          <span class="icon">✅</span>
+          <div><strong>Logos Oficiais em Todos os Níveis:</strong> Claude, OpenAI e Antigravity presentes no card de ação, na fita de agentes e nas micro-barras de cota.</div>
+        </li>
+        <li>
+          <span class="icon">✅</span>
+          <div><strong>Ação Prioritária Isolada no Topo:</strong> Se houver comando aguardando aprovação, ele ganha um card limpo com botões diretos <code>Permitir</code> / <code>Negar</code>.</div>
+        </li>
+        <li>
+          <span class="icon">✅</span>
+          <div><strong>Fita Compacta de Agentes:</strong> 1 linha de 28px por IA ativa com logo vetorial e pulso verde suave.</div>
+        </li>
+        <li>
+          <span class="icon">✅</span>
+          <div><strong>Micro-Barras de Cotas (32px total):</strong> 3 barras horizontais compactas com mini-logos integrados e percentual exato.</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+
+  <!-- SEÇÃO 4: GANHOS QUANTITATIVOS E DECISÕES DE DESIGN -->
+  <div class="section-title">
+    <svg viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+    Métricas de Redução e Pilares da Reorganização
+  </div>
+
+  <div class="grid grid-4">
+    <div class="card">
+      <span class="card-badge metric">Dimensões</span>
+      <h3>-56% de Altura</h3>
+      <p>A altura típica caiu de <strong>540px</strong> para <strong>238px</strong> (ou <strong>168px</strong> no modo Zen sem pendências). Evita cobrir o código do usuário.</p>
+    </div>
+
+    <div class="card">
+      <span class="card-badge brand">Identidade</span>
+      <h3>3 Logos Vetoriais</h3>
+      <p>Inclusão dos arquivos oficiais <code>claude.svg</code>, <code>openai.svg</code> e <code>antigravity.svg</code> herdados da pasta <code>Token-Watch/ui/logos</code>.</p>
+    </div>
+
+    <div class="card">
+      <span class="card-badge metric">Hierarquia</span>
+      <h3>1 Clique para Liberar</h3>
+      <p>Botão <strong>Permitir</strong> em destaque verde primário resolve o bloqueio da IA sem exigir abrir terminal nem navegar em menus.</p>
+    </div>
+
+    <div class="card">
+      <span class="card-badge decision">Navegação</span>
+      <h3>Separação Rápido / Profundo</h3>
+      <p>Configurações detalhadas, troca de chaves e histórico de tokens continuam preservados com 1 clique no <strong>Painel Completo ↗</strong>.</p>
+    </div>
+  </div>
+
+  <!-- RODAPÉ DO SHOWCASE -->
+  <footer class="showcase-footer">
+    <p>Capy Desktop Prototype Suite · Integrado aos assets de <code>Token-Watch</code> e documentado em <code>NEXT_STEPS.md</code></p>
+  </footer>
+
+  <!-- SCRIPT INTERATIVO DO SHOWCASE -->
+  <script>
+    (function() {
+      // Elementos do DOM
+      const petToggleBtn = document.getElementById('petToggleBtn');
+      const zenPopover = document.getElementById('zenPopover');
+      const closePopoverBtn = document.getElementById('closePopoverBtn');
+      const clickPrompt = document.getElementById('clickPrompt');
+      const pet = document.getElementById('pet');
+      const capyBadge = document.getElementById('capyBadge');
+      const zenToast = document.getElementById('zenToast');
+
+      // Seções do Popover
+      const zenStatusPill = document.getElementById('zenStatusPill');
+      const zenStatusText = document.getElementById('zenStatusText');
+      const zenPriorityBox = document.getElementById('zenPriorityBox');
+      const zenPriorityProject = document.getElementById('zenPriorityProject');
+      const zenPriorityCommand = document.getElementById('zenPriorityCommand');
+      const zenPriorityMessage = document.getElementById('zenPriorityMessage');
+      const zenPriorityAgentBadge = document.getElementById('zenPriorityAgentBadge');
+      const zenAgentsSection = document.getElementById('zenAgentsSection');
+      const zenAgentsCount = document.getElementById('zenAgentsCount');
+      const zenAgentsList = document.getElementById('zenAgentsList');
+      const zenEmptyState = document.getElementById('zenEmptyState');
+      const zenQuotaStatusLabel = document.getElementById('zenQuotaStatusLabel');
+
+      // Botões de Ação
+      const zenBtnAllow = document.getElementById('zenBtnAllow');
+      const zenBtnDeny = document.getElementById('zenBtnDeny');
+      const openFullMockBtn = document.getElementById('openFullMockBtn');
+
+      // Cotas
+      const claudeQuotaPct = document.getElementById('claudeQuotaPct');
+      const claudeQuotaBar = document.getElementById('claudeQuotaBar');
+      const codexQuotaPct = document.getElementById('codexQuotaPct');
+      const codexQuotaBar = document.getElementById('codexQuotaBar');
+      const agyQuotaPct = document.getElementById('agyQuotaPct');
+      const agyQuotaBar = document.getElementById('agyQuotaBar');
+
+      // Toast notification helper
+      let toastTimer = null;
+      function showToast(msg) {
+        zenToast.textContent = msg;
+        zenToast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          zenToast.classList.remove('show');
+        }, 2600);
+      }
+
+      // Alternar Popover
+      function togglePopover(show) {
+        const isHidden = zenPopover.classList.contains('hidden');
+        const nextState = (typeof show === 'boolean') ? !show : isHidden;
+        
+        if (nextState) {
+          zenPopover.classList.add('hidden');
+          petToggleBtn.setAttribute('aria-expanded', 'false');
+        } else {
+          zenPopover.classList.remove('hidden');
+          petToggleBtn.setAttribute('aria-expanded', 'true');
+        }
+        if (clickPrompt) clickPrompt.style.display = 'none';
+      }
+
+      petToggleBtn.addEventListener('click', () => togglePopover());
+      closePopoverBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePopover(false);
+      });
+
+      // Fechar com Escape
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !zenPopover.classList.contains('hidden')) {
+          togglePopover(false);
+        }
+      });
+
+      // Ações rápidas no Card Prioritário
+      zenBtnAllow.addEventListener('click', () => {
+        showToast('Permissão concedida: teste em execução no Claude Code!');
+        setScenario('working');
+      });
+
+      zenBtnDeny.addEventListener('click', () => {
+        showToast('Permissão negada. Claude notificado.');
+        setScenario('working');
+      });
+
+      openFullMockBtn.addEventListener('click', () => {
+        showToast('Abrindo o painel completo expandido com histórico e configurações...');
+      });
+
+      // SVGs Inline Snippets
+      const svgClaude = `<svg class="provider-logo" viewBox="0 0 24 24"><use href="#logo-claude-sym"/></svg>`;
+      const svgCodex = `<svg class="provider-logo" viewBox="0 0 24 24"><use href="#logo-openai-sym"/></svg>`;
+      const svgAgy = `<svg class="provider-logo" viewBox="16 20 146 138"><use href="#logo-agy-sym"/></svg>`;
+
+      // Gerenciador de Cenários
+      const scenarios = {
+        'waiting': {
+          pillClass: 'waiting',
+          pillText: '1 pendente',
+          capyBadge: '1',
+          petClass: 's-waiting p-stand',
+          showPriority: true,
+          showEmpty: false,
+          agentsCount: '2 ativos',
+          agentsHTML: `
+            <div class="zen-agent-row">
+              <div class="zen-agent-info">
+                ${svgCodex}
+                <span class="zen-agent-name">Terminal-Hub</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="zen-agent-task">gerando resposta</span>
+                <span class="zen-agent-state-dot working"></span>
+              </div>
+            </div>
+            <div class="zen-agent-row">
+              <div class="zen-agent-info">
+                ${svgAgy}
+                <span class="zen-agent-name">Capy</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="zen-agent-task">compilando código</span>
+                <span class="zen-agent-state-dot working"></span>
+              </div>
+            </div>
+          `,
+          quotas: { claude: 38, codex: 72, agy: 61, label: 'Renovam hoje' }
+        },
+        'working': {
+          pillClass: 'working',
+          pillText: '3 trabalhando',
+          capyBadge: '',
+          petClass: 's-working p-sit',
+          showPriority: false,
+          showEmpty: false,
+          agentsCount: '3 ativos',
+          agentsHTML: `
+            <div class="zen-agent-row">
+              <div class="zen-agent-info">
+                ${svgClaude}
+                <span class="zen-agent-name">Token-Watch</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="zen-agent-task">executando testes</span>
+                <span class="zen-agent-state-dot working"></span>
+              </div>
+            </div>
+            <div class="zen-agent-row">
+              <div class="zen-agent-info">
+                ${svgCodex}
+                <span class="zen-agent-name">Terminal-Hub</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="zen-agent-task">refatorando rota</span>
+                <span class="zen-agent-state-dot working"></span>
+              </div>
+            </div>
+            <div class="zen-agent-row">
+              <div class="zen-agent-info">
+                ${svgAgy}
+                <span class="zen-agent-name">Capy</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="zen-agent-task">testes de unidade</span>
+                <span class="zen-agent-state-dot working"></span>
+              </div>
+            </div>
+          `,
+          quotas: { claude: 35, codex: 70, agy: 59, label: 'Consumo estável' }
+        },
+        'idle': {
+          pillClass: 'idle',
+          pillText: 'Tudo zen',
+          capyBadge: '',
+          petClass: 's-sleeping p-lie',
+          showPriority: false,
+          showEmpty: true,
+          agentsCount: '0 ativos',
+          agentsHTML: '',
+          quotas: { claude: 38, codex: 72, agy: 61, label: 'Pronto para uso' }
+        },
+        'quota-alert': {
+          pillClass: 'waiting',
+          pillText: 'Cota baixa (8%)',
+          capyBadge: '!',
+          petClass: 's-waiting p-stand',
+          showPriority: false,
+          showEmpty: false,
+          agentsCount: '1 ativo',
+          agentsHTML: `
+            <div class="zen-agent-row">
+              <div class="zen-agent-info">
+                ${svgClaude}
+                <span class="zen-agent-name">Token-Watch</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="zen-agent-task" style="color: #b2451f; font-weight: 600;">limite próximo</span>
+                <span class="zen-agent-state-dot waiting"></span>
+              </div>
+            </div>
+          `,
+          quotas: { claude: 8, codex: 72, agy: 61, label: '⚠️ Claude esgotando' }
+        }
+      };
+
+      function setScenario(key) {
+        const sc = scenarios[key];
+        if (!sc) return;
+
+        // Atualizar botões
+        document.querySelectorAll('.scenario-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.scenario === key);
+        });
+
+        // Atualizar Popover
+        zenStatusPill.className = 'zen-status-pill ' + sc.pillClass;
+        zenStatusText.textContent = sc.pillText;
+
+        // Badge flutuante na Capy
+        if (sc.capyBadge) {
+          capyBadge.textContent = sc.capyBadge;
+          capyBadge.style.display = 'flex';
+        } else {
+          capyBadge.style.display = 'none';
+        }
+
+        // Postura da Capy
+        pet.setAttribute('class', sc.petClass);
+
+        // Visibilidade do Card Prioritário
+        zenPriorityBox.style.display = sc.showPriority ? 'block' : 'none';
+
+        // Visibilidade de Agentes ou Vazio
+        if (sc.showEmpty) {
+          zenAgentsSection.style.display = 'none';
+          zenEmptyState.style.display = 'block';
+        } else {
+          zenAgentsSection.style.display = 'block';
+          zenEmptyState.style.display = 'none';
+          zenAgentsCount.textContent = sc.agentsCount;
+          zenAgentsList.innerHTML = sc.agentsHTML;
+        }
+
+        // Cotas
+        claudeQuotaPct.textContent = sc.quotas.claude + '%';
+        claudeQuotaBar.style.width = sc.quotas.claude + '%';
+        claudeQuotaBar.className = 'zen-micro-fill claude' + (sc.quotas.claude <= 10 ? ' alert' : '');
+        claudeQuotaPct.className = 'zen-quota-pct' + (sc.quotas.claude <= 10 ? ' low' : '');
+
+        codexQuotaPct.textContent = sc.quotas.codex + '%';
+        codexQuotaBar.style.width = sc.quotas.codex + '%';
+
+        agyQuotaPct.textContent = sc.quotas.agy + '%';
+        agyQuotaBar.style.width = sc.quotas.agy + '%';
+
+        zenQuotaStatusLabel.textContent = sc.quotas.label;
+
+        // Garantir popover visível ao trocar de cenário
+        togglePopover(true);
+      }
+
+      // Conectar botões de cenário
+      document.querySelectorAll('.scenario-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          setScenario(btn.dataset.scenario);
+        });
+      });
+
+      // Inicializar no cenário 'waiting'
+      setScenario('waiting');
+
+    })();
+  </script>
+</body>
+</html>

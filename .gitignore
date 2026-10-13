@@ -7,5 +7,6 @@
 /.impeccable/*.pid
 /scratch/
 /releases/**/*.exe
+/*.exe
 /.checks/discovery-local.json
 /.checks/activity-local.json

@@ -69,7 +69,14 @@ export function sessionRow(s: Session, real: boolean, requests: Intervention[] =
     : '<button data-action="terminal">Ver terminal simulado</button>';
   const states: Record<string, string> = { waiting: 'Precisa de você', working: 'Trabalhando', idle: 'Ociosa', done: 'Concluída' };
   const state = real && !['waiting', 'working', 'idle', 'unknown'].includes(s.state) ? 'unknown' : s.state;
-  return `<article class="session ${escape(state)}" data-id="${escape(s.id)}"><div class="session-top"><span class="agent-mark ${escape(s.kind)}" aria-hidden="true">${escape(s.symbol)}</span><h2>${escape(s.project)}</h2><button class="icon-button" data-action="hide" aria-label="Ocultar sessão ${escape(s.project)}">${eye}</button></div><p class="session-meta">${escape(s.agent)} · ${escape(s.origin)}</p>${real ? `<p class="session-id">Sessão ${escape(s.id.split(':').slice(1).join(':') || s.id)}</p>` : ''}<p class="session-message">${escape(s.message)}</p>${!real && s.state === 'waiting' && s.command ? `<code class="request-command">${escape(s.command)}</code>` : ''}${buttons ? `<div class="actions">${buttons}</div>` : ''}${real ? requests.map(interventionMarkup).join('') : ''}<p class="state-line"><span aria-hidden="true"></span>${states[state] ?? 'Estado desconhecido'}</p></article>`;
+  const brandLogo = s.kind === 'claude'
+    ? '<svg class="provider-logo claude" viewBox="0 0 24 24"><use href="#logo-claude-sym"/></svg>'
+    : (s.kind === 'agy' || s.kind === 'antigravity')
+    ? '<svg class="provider-logo agy" viewBox="16 20 146 138"><use href="#logo-agy-sym"/></svg>'
+    : (s.kind === 'codex' || s.kind === 'openai')
+    ? '<svg class="provider-logo openai" viewBox="0 0 24 24"><use href="#logo-openai-sym"/></svg>'
+    : escape(s.symbol);
+  return `<article class="session ${escape(state)}" data-id="${escape(s.id)}"><div class="session-top"><span class="agent-mark ${escape(s.kind)}" aria-hidden="true">${brandLogo}</span><h2>${escape(s.project)}</h2><button class="icon-button" data-action="hide" aria-label="Ocultar sessão ${escape(s.project)}">${eye}</button></div><p class="session-meta">${escape(s.agent)} · ${escape(s.origin)}</p>${real ? `<p class="session-id">Sessão ${escape(s.id.split(':').slice(1).join(':') || s.id)}</p>` : ''}<p class="session-message">${escape(s.message)}</p>${!real && s.state === 'waiting' && s.command ? `<code class="request-command">${escape(s.command)}</code>` : ''}${buttons ? `<div class="actions">${buttons}</div>` : ''}${real ? requests.map(interventionMarkup).join('') : ''}<p class="state-line"><span aria-hidden="true"></span>${states[state] ?? 'Estado desconhecido'}</p></article>`;
 }
 
 export function petState(data: Snapshot): string {

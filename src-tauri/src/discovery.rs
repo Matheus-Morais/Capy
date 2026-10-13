@@ -79,15 +79,32 @@ pub(crate) fn uuid(value: &str) -> bool {
 }
 
 pub(crate) fn session(agent: &str, kind: &str, id: &str, cwd: &str) -> Session {
-    let project = cwd
-        .trim_end_matches(['/', '\\'])
+    let home = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(std::path::PathBuf::from)
+        .unwrap_or_default();
+    let is_home = !home.as_os_str().is_empty() && {
+        let p = std::path::Path::new(cwd);
+        p == home || {
+            let s1 = cwd.replace('/', "\\").trim_end_matches('\\').to_lowercase();
+            let s2 = home.to_string_lossy().replace('/', "\\").trim_end_matches('\\').to_lowercase();
+            !s1.is_empty() && s1 == s2
+        }
+    };
+    let username = std::env::var("USERNAME").unwrap_or_default();
+    let candidate = cwd.trim_end_matches(['/', '\\'])
         .rsplit(['/', '\\'])
         .next()
         .filter(|p| !p.is_empty())
         .unwrap_or(cwd);
+    let project = if is_home || (!username.is_empty() && candidate.eq_ignore_ascii_case(&username)) {
+        "Workspace Geral".to_string()
+    } else {
+        candidate.to_string()
+    };
     Session {
         id: format!("{kind}:{id}"),
-        project: project.into(),
+        project,
         agent: agent.into(),
         symbol: match kind {
             "claude" => "C",

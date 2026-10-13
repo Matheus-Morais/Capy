@@ -1,7 +1,7 @@
 import './style.css';
 import { action, desktopCommand, native, showError, snapshot, subscribe, respondIntervention, setInterventionSubscription, type Snapshot } from './bridge';
 import { escape, sessionRow } from './presentation';
-import { renderQuotaBoard } from './quota-board';
+import { renderQuotaBoard, renderSummaryQuotas } from './quota-board';
 import { pendingIntervention, interventionContext, captureInterventionAnswers, restoreInterventionAnswers, questionAnswer } from './interventions-ui';
 import { runInterventionSubscriptionClick } from './intervention-subscription';
 import { renderPreferences } from './settings-ui';
@@ -25,10 +25,20 @@ function render(data: Snapshot) {
   realMode = data.scenario === 'real';
   const visible = data.sessions.filter(s => !s.hidden).sort((a,b) => Number(b.state === 'waiting') - Number(a.state === 'waiting'));
   const waiting = visible.filter(s => s.state === 'waiting').length + (data.chatTransfers??[]).length;
-  document.getElementById('subtitle')!.textContent = waiting ? `${waiting} pedidos precisam de você` : `${visible.length} sessões acompanhadas`;
-  sessions.innerHTML = visible.length ? visible.map(s => sessionRow(s, realMode, data.interventions.filter(r => r.sessionId === s.id), data.subscriptions.find(sub => sub.sessionId === s.id),data.chatTransfers?.find(review=>s.id===`chat:${review.sourceId}`))).join('') : realMode
-    ? '<div class="empty"><h2>Nenhuma sessão visível.</h2><p>Abra uma sessão de Claude Code ou Codex. A lista é atualizada automaticamente a cada 5 segundos; sessões ocultas podem ser restauradas abaixo.</p></div>'
-    : '<div class="empty"><h2>Tudo tranquilo por aqui.</h2><p>Restaure as sessões ocultas ou escolha outro cenário no painel completo.</p></div>';
+  const subtitle = document.getElementById('subtitle')!;
+  const pillClass = waiting ? 'waiting' : visible.length ? 'working' : 'idle';
+  const pillText = waiting ? `${waiting} pendente${waiting > 1 ? 's' : ''}` : visible.length ? `${visible.length} ativo${visible.length > 1 ? 's' : ''}` : 'Tudo zen';
+  subtitle.className = `zen-status-pill ${pillClass}`;
+  subtitle.innerHTML = `<span class="pulse-dot"></span><span>${pillText}</span>`;
+  const isSummary = document.body.dataset.surface === 'summary';
+  const emptyMarkup = isSummary
+    ? (realMode
+      ? '<div class="zen-empty-state"><p class="zen-empty-title">🌿 Tudo tranquilo por aqui</p><p class="zen-empty-desc">Nenhuma sessão ativa no momento.<br>A Capy monitora Claude Code, Codex e Antigravity automaticamente.</p></div>'
+      : '<div class="zen-empty-state"><p class="zen-empty-title">🌿 Tudo tranquilo por aqui</p><p class="zen-empty-desc">Nenhum agente em execução no momento.<br>A Capy está descansando em segundo plano.</p></div>')
+    : (realMode
+      ? '<div class="empty"><h2>Nenhuma sessão visível.</h2><p>Abra uma sessão de Claude Code ou Codex. A lista é atualizada automaticamente a cada 5 segundos; sessões ocultas podem ser restauradas abaixo.</p></div>'
+      : '<div class="empty"><h2>Tudo tranquilo por aqui.</h2><p>Restaure as sessões ocultas ou escolha outro cenário no painel completo.</p></div>');
+  sessions.innerHTML = visible.length ? visible.map(s => sessionRow(s, realMode, data.interventions.filter(r => r.sessionId === s.id), data.subscriptions.find(sub => sub.sessionId === s.id),data.chatTransfers?.find(review=>s.id===`chat:${review.sourceId}`))).join('') : emptyMarkup;
   restoreInterventionAnswers(sessions.querySelectorAll<HTMLInputElement>('[data-question-answer],[data-free-answer]'), retained);
   for (const row of sessions.querySelectorAll<HTMLElement>('[data-id]')) {
     if (opening.has(row.dataset.id!)) {
@@ -38,14 +48,35 @@ function render(data: Snapshot) {
     const requestElement = row.querySelector<HTMLElement>('[data-request]');
     if (requestElement && submitting.has(requestElement.dataset.request!)) requestElement.querySelectorAll<HTMLButtonElement>('button').forEach(b => { b.disabled = true; b.setAttribute('aria-busy', 'true'); });
   }
-  document.querySelector<HTMLElement>('.simulation')!.textContent = realMode ? 'Sessões reais · descoberta local experimental' : 'Demonstração · sessões, respostas e cotas simuladas';
+  const sim = document.querySelector<HTMLElement>('.simulation');
+  if (sim) sim.textContent = realMode ? 'Sessões reais · descoberta local experimental' : 'Demonstração · sessões, respostas e cotas simuladas';
   cancelQuotaExpiry?.();
-  cancelQuotaExpiry = renderQuotaBoard(document.getElementById('quotaRows')!, realMode, data.quotas ?? []);
-  document.querySelector<HTMLElement>('#quotaTitle span')!.textContent = realMode ? 'Fonte e atualização' : 'Simulação';
-  document.getElementById('refreshQuotas')!.hidden = !realMode;
+  const quotaRowsEl = document.getElementById('quotaRows')!;
+  if (isSummary) {
+    cancelQuotaExpiry = renderSummaryQuotas(quotaRowsEl, realMode, data.quotas ?? []);
+    const agentsCount = document.getElementById('agentsCount');
+    if (agentsCount) agentsCount.textContent = `${visible.length} ativo${visible.length === 1 ? '' : 's'}`;
+    const quotaStatus = document.getElementById('quotaStatusLabel');
+    if (quotaStatus) quotaStatus.textContent = realMode ? 'Ao vivo' : 'Renovam hoje';
+    const footerSync = document.getElementById('footerSync');
+    if (footerSync) footerSync.textContent = realMode ? '● Auto-sync ativo' : '● Simulação ativa';
+  } else {
+    cancelQuotaExpiry = renderQuotaBoard(quotaRowsEl, realMode, data.quotas ?? []);
+    const quotaTitleSpan = document.querySelector<HTMLElement>('#quotaTitle span');
+    if (quotaTitleSpan) quotaTitleSpan.textContent = realMode ? 'Fonte e atualização' : 'Simulação';
+    const refreshBtn = document.getElementById('refreshQuotas');
+    if (refreshBtn) refreshBtn.hidden = !realMode;
+  }
   const integrations = document.getElementById('integrations')!;
-  integrations.hidden = !realMode;
-  integrations.innerHTML = '<h2>Integrações locais</h2>' + (data.integrations.length ? data.integrations.map(i => `<p><strong>${escape(i.agent)}</strong><br>${escape(i.message)}</p>`).join('') : '<p>Buscando sessões locais…</p>');
+  if (integrations) {
+    if (isSummary) {
+      integrations.hidden = true;
+      integrations.innerHTML = '';
+    } else {
+      integrations.hidden = !realMode;
+      integrations.innerHTML = '<h2>Integrações locais</h2>' + (data.integrations.length ? data.integrations.map(i => `<p><strong>${escape(i.agent)}</strong><br>${escape(i.message)}</p>`).join('') : '<p>Buscando sessões locais…</p>');
+    }
+  }
   const footer = document.querySelector<HTMLElement>('.sheet-footer > span');
   if (footer) footer.textContent = realMode ? 'Atualiza a cada 5 s' : '3 agentes no exemplo';
   const restore = document.getElementById('restore') as HTMLButtonElement;
@@ -55,6 +86,15 @@ function render(data: Snapshot) {
   document.querySelectorAll<HTMLButtonElement>('[data-scenario]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.scenario === data.scenario)));
   const motion = document.getElementById('reduceMotion') as HTMLInputElement | null;
   if (motion) motion.checked = data.reduceMotion;
+  if (isSummary) {
+    requestAnimationFrame(() => {
+      const sheet = document.querySelector<HTMLElement>('.sheet');
+      if (sheet) {
+        const height = Math.ceil(sheet.getBoundingClientRect().height) + 2;
+        if (height > 0) void desktopCommand('resize_summary', { height, width: 360 }).catch(() => {});
+      }
+    });
+  }
 }
 sessions.addEventListener('click', event => {
   const button = (event.target as Element).closest<HTMLButtonElement>('[data-action]');

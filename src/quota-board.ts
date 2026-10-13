@@ -61,7 +61,7 @@ export function quotaBoard(real: boolean, rows: QuotaRow[] = [], now = Date.now(
     const status = !fresh.length ? 'Saldo indisponível' : low ? 'Saldo baixo' : 'Saldo atualizado';
     const buckets = new Map<string, QuotaRow[]>();
     for (const row of group) { const key=row.bucket??''; const bucket=buckets.get(key)??[]; bucket.push(row); buckets.set(key,bucket); }
-    return `<article class="quota-account"><header><div><h3>${html(first.provider)}</h3><p>${html(first.account ?? 'Conta não confirmada')}</p></div><span class="quota-account-state${low?' quota-low':!fresh.length?' quota-unknown':''}">${status}</span></header>
+    return `<article class="quota-account" data-provider="${html(first.provider.toLowerCase())}"><header><div><h3>${html(first.provider)}</h3><p>${html(first.account ?? 'Conta não confirmada')}</p></div><span class="quota-account-state${low?' quota-low':!fresh.length?' quota-unknown':''}">${status}</span></header>
       ${[...buckets.entries()].map(([bucket,windows])=>`<div class="quota-bucket">${bucket?`<p class="quota-bucket-label">${html(bucket)}</p>`:''}<div class="quota-windows">${windows.map(q=>meter(q,now)).join('')}</div></div>`).join('')}</article>`;
   }).join('');
 }
@@ -84,3 +84,59 @@ export function renderQuotaBoard(element: HTMLElement, real: boolean, rows: Quot
   draw(now);
   return () => clearTimeout(timer);
 }
+
+function findProviderPercent(rows: QuotaRow[], keys: string[], now: number): number | null {
+  const matches = rows.filter(r => keys.some(k => r.provider.toLowerCase().includes(k)));
+  const fresh = matches.find(r => usableQuota(r, now));
+  if (fresh && fresh.window) return Math.round(100 - fresh.window.usedPercent);
+  const anyWindow = matches.find(r => r.window && Number.isFinite(r.window.usedPercent));
+  if (anyWindow && anyWindow.window) return Math.round(100 - anyWindow.window.usedPercent);
+  return null;
+}
+
+export function summaryQuotaBars(real: boolean, rows: QuotaRow[] = [], now = Date.now()): string {
+  let claudePct: number | null = 38;
+  let codexPct: number | null = 72;
+  let agyPct: number | null = 61;
+
+  if (real) {
+    claudePct = findProviderPercent(rows, ['claude'], now);
+    codexPct = findProviderPercent(rows, ['codex', 'openai'], now);
+    agyPct = findProviderPercent(rows, ['antigravity', 'agy', 'gemini'], now);
+  }
+
+  const col = (name: string, sym: string, pct: number | null, cls: string, viewBox = '0 0 24 24') => {
+    const isLow = pct !== null && pct <= 20;
+    const valText = pct !== null ? `${pct}%` : '—';
+    const fillWidth = pct !== null ? Math.max(0, Math.min(100, pct)) : 0;
+    return `<div class="zen-quota-col">
+      <div class="zen-quota-header">
+        <div class="zen-quota-name-wrap">
+          <svg class="provider-logo mini ${cls}" viewBox="${viewBox}"><use href="#${sym}"/></svg>
+          <span class="zen-quota-name">${name}</span>
+        </div>
+        <span class="zen-quota-pct${isLow ? ' low' : ''}">${valText}</span>
+      </div>
+      <div class="zen-micro-track">
+        <div class="zen-micro-fill ${cls}${isLow ? ' alert' : ''}" style="width: ${fillWidth}%;"></div>
+      </div>
+    </div>`;
+  };
+
+  return `${col('Claude', 'logo-claude-sym', claudePct, 'claude')}
+${col('Codex', 'logo-openai-sym', codexPct, 'codex')}
+${col('AGY', 'logo-agy-sym', agyPct, 'agy', '16 20 146 138')}`;
+}
+
+export function renderSummaryQuotas(element: HTMLElement, real: boolean, rows: QuotaRow[], now = Date.now()): () => void {
+  let timer: ReturnType<typeof setTimeout>;
+  function draw(time: number) {
+    element.innerHTML = summaryQuotaBars(real, rows, time);
+    const deadlines = real ? rows.filter(q => usableQuota(q, time)).flatMap(q => [q.observedAt! + 120_001, q.window!.resetsAt * 1000]) : [];
+    const delay = Math.min(60_000 - time % 60_000, ...deadlines.map(d => d - time));
+    timer = setTimeout(() => draw(Date.now()), Math.max(1, delay));
+  }
+  draw(now);
+  return () => clearTimeout(timer);
+}
+

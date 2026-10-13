@@ -618,11 +618,13 @@
 
 /* ===== INTERAÇÃO / MOUSE EM CIMA (IS-HOVERED) ===== */
 /* Quando passa o mouse por cima: Capy ACORDA na hora com olhinhos grandes abertos e curiosidade! */
+#pet .eye-open, #pet .eye-wide {
+  translate: var(--gaze-x, 0px) var(--gaze-y, 0px);
+  transition: translate .22s cubic-bezier(0.25, 1, 0.5, 1);
+}
 #pet.is-hovered .eye-open, #pet.is-hovered .eye-wide {
   display: inline !important;
-  translate: var(--gaze-x, 0px) var(--gaze-y, 0px);
 }
-#pet .eye-open, #pet .eye-wide { transition: translate .15s ease-out; }
 #pet.is-hovered .eye-open {
   transform-origin: 135px 60.5px;
   animation: capy-blink 4s infinite;
@@ -929,6 +931,66 @@
 @keyframes capy-speech-pop {
   0% { opacity: 0; transform: scale(0.6) translateY(8px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ===== MICRO-FIDGETS AUTÔNOMOS E FÍSICA DE MOVIMENTO ===== */
+#pet.g-ear-twitch #ear {
+  animation: capy-ear-twitch-fast 0.45s ease-in-out 2 !important;
+  transform-origin: 135px 44px;
+}
+@keyframes capy-ear-twitch-fast {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-12deg); }
+  75% { transform: rotate(9deg); }
+}
+
+#pet.g-sniff .capy-nostrils {
+  animation: capy-sniff-burst 0.35s ease-in-out 3 !important;
+  transform-origin: 135px 88px;
+}
+#pet.g-sniff #faceAnim {
+  animation: capy-sniff-face 0.6s ease-in-out 2 !important;
+}
+@keyframes capy-sniff-burst {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.22, 0.82); }
+}
+@keyframes capy-sniff-face {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+
+#pet.g-look-up .eye-open {
+  translate: var(--gaze-x, 0px) -2.2px !important;
+}
+#pet.g-look-up #faceAnim {
+  animation: capy-look-curious 2.2s ease-in-out 1 !important;
+  transform-origin: 135px 85px;
+}
+@keyframes capy-look-curious {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  35%, 70% { transform: translate(-1.8px, -2px) rotate(-3deg); }
+}
+
+/* Inércia ao arrastar (Squash & Stretch elástico) */
+#pet.is-dragging #rig {
+  transform: scale(var(--drag-scale-x, 0.96), var(--drag-scale-y, 1.05)) rotate(var(--drag-tilt, 0deg)) !important;
+  transition: transform 0.08s ease-out;
+}
+#pet.is-dragging #shadow {
+  transform: scale(0.85, 0.85);
+  opacity: 0.08;
+}
+
+/* Pouso amortecido ao soltar (Landing bounce) */
+#pet.g-bounce-land #rig {
+  animation: capy-land-bounce 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 1 !important;
+}
+@keyframes capy-land-bounce {
+  0% { transform: scale(1.12, 0.86); }
+  40% { transform: scale(0.95, 1.05); }
+  70% { transform: scale(1.02, 0.98); }
+  100% { transform: scale(1, 1); }
 }
 
 @media (prefers-reduced-motion: reduce) {

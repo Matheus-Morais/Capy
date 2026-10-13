@@ -178,6 +178,6 @@ document.getElementById('reset').addEventListener('click', () => {
 });
 document.addEventListener('keydown', event => {if (event.key === 'Escape' && !summary.hidden) {openSummary(false); petButton.focus();}});
 window.addEventListener('resize', clampPosition);
-document.getElementById('quotaRows').innerHTML = [{label:'Claude · Conta 1',remaining:38},{label:'Codex',remaining:72},{label:'Antigravity',remaining:61}].map(q => `<div class="quota-row"><span>${q.label}</span><div class="quota-track" aria-hidden="true"><span style="--remaining:${q.remaining}%"></span></div><strong>${q.remaining}%</strong></div>`).join('');
+document.getElementById('quotaRows').innerHTML = [{label:'Claude · Conta 1',kind:'claude',remaining:38},{label:'Codex',kind:'codex',remaining:72},{label:'Antigravity',kind:'agy',remaining:61}].map(q => `<div class="quota-row"><span class="${q.kind}">${q.label}</span><div class="quota-track" aria-hidden="true"><span style="--remaining:${q.remaining}%"></span></div><strong>${q.remaining}%</strong></div>`).join('');
 scenario('waiting');
 try {const saved = JSON.parse(localStorage.getItem('capy-prototype-position')); if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) setPosition(saved.x,saved.y);} catch {}

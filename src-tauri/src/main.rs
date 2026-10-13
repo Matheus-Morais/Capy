@@ -121,8 +121,15 @@ fn position_summary(app: &tauri::AppHandle) -> Result<(), String> {
     let summary = window(app, "summary")?;
     let area = work_area(&pet)?;
     let scale = pet.scale_factor().map_err(|e| e.to_string())?;
-    let width = ((380.0 * scale).round() as u32).min(area.width);
-    let height = ((620.0 * scale).round() as u32).min(area.height);
+    let min_w = (280.0 * scale).round() as u32;
+    let min_h = (180.0 * scale).round() as u32;
+    let max_h = (580.0 * scale).round() as u32;
+    let current = summary.outer_size().unwrap_or(PhysicalSize::new(
+        (360.0 * scale).round() as u32,
+        (380.0 * scale).round() as u32,
+    ));
+    let width = current.width.clamp(min_w, area.width);
+    let height = current.height.clamp(min_h, area.height.min(max_h));
     summary
         .set_size(PhysicalSize::new(width, height))
         .map_err(|e| e.to_string())?;
@@ -138,6 +145,38 @@ fn position_summary(app: &tauri::AppHandle) -> Result<(), String> {
         },
         width,
         height,
+    );
+    summary
+        .set_position(PhysicalPosition::new(point.x, point.y))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn resize_summary(app: tauri::AppHandle, height: u32, width: Option<u32>) -> Result<(), String> {
+    let pet = window(&app, "pet")?;
+    let summary = window(&app, "summary")?;
+    let area = work_area(&pet)?;
+    let scale = pet.scale_factor().map_err(|e| e.to_string())?;
+    let min_w = (280.0 * scale).round() as u32;
+    let min_h = (180.0 * scale).round() as u32;
+    let max_h = (580.0 * scale).round() as u32;
+    let w = ((width.unwrap_or(360) as f64 * scale).round() as u32).clamp(min_w, area.width);
+    let h = ((height as f64 * scale).round() as u32).clamp(min_h, area.height.min(max_h));
+    summary
+        .set_size(PhysicalSize::new(w, h))
+        .map_err(|e| e.to_string())?;
+    let pet_point = pet.outer_position().map_err(|e| e.to_string())?;
+    let pet_size = pet.outer_size().map_err(|e| e.to_string())?;
+    let point = area.clamp(
+        Point {
+            x: pet_point
+                .x
+                .saturating_add(pet_size.width as i32)
+                .saturating_sub(w as i32),
+            y: pet_point.y.saturating_sub(h as i32).saturating_sub(8),
+        },
+        w,
+        h,
     );
     summary
         .set_position(PhysicalPosition::new(point.x, point.y))
@@ -244,6 +283,51 @@ fn move_pet(app: tauri::AppHandle, dx: i32, dy: i32) -> Result<(), String> {
     pet.set_position(PhysicalPosition::new(point.x, point.y))
         .map_err(|e| e.to_string())
 }
+
+#[cfg(windows)]
+fn spawn_cursor_monitor(app: tauri::AppHandle) {
+    std::thread::spawn(move || {
+        use windows_sys::Win32::Foundation::POINT;
+        use windows_sys::Win32::UI::WindowsAndMessaging::GetCursorPos;
+        let mut last_gx = 0.0f64;
+        let mut last_gy = 0.0f64;
+        let mut last_emit = std::time::Instant::now();
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(60));
+            let Ok(pet) = window(&app, "pet") else { continue };
+            if !pet.is_visible().unwrap_or(false) {
+                std::thread::sleep(std::time::Duration::from_millis(300));
+                continue;
+            }
+            let mut pt = POINT { x: 0, y: 0 };
+            if unsafe { GetCursorPos(&mut pt) } == 0 {
+                continue;
+            }
+            let Ok(pet_pos) = pet.outer_position() else { continue };
+            let Ok(pet_size) = pet.outer_size() else { continue };
+            let center_x = pet_pos.x + (pet_size.width as i32) / 2;
+            let center_y = pet_pos.y + (pet_size.height as i32) / 2;
+            let dx = pt.x - center_x;
+            let dy = pt.y - center_y;
+            let gx = (f64::from(dx) / 280.0).clamp(-3.0, 3.0);
+            let gy = (f64::from(dy) / 220.0).clamp(-2.0, 2.0);
+            if (gx - last_gx).abs() > 0.08
+                || (gy - last_gy).abs() > 0.08
+                || (last_emit.elapsed() > std::time::Duration::from_millis(600)
+                    && (gx - last_gx).abs() > 0.02)
+            {
+                last_gx = gx;
+                last_gy = gy;
+                last_emit = std::time::Instant::now();
+                let _ = app.emit("global-gaze", serde_json::json!({ "x": gx, "y": gy }));
+            }
+        }
+    });
+}
+
+#[cfg(not(windows))]
+fn spawn_cursor_monitor(_app: tauri::AppHandle) {}
+
 #[tauri::command]
 fn demo_snapshot(state: State<'_, DesktopState>) -> Result<demo::Snapshot, String> {
     state
@@ -467,7 +551,6 @@ async fn respond_intervention(
         .await
         .map_err(|_| "A entrega não foi confirmada. Confira na origem.".to_owned())?
 }
-
 #[tauri::command]
 async fn open_source(app:tauri::AppHandle,state: State<'_, DesktopState>, id: String) -> Result<(), String> {
     let expected = {
@@ -725,6 +808,7 @@ fn main() {
             chat_commands::approve_chat_transfer,
             chat_commands::cancel_chat_transfer,
             toggle_summary,
+            resize_summary,
             show_panel,
             hide_window,
             move_pet,
@@ -882,6 +966,7 @@ fn main() {
                 })
                 .build(app)?;
             restore_pet(app.handle())?;
+            spawn_cursor_monitor(app.handle().clone());
             if let Some(path) = smoke_path.clone() {
                 smoke::schedule(app.handle().clone(), path);
             }
