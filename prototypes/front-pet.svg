@@ -402,6 +402,12 @@
       <path d="M129 157 l-5 3 5 3 M141 157 l5 3 -5 3 M137 154 l-4 12" fill="none" stroke="#c4d7b1" stroke-width="2" stroke-linecap="round"/>
     </g>
 
+    <!-- Patinhas digitando: desenhadas POR CIMA do laptop para ficarem visíveis -->
+    <g class="typing-paws" fill="var(--fur-dark)" stroke="var(--line)" stroke-width="2" stroke-linecap="round">
+      <g class="tp tpL"><ellipse cx="114" cy="174" rx="12" ry="7.5"/><path d="M108 175 v4 M114 176 v4 M120 175 v4"/></g>
+      <g class="tp tpR"><ellipse cx="156" cy="174" rx="12" ry="7.5"/><path d="M150 175 v4 M156 176 v4 M162 175 v4"/></g>
+    </g>
+
     <!-- A icônica laranjinha da capivara na cabeça -->
     <g id="orange">
       <g class="orange">

@@ -46,6 +46,7 @@
 #pet .sparkles,
 #pet .zzz,
 #pet .laptop,
+#pet .typing-paws,
 #pet .coffee-cup,
 #pet .coffee-steam,
 #pet .bath-tub,
@@ -684,8 +685,16 @@
 }
 
 /* ===== ESTADO: TRABALHANDO (S-WORKING) ===== */
-#pet.s-working:not(.g-dance):not(.g-spin):not(.g-waddle):not(.g-stretch):not(.g-bounce-land):not(.g-celebrate) .laptop {
+#pet.s-working:not(.g-dance):not(.g-spin):not(.g-waddle):not(.g-stretch):not(.g-bounce-land):not(.g-celebrate) .laptop,
+#pet.s-working:not(.g-dance):not(.g-spin):not(.g-waddle):not(.g-stretch):not(.g-bounce-land):not(.g-celebrate) .typing-paws {
   display: inline !important;
+}
+#pet .typing-paws .tp { transform-box: fill-box; transform-origin: center; }
+#pet.s-working .typing-paws .tpL { animation: capy-type-key .26s ease-in-out infinite alternate; }
+#pet.s-working .typing-paws .tpR { animation: capy-type-key .26s -.13s ease-in-out infinite alternate; }
+@keyframes capy-type-key {
+  from { transform: translateY(2px); }
+  to { transform: translateY(-5px) rotate(-3deg); }
 }
 #pet.s-working:not([class*="g-"]) .front-paws .anim { transform-box: fill-box; transform-origin: center; }
 #pet.s-working:not([class*="g-"]) .front-paws .fnA { animation: tap .24s ease-in-out infinite alternate; }
