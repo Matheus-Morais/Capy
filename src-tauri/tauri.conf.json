@@ -71,7 +71,8 @@
           "Portuguese",
           "English"
         ],
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "installerHooks": "installer_hooks.nsi"
       }
     }
   },
