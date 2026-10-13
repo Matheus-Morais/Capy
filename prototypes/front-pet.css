@@ -45,6 +45,7 @@
 #pet .attention-mark,
 #pet .sparkles,
 #pet .zzz,
+#pet .laptop,
 #pet .coffee-cup,
 #pet .coffee-steam,
 #pet .bath-tub,
@@ -683,13 +684,18 @@
 }
 
 /* ===== ESTADO: TRABALHANDO (S-WORKING) ===== */
-#pet.s-working .front-paws .anim { transform-box: fill-box; transform-origin: center; }
-#pet.s-working .front-paws .fnA { animation: tap .24s ease-in-out infinite alternate; }
-#pet.s-working .front-paws .ffA { animation: tap .24s -.12s ease-in-out infinite alternate; }
-#pet.s-working #faceAnim { animation: front-nod 1.4s ease-in-out infinite; }
-#pet.s-working .eye-half { display: inline !important; }
+#pet.s-working:not(.g-dance):not(.g-spin):not(.g-waddle):not(.g-stretch):not(.g-bounce-land):not(.g-celebrate) .laptop {
+  display: inline !important;
+}
+#pet.s-working:not([class*="g-"]) .front-paws .anim { transform-box: fill-box; transform-origin: center; }
+#pet.s-working:not([class*="g-"]) .front-paws .fnA { animation: tap .24s ease-in-out infinite alternate; }
+#pet.s-working:not([class*="g-"]) .front-paws .ffA { animation: tap .24s -.12s ease-in-out infinite alternate; }
+#pet.s-working:not([class*="g-"]) #faceAnim { animation: front-nod 1.4s ease-in-out infinite; }
+#pet.s-working:not([class*="g-"]) .eye-half { display: inline !important; }
+#pet.s-working:not([class*="g-"]) #rig { animation: breathe 3.6s ease-in-out infinite; }
+#pet.s-working.g-ear-twitch .eye-half,
+#pet.s-working.g-sniff .eye-half { display: inline !important; }
 #pet.s-working .laptop path:last-child { animation: capy-code 1.4s steps(2) infinite; }
-#pet.s-working #rig { animation: breathe 3.6s ease-in-out infinite; }
 
 /* ===== ESTADO: ESPERANDO VOCÊ (S-WAITING) ===== */
 #pet.s-waiting .attention-mark { display: inline !important; transform-box: fill-box; transform-origin: center; }
@@ -730,6 +736,21 @@
   0%, 100% { transform: translateY(0) rotate(0deg); }
   35% { transform: translateY(-10px) rotate(8deg); }
   65% { transform: translateY(0) rotate(-4deg); }
+}
+
+@keyframes tap {
+  from { transform: translateY(-1.5px); }
+  to { transform: translateY(2.5px); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.015, 1.025); }
+}
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(.3); opacity: 0; }
+  50% { transform: scale(1); opacity: 1; }
 }
 
 .pet-paused #pet, .pet-paused #pet * { animation-play-state: paused !important; }
@@ -986,6 +1007,7 @@
 }
 
 #pet.g-look-up .eye-open {
+  display: inline !important;
   translate: var(--gaze-x, 0px) -2.2px !important;
 }
 #pet.g-look-up #faceAnim {

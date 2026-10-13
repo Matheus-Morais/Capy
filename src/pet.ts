@@ -131,7 +131,12 @@ function updateGazeLoop() {
   if (Math.abs(dx) < 0.02 && Math.abs(dy) < 0.02) {
     currentGazeX = targetGazeX;
     currentGazeY = targetGazeY;
-    if (pet?.style) {
+    if (targetGazeX === 0 && targetGazeY === 0) {
+      if (pet?.style) {
+        pet.style.removeProperty('--gaze-x');
+        pet.style.removeProperty('--gaze-y');
+      }
+    } else if (pet?.style) {
       pet.style.setProperty('--gaze-x', `${currentGazeX.toFixed(2)}px`);
       pet.style.setProperty('--gaze-y', `${currentGazeY.toFixed(2)}px`);
     }
@@ -185,6 +190,7 @@ function resetSmoothGaze() {
 applySkin(currentSkin);
 const badge = document.getElementById('petBadge')!;
 const behavior = new PetBehavior(Date.now());
+let forcePauseWork = false;
 let latest: Snapshot | undefined;
 let lastGestureId = -1;
 let windowVisible = true;
@@ -207,19 +213,21 @@ const lifeEngine = new PetLifeEngine({
   canFidget() {
     if (!latest || latest.reduceMotion || document.hidden || !windowVisible) return false;
     const isSleeping = pet.classList.contains('s-sleeping');
-    const isWorking = pet.classList.contains('s-working');
     const isWaiting = pet.classList.contains('s-waiting');
     const isHovered = pet.classList.contains('is-hovered');
     const waitingCount = parseInt(badge.textContent || '0', 10);
-    return !isSleeping && !isWorking && !isWaiting && !isHovered && waitingCount === 0;
+    return !isSleeping && !isWaiting && !isHovered && waitingCount === 0;
   }
 });
 
 function render(data: Snapshot) {
   latest = data;
   const frame = behavior.update(data, Date.now());
-  const {state, waiting, gesture} = frame;
-  if (state !== 'idle' || gesture !== '' || waiting > 0) {
+  let {state, waiting, gesture} = frame;
+  if (forcePauseWork && state === 'working') {
+    state = 'idle';
+  }
+  if (state === 'sleeping' || gesture !== '' || waiting > 0) {
     lifeEngine.cancelActiveGesture();
   }
   if (state === 'sleeping' || data.reduceMotion) {
@@ -237,7 +245,7 @@ function render(data: Snapshot) {
   if (!gesture) for (const value of ['hello', 'wave', 'click', 'celebrate']) pet.classList.remove(`g-${value}`);
   badge.hidden = !waiting;
   badge.textContent = String(waiting);
-  const statusText = waiting ? `${waiting} precisam de você` : gesture === 'celebrate' ? state === 'working' ? 'Conclusão confirmada · outros agentes trabalhando' : 'Conclusão confirmada' : state === 'working' ? 'Agentes trabalhando' : state === 'idle' ? 'Sessões abertas' : 'Capy descansando';
+  const statusText = waiting ? `${waiting} precisam de você` : gesture === 'celebrate' ? state === 'working' ? 'Conclusão confirmada · outros agentes trabalhando' : 'Conclusão confirmada' : state === 'working' ? 'Agentes trabalhando' : forcePauseWork ? 'Pausa da Capy ☕' : state === 'idle' ? 'Sessões abertas' : 'Capy descansando';
   document.getElementById('petStatus')!.textContent = statusText;
   button.title = `Capy: ${statusText}\nClique para abrir. Arraste para mover.`;
   document.body.classList.toggle('reduce-motion', data.reduceMotion);
@@ -259,7 +267,13 @@ button.addEventListener('pointerenter', () => {
 button.addEventListener('pointerleave', () => {
   pet.classList.remove('is-hovered');
   lifeEngine.clearGlobalGaze();
-  resetSmoothGaze();
+  pet.style.removeProperty('--gaze-x');
+  pet.style.removeProperty('--gaze-y');
+  targetGazeX = 0;
+  targetGazeY = 0;
+  currentGazeX = 0;
+  currentGazeY = 0;
+  gazeRafId = null;
 });
 button.addEventListener('pointermove', event => {
   if (pointer || !pet.classList.contains('is-hovered')) return;
@@ -317,24 +331,39 @@ button.addEventListener('dblclick', event => {
   event.preventDefault();
   triggerPlayfulGesture('g-love', 1800);
 });
-button.addEventListener('keydown', event => {
+button.addEventListener('contextmenu', event => {
+  event.preventDefault();
+});
+
+function handlePetKeydown(event: KeyboardEvent) {
   const key = event.key.toLowerCase();
+  if (key === 'x') {
+    event.preventDefault();
+    forcePauseWork = !forcePauseWork;
+    showSpeechBubble(forcePauseWork ? 'Pausa para café! ☕ Capy livre!' : 'De volta ao foco! 💻', 2500);
+    if (latest?.preferences?.sounds) playPetSound(forcePauseWork ? 'sip' : 'sparkle');
+    if (latest) render(latest);
+    return;
+  }
   if (key === 'v') {
     event.preventDefault();
     const next = currentSkin === 'v5' ? 'v4' : currentSkin === 'v4' ? 'v3' : currentSkin === 'v3' ? 'v2' : currentSkin === 'v2' ? 'v1' : 'v5';
     applySkin(next);
+    showSpeechBubble(`Capy Skin: ${next.toUpperCase()} ✨`, 1800);
     if (latest) render(latest);
     return;
   }
   if (key === 'c') {
     event.preventDefault();
     triggerPlayfulGesture('g-love', 1800);
+    showSpeechBubble('Muuuita fofura! ❤️', 1800);
     if (latest?.preferences?.sounds) playPetSound('purr');
     return;
   }
   if (key === 'b') {
     event.preventDefault();
     triggerPlayfulGesture('g-yawn', 1600);
+    showSpeechBubble('Que soninho gostoso... 🥱', 1800);
     if (latest?.preferences?.sounds) playPetSound('purr');
     return;
   }
@@ -346,76 +375,89 @@ button.addEventListener('keydown', event => {
   if (key === 'k') {
     event.preventDefault();
     toggleCompanionState('s-coffee');
+    showSpeechBubble('Cafézinho quente! ☕', 2000);
     if (latest?.preferences?.sounds) playPetSound('sip');
     return;
   }
   if (key === 'w') {
     event.preventDefault();
     toggleCompanionState('s-bath');
+    showSpeechBubble('Banho relaxante de ofurô! 🛁', 2200);
     if (latest?.preferences?.sounds) playPetSound('bubble');
     return;
   }
   if (key === 'p') {
     event.preventDefault();
     toggleCompanionState('s-music');
+    showSpeechBubble('Lofi Beats na vibe! 🎵', 2000);
     return;
   }
   if (key === 'o') {
     event.preventDefault();
     triggerPlayfulGesture('g-orange-trick', 1800);
+    showSpeechBubble('Equilibrando a laranja! 🍊', 2000);
     if (latest?.preferences?.sounds) playPetSound('sparkle');
     return;
   }
   if (key === 'h') {
     event.preventDefault();
     triggerPlayfulGesture('g-highfive', 1500);
+    showSpeechBubble('Toca aqui! ✋🎉', 1800);
     if (latest?.preferences?.sounds) playPetSound('sparkle');
     return;
   }
   if (key === 'd') {
     event.preventDefault();
     triggerPlayfulGesture('g-dream', 2500);
+    showSpeechBubble('Pensando em código limpo... 💭', 2200);
     return;
   }
   if (key === 'm') {
     event.preventDefault();
     toggleCompanionState('s-snack');
+    showSpeechBubble('Nhac nhac nhac! 🌿', 2000);
     if (latest?.preferences?.sounds) playPetSound('crunch');
     return;
   }
   if (key === 't') {
     event.preventDefault();
     triggerPlayfulGesture('g-dance', 2400);
+    showSpeechBubble('Hora da dancinha! 🕺✨', 2200);
     if (latest?.preferences?.sounds) playPetSound('sparkle');
     return;
   }
   if (key === 'a') {
     event.preventDefault();
     triggerPlayfulGesture('g-waddle', 2000);
+    showSpeechBubble('Passeando fofinha! 🐾', 2000);
     if (latest?.preferences?.sounds) playPetSound('bubble');
     return;
   }
   if (key === 'r') {
     event.preventDefault();
     triggerPlayfulGesture('g-spin', 1400);
+    showSpeechBubble('Rodopiando! 🌀', 1600);
     if (latest?.preferences?.sounds) playPetSound('celebrate');
     return;
   }
   if (key === 'e') {
     event.preventDefault();
     triggerPlayfulGesture('g-stretch', 2400);
+    showSpeechBubble('Alongando as costas! 🧘', 2000);
     if (latest?.preferences?.sounds) playPetSound('purr');
     return;
   }
   if (key === 'g') {
     event.preventDefault();
     triggerPlayfulGesture('g-wiggle', 1800);
+    showSpeechBubble('Reboladinha alegre! 💃', 1800);
     if (latest?.preferences?.sounds) playPetSound('chirp');
     return;
   }
   if (key === 'z') {
     event.preventDefault();
     triggerPlayfulGesture('g-tap', 1600);
+    showSpeechBubble('Batendo palminhas! 👏', 1800);
     if (latest?.preferences?.sounds) playPetSound('crunch');
     return;
   }
@@ -430,24 +472,28 @@ button.addEventListener('keydown', event => {
     event.preventDefault();
     const nextIdx = (HATS.indexOf(currentHat) + 1) % HATS.length;
     applyWardrobe(HATS[nextIdx], currentClothes, currentCostume);
+    showSpeechBubble(`Chapéu: ${HATS[nextIdx]} 🎩`, 1800);
     return;
   }
   if (key === '2') {
     event.preventDefault();
     const nextIdx = (CLOTHES.indexOf(currentClothes) + 1) % CLOTHES.length;
     applyWardrobe(currentHat, CLOTHES[nextIdx], currentCostume);
+    showSpeechBubble(`Roupinha: ${CLOTHES[nextIdx]} 👕`, 1800);
     return;
   }
   if (key === '3') {
     event.preventDefault();
     const nextIdx = (COSTUMES.indexOf(currentCostume) + 1) % COSTUMES.length;
     applyWardrobe(currentHat, currentClothes, COSTUMES[nextIdx]);
+    showSpeechBubble(`Fantasia: ${COSTUMES[nextIdx]} 🧙`, 1800);
     return;
   }
   if (key === '4') {
     event.preventDefault();
     const nextIdx = (FRIENDS.indexOf(currentFriend) + 1) % FRIENDS.length;
     applyFriend(FRIENDS[nextIdx]);
+    showSpeechBubble(`Amiguinho: ${FRIENDS[nextIdx]} 🐾`, 1800);
     if (latest?.preferences?.sounds && FRIENDS[nextIdx] !== 'none') playPetSound('chirp');
     return;
   }
@@ -455,6 +501,7 @@ button.addEventListener('keydown', event => {
     event.preventDefault();
     const nextIdx = (ENVIRONMENTS.indexOf(currentEnv) + 1) % ENVIRONMENTS.length;
     applyEnvironment(ENVIRONMENTS[nextIdx]);
+    showSpeechBubble(`Cenário: ${ENVIRONMENTS[nextIdx]} 🌅`, 1800);
     if (latest?.preferences?.sounds) playPetSound('sparkle');
     return;
   }
@@ -475,12 +522,18 @@ button.addEventListener('keydown', event => {
     applyWardrobe('none', 'none', 'none');
     applyFriend('none');
     applyEnvironment('none');
+    showSpeechBubble('Resetado ao padrão! ✨', 1800);
     return;
   }
   const directions: Record<string, [number, number]> = { ArrowLeft: [-16, 0], ArrowRight: [16, 0], ArrowUp: [0, -16], ArrowDown: [0, 16] };
   const direction = directions[event.key];
   if (direction) { event.preventDefault(); void desktopCommand('move_pet', { dx: direction[0], dy: direction[1] }).catch(showError); }
-});
+}
+
+button.addEventListener('keydown', handlePetKeydown);
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', handlePetKeydown);
+}
 window.addEventListener('storage', event => {
   if (event.key === 'capy_pet_skin' && event.newValue && event.newValue !== currentSkin) {
     applySkin(event.newValue);
