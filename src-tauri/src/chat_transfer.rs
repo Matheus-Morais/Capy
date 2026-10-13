@@ -1,84 +1,177 @@
-use crate::{chat_history::{self,Conversation,Store,Target},handoff::Summary,settings};
-use serde::{Deserialize,Serialize};
-use std::{collections::HashSet,path::Path};
+use crate::{
+    chat_history::{self, Conversation, Store, Target},
+    handoff::Summary,
+    settings,
+};
+use serde::{Deserialize, Serialize};
+use std::{collections::HashSet, path::Path};
 
-#[derive(Clone,Deserialize,Serialize)]
-#[serde(rename_all="camelCase",deny_unknown_fields)]
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Review {
-    pub nonce:String,pub source_id:String,pub source_revision:u64,pub source_target:Target,
-    pub destination:Target,pub model:String,pub summary:Summary,
+    pub nonce: String,
+    pub source_id: String,
+    pub source_revision: u64,
+    pub source_target: Target,
+    pub destination: Target,
+    pub model: String,
+    pub summary: Summary,
     #[serde(default)]
-    pub uncertain_messages:Vec<usize>,
+    pub uncertain_messages: Vec<usize>,
     #[serde(default)]
-    pub automatic:bool,
+    pub automatic: bool,
     #[serde(default)]
-    pub dismissed:bool,
+    pub dismissed: bool,
 }
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct Journal {before_source:Conversation,source:Conversation,destination:Conversation,before_ids:Vec<String>,ids:Vec<String>}
-
-fn validate_journal(j:&Journal)->bool{
-    let mut ids=HashSet::new();
-    let mut expected=j.before_source.clone();expected.state="transferred".into();
-    expected.transferred_to=Some(j.destination.id.clone());expected.revision=j.before_source.revision.saturating_add(1);
-    expected.used_nonces.push(j.source.used_nonces.last().cloned().unwrap_or_default());
-    chat_history::valid(&j.before_source)&&eligible(&j.before_source)&&chat_history::valid(&j.source)&&chat_history::valid(&j.destination)
-        &&serde_json::to_value(&expected).ok()==serde_json::to_value(&j.source).ok()
-        &&j.before_source.id==j.source.id&&j.before_source.revision.checked_add(1)==Some(j.source.revision)
-        &&j.before_source.target==j.source.target&&j.source.used_nonces.len()==j.before_source.used_nonces.len()+1
-        &&j.source.used_nonces.starts_with(&j.before_source.used_nonces)
-        &&serde_json::to_value(&j.source.messages).ok()==serde_json::to_value(&j.before_source.messages).ok()
-        &&j.source.state=="transferred"&&j.source.transferred_to.as_deref()==Some(&j.destination.id)
-        &&j.source.id!=j.destination.id&&j.destination.state=="working"&&j.destination.revision==1
-        &&j.destination.messages.len()==1&&j.destination.messages[0].role=="user"
-        &&j.ids.len()<=500&&j.ids.iter().all(|id|crate::discovery::uuid(id)&&ids.insert(id))
-        &&ids.contains(&j.source.id)&&ids.contains(&j.destination.id)
-        &&j.ids.len()==j.before_ids.len()+1&&j.ids.starts_with(&j.before_ids)&&j.ids.last()==Some(&j.destination.id)
-        &&j.before_ids.contains(&j.source.id)&&!j.before_ids.contains(&j.destination.id)
-}
-fn apply(root:&Path,j:&Journal)->Result<(),String>{
-    if !validate_journal(j){return Err("Registro de transferência incompatível; os arquivos foram preservados.".into());}
-    let current:Conversation=settings::read_json_limit(&root.join(format!("{}.json",j.source.id)),2_097_152)?;
-    let current=serde_json::to_value(&current).map_err(|_|"Histórico incompatível.")?;
-    if current!=serde_json::to_value(&j.before_source).map_err(|_|"Histórico incompatível.")?
-        &&current!=serde_json::to_value(&j.source).map_err(|_|"Histórico incompatível.")?{
-        return Err("A origem mudou fora da transferência. Os arquivos foram preservados para revisão.".into());
-    }
-    let destination_path=root.join(format!("{}.json",j.destination.id));
-    if destination_path.exists(){
-        let current:Conversation=settings::read_json_limit(&destination_path,2_097_152)?;
-        if serde_json::to_value(&current).ok()!=serde_json::to_value(&j.destination).ok(){return Err("O destino mudou; a recuperação preservou os arquivos.".into());}
-    }
-    let current_ids:Vec<String>=settings::read_json(&root.join("index.json"))?;
-    if current_ids!=j.before_ids&&current_ids!=j.ids{return Err("O índice mudou fora da transferência. Os arquivos foram preservados.".into());}
-    settings::write_json_limit(&root.join(format!("{}.json",j.destination.id)),&j.destination,2_097_152)?;
-    settings::write_json_limit(&root.join(format!("{}.json",j.source.id)),&j.source,2_097_152)?;
-    settings::write_json(&root.join("index.json"),&j.ids)?;
-    std::fs::remove_file(root.join("transfer-pending.json")).map_err(|_|"A transferência foi gravada, mas precisa de recuperação ao reiniciar.".into())
-}
-pub fn recover(root:&Path)->Result<(),String>{
-    let path=root.join("transfer-pending.json");if !path.exists(){return Ok(());}
-    let journal:Journal=settings::read_json_limit(&path,8_388_608)?;
-    apply(root,&journal)
+struct Journal {
+    before_source: Conversation,
+    source: Conversation,
+    destination: Conversation,
+    before_ids: Vec<String>,
+    ids: Vec<String>,
 }
 
-fn uncertain_messages(source:&Conversation)->Vec<usize>{
-    let mut result:Vec<_>=source.interruptions.iter().map(|entry|entry.message_index).collect();result.sort_unstable();result
+fn validate_journal(j: &Journal) -> bool {
+    let mut ids = HashSet::new();
+    let mut expected = j.before_source.clone();
+    expected.state = "transferred".into();
+    expected.transferred_to = Some(j.destination.id.clone());
+    expected.revision = j.before_source.revision.saturating_add(1);
+    expected
+        .used_nonces
+        .push(j.source.used_nonces.last().cloned().unwrap_or_default());
+    chat_history::valid(&j.before_source)
+        && eligible(&j.before_source)
+        && chat_history::valid(&j.source)
+        && chat_history::valid(&j.destination)
+        && serde_json::to_value(&expected).ok() == serde_json::to_value(&j.source).ok()
+        && j.before_source.id == j.source.id
+        && j.before_source.revision.checked_add(1) == Some(j.source.revision)
+        && j.before_source.target == j.source.target
+        && j.source.used_nonces.len() == j.before_source.used_nonces.len() + 1
+        && j.source
+            .used_nonces
+            .starts_with(&j.before_source.used_nonces)
+        && serde_json::to_value(&j.source.messages).ok()
+            == serde_json::to_value(&j.before_source.messages).ok()
+        && j.source.state == "transferred"
+        && j.source.transferred_to.as_deref() == Some(&j.destination.id)
+        && j.source.id != j.destination.id
+        && j.destination.state == "working"
+        && j.destination.revision == 1
+        && j.destination.messages.len() == 1
+        && j.destination.messages[0].role == "user"
+        && j.ids.len() <= 500
+        && j.ids
+            .iter()
+            .all(|id| crate::discovery::uuid(id) && ids.insert(id))
+        && ids.contains(&j.source.id)
+        && ids.contains(&j.destination.id)
+        && j.ids.len() == j.before_ids.len() + 1
+        && j.ids.starts_with(&j.before_ids)
+        && j.ids.last() == Some(&j.destination.id)
+        && j.before_ids.contains(&j.source.id)
+        && !j.before_ids.contains(&j.destination.id)
 }
-fn lost_results_note(source:&Conversation)->String{
-    if source.interruptions.is_empty(){return String::new();}
+fn apply(root: &Path, j: &Journal) -> Result<(), String> {
+    if !validate_journal(j) {
+        return Err(
+            "Registro de transferência incompatível; os arquivos foram preservados.".into(),
+        );
+    }
+    let current: Conversation =
+        settings::read_json_limit(&root.join(format!("{}.json", j.source.id)), 2_097_152)?;
+    let current = serde_json::to_value(&current).map_err(|_| "Histórico incompatível.")?;
+    if current != serde_json::to_value(&j.before_source).map_err(|_| "Histórico incompatível.")?
+        && current != serde_json::to_value(&j.source).map_err(|_| "Histórico incompatível.")?
+    {
+        return Err(
+            "A origem mudou fora da transferência. Os arquivos foram preservados para revisão."
+                .into(),
+        );
+    }
+    let destination_path = root.join(format!("{}.json", j.destination.id));
+    if destination_path.exists() {
+        let current: Conversation = settings::read_json_limit(&destination_path, 2_097_152)?;
+        if serde_json::to_value(&current).ok() != serde_json::to_value(&j.destination).ok() {
+            return Err("O destino mudou; a recuperação preservou os arquivos.".into());
+        }
+    }
+    let current_ids: Vec<String> = settings::read_json(&root.join("index.json"))?;
+    if current_ids != j.before_ids && current_ids != j.ids {
+        return Err("O índice mudou fora da transferência. Os arquivos foram preservados.".into());
+    }
+    settings::write_json_limit(
+        &root.join(format!("{}.json", j.destination.id)),
+        &j.destination,
+        2_097_152,
+    )?;
+    settings::write_json_limit(
+        &root.join(format!("{}.json", j.source.id)),
+        &j.source,
+        2_097_152,
+    )?;
+    settings::write_json(&root.join("index.json"), &j.ids)?;
+    std::fs::remove_file(root.join("transfer-pending.json"))
+        .map_err(|_| "A transferência foi gravada, mas precisa de recuperação ao reiniciar.".into())
+}
+pub fn recover(root: &Path) -> Result<(), String> {
+    let path = root.join("transfer-pending.json");
+    if !path.exists() {
+        return Ok(());
+    }
+    let journal: Journal = settings::read_json_limit(&path, 8_388_608)?;
+    apply(root, &journal)
+}
+
+fn uncertain_messages(source: &Conversation) -> Vec<usize> {
+    let mut result: Vec<_> = source
+        .interruptions
+        .iter()
+        .map(|entry| entry.message_index)
+        .collect();
+    result.sort_unstable();
+    result
+}
+fn lost_results_note(source: &Conversation) -> String {
+    if source.interruptions.is_empty() {
+        return String::new();
+    }
     format!("Registro original da Capy — resultados perdidos:\n{}\nNão repetir automaticamente essas mensagens. A aprovação de recuperação não confirmou uma resposta ou ausência de consumo.",
         uncertain_messages(source).into_iter().map(|index|format!("Mensagem {}: resultado indisponível; consumo pode ter ocorrido; revisado sem reenvio.",index+1)).collect::<Vec<_>>().join("\n"))
 }
 
-fn summary(store:&Store,source:&Conversation,loaded_guides:Option<&str>)->Summary{
+fn summary(store: &Store, source: &Conversation, loaded_guides: Option<&str>) -> Summary {
     use crate::handoff_context::excerpt;
-    let reference=format!("Histórico original integral: {} · {} mensagens · versão {}.",store.root.join(format!("{}.json",source.id)).display(),source.messages.len(),source.revision);
-    let instructions=source.messages.iter().filter(|m|m.role=="user").map(|m|m.text.as_str()).collect::<Vec<_>>().join("\n\n");
-    let dialogue=source.messages.iter().enumerate().rev().map(|(i,m)|format!("Mensagem {} [{}]:\n{}",i+1,m.role,m.text)).collect::<Vec<_>>().join("\n\n");
-    let last=source.messages.last().map(|m|m.text.as_str()).unwrap_or("Conversa sem mensagens.");
-    let lost=lost_results_note(source);
+    let reference = format!(
+        "Histórico original integral: {} · {} mensagens · versão {}.",
+        store.root.join(format!("{}.json", source.id)).display(),
+        source.messages.len(),
+        source.revision
+    );
+    let instructions = source
+        .messages
+        .iter()
+        .filter(|m| m.role == "user")
+        .map(|m| m.text.as_str())
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    let dialogue = source
+        .messages
+        .iter()
+        .enumerate()
+        .rev()
+        .map(|(i, m)| format!("Mensagem {} [{}]:\n{}", i + 1, m.role, m.text))
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    let last = source
+        .messages
+        .last()
+        .map(|m| m.text.as_str())
+        .unwrap_or("Conversa sem mensagens.");
+    let lost = lost_results_note(source);
     Summary{
         objective:excerpt(source.messages.iter().find(|m|m.role=="user").map(|m|m.text.as_str()).unwrap_or(&source.title),8_000),
         decisions:excerpt(&format!("Instruções recebidas, em ordem. Revise decisões e regras também nas respostas do histórico.\n\n{instructions}"),48_000),
@@ -92,307 +185,1031 @@ fn summary(store:&Store,source:&Conversation,loaded_guides:Option<&str>)->Summar
                     else{"A origem é um chat de API; referências automáticas de instruções do CLI não se aplicam.".into()})),
     }
 }
-fn eligible(source:&Conversation)->bool{source.state!="working"&&source.state!="unknown"&&source.transferred_to.is_none()&&source.used_nonces.len()<chat_history::MAX_NONCES}
+fn eligible(source: &Conversation) -> bool {
+    source.state != "working"
+        && source.state != "unknown"
+        && source.transferred_to.is_none()
+        && source.used_nonces.len() < chat_history::MAX_NONCES
+}
 impl Store {
-    fn review_for(&self,source:&Conversation)->Result<Option<Review>,String>{
-        let path=self.root.join(format!("{}.review.json",source.id));
-        if !path.exists(){return Ok(None);}
-        let review:Review=settings::read_json_limit(&path,2_097_152)?;
-        if review.source_id!=source.id||!crate::discovery::uuid(&review.nonce)||!chat_history::valid_target(&review.source_target)
-            ||!chat_history::valid_target(&review.destination)||!crate::chat_api::valid_model(&review.model){return Err("Revisão de chat incompatível; o arquivo foi preservado.".into());}
-        review.summary.validate()?;
-        Ok((!review.dismissed&&eligible(source)&&source.revision==review.source_revision&&source.target==review.source_target
-            &&review.uncertain_messages==uncertain_messages(source)&&!source.used_nonces.contains(&review.nonce)).then_some(review))
-    }
-    pub fn transfer_reviews(&self)->Result<Vec<Review>,String>{
-        let mut reviews=Vec::new();
-        for source in self.list()? {
-            if let Some(review)=self.review_for(&source)?{reviews.push(review);}
+    fn review_for(&self, source: &Conversation) -> Result<Option<Review>, String> {
+        let path = self.root.join(format!("{}.review.json", source.id));
+        if !path.exists() {
+            return Ok(None);
         }
-        if reviews.len()>64{return Err("Limite de 64 revisões de chat. Cancele uma revisão antes de preparar outra.".into());}
+        let review: Review = settings::read_json_limit(&path, 2_097_152)?;
+        if review.source_id != source.id
+            || !crate::discovery::uuid(&review.nonce)
+            || !chat_history::valid_target(&review.source_target)
+            || !chat_history::valid_target(&review.destination)
+            || !crate::chat_api::valid_model(&review.model)
+        {
+            return Err("Revisão de chat incompatível; o arquivo foi preservado.".into());
+        }
+        review.summary.validate()?;
+        Ok((!review.dismissed
+            && eligible(source)
+            && source.revision == review.source_revision
+            && source.target == review.source_target
+            && review.uncertain_messages == uncertain_messages(source)
+            && !source.used_nonces.contains(&review.nonce))
+        .then_some(review))
+    }
+    pub fn transfer_reviews(&self) -> Result<Vec<Review>, String> {
+        let mut reviews = Vec::new();
+        for source in self.list()? {
+            if let Some(review) = self.review_for(&source)? {
+                reviews.push(review);
+            }
+        }
+        if reviews.len() > 64 {
+            return Err(
+                "Limite de 64 revisões de chat. Cancele uma revisão antes de preparar outra."
+                    .into(),
+            );
+        }
         Ok(reviews)
     }
-    pub fn active_transfer_review(&self,source_id:&str)->Result<Option<Review>,String>{self.review_for(&self.get(source_id)?)}
-    pub fn transfer_review(&self,source_id:&str)->Result<Review,String>{
-        self.available()?;let source=self.get(source_id)?;
-        let review:Review=settings::read_json_limit(&self.root.join(format!("{source_id}.review.json")),2_097_152)?;
-        if review.source_id!=source_id||!crate::discovery::uuid(&review.nonce)||!chat_history::valid_target(&review.source_target)
-            ||!chat_history::valid_target(&review.destination)||!crate::chat_api::valid_model(&review.model){return Err("Revisão incompatível; o arquivo foi preservado.".into());}
+    pub fn active_transfer_review(&self, source_id: &str) -> Result<Option<Review>, String> {
+        self.review_for(&self.get(source_id)?)
+    }
+    pub fn transfer_review(&self, source_id: &str) -> Result<Review, String> {
+        self.available()?;
+        let source = self.get(source_id)?;
+        let review: Review = settings::read_json_limit(
+            &self.root.join(format!("{source_id}.review.json")),
+            2_097_152,
+        )?;
+        if review.source_id != source_id
+            || !crate::discovery::uuid(&review.nonce)
+            || !chat_history::valid_target(&review.source_target)
+            || !chat_history::valid_target(&review.destination)
+            || !crate::chat_api::valid_model(&review.model)
+        {
+            return Err("Revisão incompatível; o arquivo foi preservado.".into());
+        }
         review.summary.validate()?;
-        if review.dismissed||!eligible(&source)||source.used_nonces.contains(&review.nonce)||source.revision!=review.source_revision||source.target!=review.source_target
-            ||review.uncertain_messages!=uncertain_messages(&source){return Err("A revisão expirou ou já foi usada; prepare um novo resumo.".into());}
+        if review.dismissed
+            || !eligible(&source)
+            || source.used_nonces.contains(&review.nonce)
+            || source.revision != review.source_revision
+            || source.target != review.source_target
+            || review.uncertain_messages != uncertain_messages(&source)
+        {
+            return Err("A revisão expirou ou já foi usada; prepare um novo resumo.".into());
+        }
         Ok(review)
     }
     #[cfg(test)]
-    pub fn prepare_transfer(&self,source_id:&str,destination:Target,model:String)->Result<Review,String>{
-        self.prepare_transfer_with_guides(source_id,destination,model,None)
+    pub fn prepare_transfer(
+        &self,
+        source_id: &str,
+        destination: Target,
+        model: String,
+    ) -> Result<Review, String> {
+        self.prepare_transfer_with_guides(source_id, destination, model, None)
     }
-    pub fn prepare_transfer_with_guides(&self,source_id:&str,destination:Target,model:String,loaded_guides:Option<&str>)->Result<Review,String>{
-        self.prepare_review(source_id,destination,model,loaded_guides,None)?.ok_or("Não foi possível preparar a revisão.".into())
+    pub fn prepare_transfer_with_guides(
+        &self,
+        source_id: &str,
+        destination: Target,
+        model: String,
+        loaded_guides: Option<&str>,
+    ) -> Result<Review, String> {
+        self.prepare_review(source_id, destination, model, loaded_guides, None)?
+            .ok_or("Não foi possível preparar a revisão.".into())
     }
-    pub fn prepare_automatic_transfer(&self,expected:&Conversation,destination:Target,model:String,loaded_guides:Option<&str>)->Result<Option<Review>,String>{
-        self.prepare_review(&expected.id,destination,model,loaded_guides,Some(expected))
+    pub fn prepare_automatic_transfer(
+        &self,
+        expected: &Conversation,
+        destination: Target,
+        model: String,
+        loaded_guides: Option<&str>,
+    ) -> Result<Option<Review>, String> {
+        self.prepare_review(
+            &expected.id,
+            destination,
+            model,
+            loaded_guides,
+            Some(expected),
+        )
     }
-    fn prepare_review(&self,source_id:&str,destination:Target,model:String,loaded_guides:Option<&str>,expected:Option<&Conversation>)->Result<Option<Review>,String>{
-        self.available()?;let ids=self.ids.lock().map_err(|_|"Conversas indisponíveis.")?;
+    fn prepare_review(
+        &self,
+        source_id: &str,
+        destination: Target,
+        model: String,
+        loaded_guides: Option<&str>,
+        expected: Option<&Conversation>,
+    ) -> Result<Option<Review>, String> {
+        self.available()?;
+        let ids = self.ids.lock().map_err(|_| "Conversas indisponíveis.")?;
         self.consistent()?;
-        if !ids.iter().any(|id|id==source_id){return Err("Conversa não encontrada.".into());}
-        let source=self.read(source_id)?;
-        if let Some(expected)=expected{
-            if source.revision!=expected.revision||source.target!=expected.target||source.state!=expected.state||source.model!=expected.model
-                ||!eligible(&source)||source.messages.is_empty(){return Ok(None);}
+        if !ids.iter().any(|id| id == source_id) {
+            return Err("Conversa não encontrada.".into());
         }
-        if !eligible(&source)||!chat_history::valid_target(&destination)||!crate::chat_api::valid_model(&model){return Err("Aguarde um fim de turno confirmado e escolha um destino válido antes de transferir.".into());}
+        let source = self.read(source_id)?;
+        if let Some(expected) = expected {
+            if source.revision != expected.revision
+                || source.target != expected.target
+                || source.state != expected.state
+                || source.model != expected.model
+                || !eligible(&source)
+                || source.messages.is_empty()
+            {
+                return Ok(None);
+            }
+        }
+        if !eligible(&source)
+            || !chat_history::valid_target(&destination)
+            || !crate::chat_api::valid_model(&model)
+        {
+            return Err("Aguarde um fim de turno confirmado e escolha um destino válido antes de transferir.".into());
+        }
         self.review_for(&source)?;
-        let path=self.root.join(format!("{source_id}.review.json"));
-        if expected.is_some()&&path.exists(){
-            let current:Review=settings::read_json_limit(&path,2_097_152)?;
-            if current.source_revision==source.revision&&current.source_target==source.target{return Ok(None);}
+        let path = self.root.join(format!("{source_id}.review.json"));
+        if expected.is_some() && path.exists() {
+            let current: Review = settings::read_json_limit(&path, 2_097_152)?;
+            if current.source_revision == source.revision && current.source_target == source.target
+            {
+                return Ok(None);
+            }
         }
-        let mut active=0;
-        for id in ids.iter().filter(|id|id.as_str()!=source_id){if self.review_for(&self.read(id)?)?.is_some(){active+=1;}}
-        if active>=64{return Err("Limite de 64 revisões de chat. Cancele uma revisão antes de preparar outra.".into());}
-        let review=Review{nonce:uuid::Uuid::new_v4().to_string(),source_id:source.id.clone(),source_revision:source.revision,source_target:source.target.clone(),destination,model,summary:summary(self,&source,loaded_guides),uncertain_messages:uncertain_messages(&source),automatic:expected.is_some(),dismissed:false};
+        let mut active = 0;
+        for id in ids.iter().filter(|id| id.as_str() != source_id) {
+            if self.review_for(&self.read(id)?)?.is_some() {
+                active += 1;
+            }
+        }
+        if active >= 64 {
+            return Err(
+                "Limite de 64 revisões de chat. Cancele uma revisão antes de preparar outra."
+                    .into(),
+            );
+        }
+        let review = Review {
+            nonce: uuid::Uuid::new_v4().to_string(),
+            source_id: source.id.clone(),
+            source_revision: source.revision,
+            source_target: source.target.clone(),
+            destination,
+            model,
+            summary: summary(self, &source, loaded_guides),
+            uncertain_messages: uncertain_messages(&source),
+            automatic: expected.is_some(),
+            dismissed: false,
+        };
         review.summary.validate()?;
-        settings::write_json_limit(&path,&review,2_097_152)?;Ok(Some(review))
+        settings::write_json_limit(&path, &review, 2_097_152)?;
+        Ok(Some(review))
     }
-    pub fn approve_transfer(&self,source_id:&str,nonce:&str,edited:Summary,reviewed:bool,billing_confirmed:bool,current_source:&Target,current_destination:&Target)->Result<Conversation,String>{
-        let review=self.transfer_review(source_id)?;edited.validate()?;
-        if !reviewed||review.nonce!=nonce||&review.source_target!=current_source||&review.destination!=current_destination{
-            return Err("Revise o resumo e confirme as identidades exatas desta transferência.".into());
+    pub fn approve_transfer(
+        &self,
+        source_id: &str,
+        nonce: &str,
+        edited: Summary,
+        reviewed: bool,
+        billing_confirmed: bool,
+        current_source: &Target,
+        current_destination: &Target,
+    ) -> Result<Conversation, String> {
+        let review = self.transfer_review(source_id)?;
+        edited.validate()?;
+        if !reviewed
+            || review.nonce != nonce
+            || &review.source_target != current_source
+            || &review.destination != current_destination
+        {
+            return Err(
+                "Revise o resumo e confirme as identidades exatas desta transferência.".into(),
+            );
         }
-        if review.source_target.billing!=review.destination.billing&&!billing_confirmed{return Err("Confirme a mudança de cobrança somente para esta transferência.".into());}
-        self.available()?;let mut ids=self.ids.lock().map_err(|_|"Conversas indisponíveis.")?;
+        if review.source_target.billing != review.destination.billing && !billing_confirmed {
+            return Err("Confirme a mudança de cobrança somente para esta transferência.".into());
+        }
+        self.available()?;
+        let mut ids = self.ids.lock().map_err(|_| "Conversas indisponíveis.")?;
         self.consistent()?;
-        let latest:Review=settings::read_json_limit(&self.root.join(format!("{source_id}.review.json")),2_097_152)?;
-        if latest.nonce!=nonce||latest.dismissed{return Err("Uma nova revisão substituiu ou cancelou esta aprovação.".into());}
-        let mut source=self.read(source_id)?;
-        let before_source=source.clone();
-        if !eligible(&source)||source.revision!=review.source_revision||source.target!=review.source_target||source.used_nonces.iter().any(|n|n==nonce)
-            ||review.uncertain_messages!=uncertain_messages(&source)||latest.uncertain_messages!=review.uncertain_messages{return Err("A conversa mudou ou esta aprovação já foi usada.".into());}
-        let mut prompt=edited.prompt();let lost=lost_results_note(&source);
-        if !lost.is_empty(){prompt.push_str("\n\n");prompt.push_str(&lost);}
-        if prompt.len()>196_608{return Err("O resumo e os avisos de origem excedem 192 KiB. Preserve referências e encurte os trechos antes de aprovar.".into());}
-        if ids.len()>=500{return Err("Limite de 500 conversas; nenhuma aprovação foi consumida.".into());}
-        let send_nonce=uuid::Uuid::new_v4().to_string();
-        let policy=(review.destination.kind=="claudeCli").then(||"windows-job-v1".into());
-        let destination=Conversation{id:uuid::Uuid::new_v4().to_string(),title:source.title.clone(),target:review.destination,model:review.model,process_policy:policy,recovery_review:None,interruptions:vec![],
-            messages:vec![crate::chat_api::Message{role:"user".into(),text:prompt}],revision:1,state:"working".into(),active_nonce:Some(send_nonce.clone()),
-            used_nonces:vec![send_nonce],last_error:None,cli_started:false,cli_attempted:false,transferred_to:None};
-        source.used_nonces.push(nonce.into());source.transferred_to=Some(destination.id.clone());source.state="transferred".into();
-        source.revision=source.revision.checked_add(1).ok_or("Versão esgotada.")?;
-        let mut updated=ids.clone();updated.push(destination.id.clone());
-        let journal=Journal{before_source,source,destination:destination.clone(),before_ids:ids.clone(),ids:updated.clone()};
-        if !validate_journal(&journal){return Err("Transferência inválida; nenhuma aprovação foi consumida.".into());}
-        settings::write_json_limit(&self.root.join("transfer-pending.json"),&journal,8_388_608)?;
-        apply(&self.root,&journal)?;*ids=updated;Ok(destination)
+        let latest: Review = settings::read_json_limit(
+            &self.root.join(format!("{source_id}.review.json")),
+            2_097_152,
+        )?;
+        if latest.nonce != nonce || latest.dismissed {
+            return Err("Uma nova revisão substituiu ou cancelou esta aprovação.".into());
+        }
+        let mut source = self.read(source_id)?;
+        let before_source = source.clone();
+        if !eligible(&source)
+            || source.revision != review.source_revision
+            || source.target != review.source_target
+            || source.used_nonces.iter().any(|n| n == nonce)
+            || review.uncertain_messages != uncertain_messages(&source)
+            || latest.uncertain_messages != review.uncertain_messages
+        {
+            return Err("A conversa mudou ou esta aprovação já foi usada.".into());
+        }
+        let mut prompt = edited.prompt();
+        let lost = lost_results_note(&source);
+        if !lost.is_empty() {
+            prompt.push_str("\n\n");
+            prompt.push_str(&lost);
+        }
+        if prompt.len() > 196_608 {
+            return Err("O resumo e os avisos de origem excedem 192 KiB. Preserve referências e encurte os trechos antes de aprovar.".into());
+        }
+        if ids.len() >= 500 {
+            return Err("Limite de 500 conversas; nenhuma aprovação foi consumida.".into());
+        }
+        let send_nonce = uuid::Uuid::new_v4().to_string();
+        let policy = (review.destination.kind == "claudeCli").then(|| "windows-job-v1".into());
+        let destination = Conversation {
+            id: uuid::Uuid::new_v4().to_string(),
+            title: source.title.clone(),
+            target: review.destination,
+            model: review.model,
+            process_policy: policy,
+            recovery_review: None,
+            interruptions: vec![],
+            messages: vec![crate::chat_api::Message {
+                role: "user".into(),
+                text: prompt,
+            }],
+            revision: 1,
+            state: "working".into(),
+            active_nonce: Some(send_nonce.clone()),
+            used_nonces: vec![send_nonce],
+            last_error: None,
+            cli_started: false,
+            cli_attempted: false,
+            transferred_to: None,
+        };
+        source.used_nonces.push(nonce.into());
+        source.transferred_to = Some(destination.id.clone());
+        source.state = "transferred".into();
+        source.revision = source.revision.checked_add(1).ok_or("Versão esgotada.")?;
+        let mut updated = ids.clone();
+        updated.push(destination.id.clone());
+        let journal = Journal {
+            before_source,
+            source,
+            destination: destination.clone(),
+            before_ids: ids.clone(),
+            ids: updated.clone(),
+        };
+        if !validate_journal(&journal) {
+            return Err("Transferência inválida; nenhuma aprovação foi consumida.".into());
+        }
+        settings::write_json_limit(
+            &self.root.join("transfer-pending.json"),
+            &journal,
+            8_388_608,
+        )?;
+        apply(&self.root, &journal)?;
+        *ids = updated;
+        Ok(destination)
     }
-    pub fn cancel_transfer(&self,source_id:&str,nonce:&str)->Result<(),String>{
-        let review=self.transfer_review(source_id)?;
-        if review.nonce!=nonce{return Err("A revisão mudou; atualize antes de cancelar.".into());}
-        let _ids=self.ids.lock().map_err(|_|"Conversas indisponíveis.")?;
+    pub fn cancel_transfer(&self, source_id: &str, nonce: &str) -> Result<(), String> {
+        let review = self.transfer_review(source_id)?;
+        if review.nonce != nonce {
+            return Err("A revisão mudou; atualize antes de cancelar.".into());
+        }
+        let _ids = self.ids.lock().map_err(|_| "Conversas indisponíveis.")?;
         self.consistent()?;
-        let mut current:Review=settings::read_json_limit(&self.root.join(format!("{source_id}.review.json")),2_097_152)?;
-        if current.nonce!=nonce{return Err("A revisão mudou; atualize antes de cancelar.".into());}
-        let source=self.read(source_id)?;
-        if !eligible(&source)||source.revision!=current.source_revision||source.target!=current.source_target{return Err("A origem mudou; atualize antes de cancelar.".into());}
-        current.dismissed=true;
-        settings::write_json_limit(&self.root.join(format!("{source_id}.review.json")),&current,2_097_152)
+        let mut current: Review = settings::read_json_limit(
+            &self.root.join(format!("{source_id}.review.json")),
+            2_097_152,
+        )?;
+        if current.nonce != nonce {
+            return Err("A revisão mudou; atualize antes de cancelar.".into());
+        }
+        let source = self.read(source_id)?;
+        if !eligible(&source)
+            || source.revision != current.source_revision
+            || source.target != current.source_target
+        {
+            return Err("A origem mudou; atualize antes de cancelar.".into());
+        }
+        current.dismissed = true;
+        settings::write_json_limit(
+            &self.root.join(format!("{source_id}.review.json")),
+            &current,
+            2_097_152,
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn cli()->Target{Target{kind:"claudeCli".into(),profile_id:"claude-test".into(),provider:"Claude".into(),account:"test@example.invalid".into(),billing:"subscription".into(),credential_revision:None}}
-    fn api()->Target{Target{kind:"api".into(),profile_id:uuid::Uuid::new_v4().to_string(),provider:"OpenAI".into(),account:"Local key".into(),billing:"api".into(),credential_revision:Some(uuid::Uuid::new_v4().to_string())}}
-    fn completed(store:&Store)->Conversation{
-        let source=store.create("Own automatic review".into(),cli(),"haiku".into()).unwrap();
-        let nonce=uuid::Uuid::new_v4().to_string();store.begin(&source.id,0,nonce.clone(),"haiku".into(),"Own instruction".into()).unwrap();
-        store.finish(&source.id,&nonce,Ok(crate::chat_api::Reply{text:"Own answer".into(),completed:true,note:None}),true).unwrap()
-    }
-    #[test]
-    fn chat_automatic_review_never_sends_preserves_manual_and_keeps_cancel_across_restart(){
-        let root=std::env::temp_dir().join(format!("capy-auto-review-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());let source=completed(&store);
-        let review=store.prepare_automatic_transfer(&source,cli(),"sonnet".into(),Some("Captured own guide")).unwrap().unwrap();
-        assert!(review.automatic);assert!(!review.dismissed);assert_eq!(review.source_revision,source.revision);
-        assert_eq!(review.source_id,source.id);assert!(review.source_target==source.target);assert!(review.destination==cli());assert_eq!(review.model,"sonnet");
-        assert!(review.summary.guides.contains("Captured own guide"));assert_eq!(store.list().unwrap().len(),1);
-        let unchanged=store.get(&source.id).unwrap();assert_eq!(unchanged.state,"completed");assert_eq!(unchanged.messages.len(),2);assert!(unchanged.active_nonce.is_none());
-        assert_eq!(unchanged.used_nonces,source.used_nonces);
-        let path=root.join(format!("{}.review.json",source.id));let bytes=std::fs::read(&path).unwrap();
-        assert!(store.prepare_automatic_transfer(&source,api(),"model".into(),None).unwrap().is_none());assert_eq!(std::fs::read(&path).unwrap(),bytes);
-        store.cancel_transfer(&source.id,&review.nonce).unwrap();assert!(store.active_transfer_review(&source.id).unwrap().is_none());
-        let restored=Store::load(root.clone());assert!(restored.prepare_automatic_transfer(&source,cli(),"sonnet".into(),None).unwrap().is_none());
-        assert!(restored.approve_transfer(&source.id,&review.nonce,review.summary,true,false,&source.target,&cli()).is_err());
-        let manual=restored.prepare_transfer(&source.id,api(),"model".into()).unwrap();assert!(!manual.automatic);
-        let bytes=std::fs::read(&path).unwrap();assert!(restored.prepare_automatic_transfer(&source,cli(),"sonnet".into(),None).unwrap().is_none());
-        assert_eq!(std::fs::read(&path).unwrap(),bytes);assert_eq!(restored.transfer_review(&source.id).unwrap().nonce,manual.nonce);
-        restored.cancel_transfer(&source.id,&manual.nonce).unwrap();
-        let nonce=uuid::Uuid::new_v4().to_string();restored.begin(&source.id,source.revision,nonce.clone(),"haiku".into(),"New own turn".into()).unwrap();
-        let next=restored.finish(&source.id,&nonce,Ok(crate::chat_api::Reply{text:"New own answer".into(),completed:true,note:None}),true).unwrap();
-        let next_review=restored.prepare_automatic_transfer(&next,cli(),"sonnet".into(),None).unwrap().unwrap();assert_ne!(next_review.nonce,manual.nonce);assert_eq!(next_review.source_revision,next.revision);
-        std::fs::remove_dir_all(root).unwrap();
-    }
-    #[test]
-    fn chat_automatic_review_revalidates_source_and_preserves_incompatible_review(){
-        let root=std::env::temp_dir().join(format!("capy-auto-drift-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());let source=completed(&store);
-        for field in ["revision","account","billing","model","state"]{
-            let mut expected=source.clone();match field{
-                "revision"=>expected.revision+=1,"account"=>expected.target.account="different@example.invalid".into(),
-                "billing"=>expected.target.billing="api".into(),"model"=>expected.model="sonnet".into(),_=>expected.state="failed".into(),
-            }
-            assert!(store.prepare_automatic_transfer(&expected,cli(),"sonnet".into(),None).unwrap().is_none(),"{field}");
-            assert!(!root.join(format!("{}.review.json",source.id)).exists());
+    fn cli() -> Target {
+        Target {
+            kind: "claudeCli".into(),
+            profile_id: "claude-test".into(),
+            provider: "Claude".into(),
+            account: "test@example.invalid".into(),
+            billing: "subscription".into(),
+            credential_revision: None,
         }
-        let nonce=uuid::Uuid::new_v4().to_string();let working=store.begin(&source.id,source.revision,nonce,"haiku".into(),"Own pending turn".into()).unwrap();
-        assert!(store.prepare_automatic_transfer(&source,cli(),"sonnet".into(),None).unwrap().is_none());
-        assert!(store.prepare_automatic_transfer(&working,cli(),"sonnet".into(),None).unwrap().is_none());
-        store.recover_interrupted().unwrap();let unknown=store.get(&source.id).unwrap();
-        assert!(store.prepare_automatic_transfer(&unknown,cli(),"sonnet".into(),None).unwrap().is_none());
-        let other=completed(&store);let path=root.join(format!("{}.review.json",other.id));let bytes=b"{\"futureReviewVersion\":2}";
-        std::fs::write(&path,bytes).unwrap();assert!(store.prepare_automatic_transfer(&other,cli(),"sonnet".into(),None).is_err());assert_eq!(std::fs::read(&path).unwrap(),bytes);
-        assert_eq!(store.list().unwrap().len(),2);std::fs::remove_dir_all(root).unwrap();
+    }
+    fn api() -> Target {
+        Target {
+            kind: "api".into(),
+            profile_id: uuid::Uuid::new_v4().to_string(),
+            provider: "OpenAI".into(),
+            account: "Local key".into(),
+            billing: "api".into(),
+            credential_revision: Some(uuid::Uuid::new_v4().to_string()),
+        }
+    }
+    fn completed(store: &Store) -> Conversation {
+        let source = store
+            .create("Own automatic review".into(), cli(), "haiku".into())
+            .unwrap();
+        let nonce = uuid::Uuid::new_v4().to_string();
+        store
+            .begin(
+                &source.id,
+                0,
+                nonce.clone(),
+                "haiku".into(),
+                "Own instruction".into(),
+            )
+            .unwrap();
+        store
+            .finish(
+                &source.id,
+                &nonce,
+                Ok(crate::chat_api::Reply {
+                    text: "Own answer".into(),
+                    completed: true,
+                    note: None,
+                }),
+                true,
+            )
+            .unwrap()
     }
     #[test]
-    fn chat_transfer_keeps_lost_results_after_success_and_edited_summary(){
-        let root=std::env::temp_dir().join(format!("capy-transfer-gaps-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
-        let chat=store.create("Uncertain result".into(),api(),"model".into()).unwrap();
-        let send=uuid::Uuid::new_v4().to_string();store.begin(&chat.id,0,send.clone(),"model".into(),"First instruction".into()).unwrap();
-        store.recover_interrupted().unwrap();let lost=store.get(&chat.id).unwrap();
-        let prepared=store.prepare_recovery(&chat.id,lost.revision,false).unwrap();let approval=prepared.recovery_review.unwrap().nonce;
-        let reviewed=store.approve_recovery(&chat.id,prepared.revision,&approval,true,&chat.target,false).unwrap();
-        let next=uuid::Uuid::new_v4().to_string();store.begin(&chat.id,reviewed.revision,next.clone(),"model".into(),"Different instruction".into()).unwrap();
-        store.finish(&chat.id,&next,Ok(crate::chat_api::Reply{text:"A later confirmed answer".into(),completed:true,note:None}),false).unwrap();
-        let source=store.get(&chat.id).unwrap();assert!(source.last_error.is_none());assert_eq!(source.state,"completed");
-        let target=api();let review=store.prepare_transfer(&chat.id,target.clone(),"model".into()).unwrap();
-        assert_eq!(review.uncertain_messages,vec![0]);assert!(review.summary.state.contains("Mensagem 1: resultado indisponível"));
-        assert!(review.summary.state.contains("consumo pode ter ocorrido"));assert!(review.summary.state.contains("A later confirmed answer"));
-        let mut edited=review.summary;edited.state="Latest answer received; continue the reviewed plan.".into();
-        let destination=store.approve_transfer(&chat.id,&review.nonce,edited,true,false,&source.target,&target).unwrap();
-        assert!(destination.messages[0].text.contains("Latest answer received"));
-        assert!(destination.messages[0].text.contains("Mensagem 1: resultado indisponível"));
-        assert!(destination.messages[0].text.contains("Não repetir automaticamente"));
-        let restored=Store::load(root.clone());let transferred=restored.get(&chat.id).unwrap();
-        assert_eq!(transferred.interruptions.len(),1);assert_eq!(transferred.interruptions[0].send_nonce,send);
-        assert_eq!(transferred.interruptions[0].approval_nonce,approval);assert_eq!(transferred.messages.len(),3);
+    fn chat_automatic_review_never_sends_preserves_manual_and_keeps_cancel_across_restart() {
+        let root = std::env::temp_dir().join(format!("capy-auto-review-{}", uuid::Uuid::new_v4()));
+        let store = Store::load(root.clone());
+        let source = completed(&store);
+        let review = store
+            .prepare_automatic_transfer(&source, cli(), "sonnet".into(), Some("Captured own guide"))
+            .unwrap()
+            .unwrap();
+        assert!(review.automatic);
+        assert!(!review.dismissed);
+        assert_eq!(review.source_revision, source.revision);
+        assert_eq!(review.source_id, source.id);
+        assert!(review.source_target == source.target);
+        assert!(review.destination == cli());
+        assert_eq!(review.model, "sonnet");
+        assert!(review.summary.guides.contains("Captured own guide"));
+        assert_eq!(store.list().unwrap().len(), 1);
+        let unchanged = store.get(&source.id).unwrap();
+        assert_eq!(unchanged.state, "completed");
+        assert_eq!(unchanged.messages.len(), 2);
+        assert!(unchanged.active_nonce.is_none());
+        assert_eq!(unchanged.used_nonces, source.used_nonces);
+        let path = root.join(format!("{}.review.json", source.id));
+        let bytes = std::fs::read(&path).unwrap();
+        assert!(store
+            .prepare_automatic_transfer(&source, api(), "model".into(), None)
+            .unwrap()
+            .is_none());
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        store.cancel_transfer(&source.id, &review.nonce).unwrap();
+        assert!(store.active_transfer_review(&source.id).unwrap().is_none());
+        let restored = Store::load(root.clone());
+        assert!(restored
+            .prepare_automatic_transfer(&source, cli(), "sonnet".into(), None)
+            .unwrap()
+            .is_none());
+        assert!(restored
+            .approve_transfer(
+                &source.id,
+                &review.nonce,
+                review.summary,
+                true,
+                false,
+                &source.target,
+                &cli()
+            )
+            .is_err());
+        let manual = restored
+            .prepare_transfer(&source.id, api(), "model".into())
+            .unwrap();
+        assert!(!manual.automatic);
+        let bytes = std::fs::read(&path).unwrap();
+        assert!(restored
+            .prepare_automatic_transfer(&source, cli(), "sonnet".into(), None)
+            .unwrap()
+            .is_none());
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        assert_eq!(
+            restored.transfer_review(&source.id).unwrap().nonce,
+            manual.nonce
+        );
+        restored.cancel_transfer(&source.id, &manual.nonce).unwrap();
+        let nonce = uuid::Uuid::new_v4().to_string();
+        restored
+            .begin(
+                &source.id,
+                source.revision,
+                nonce.clone(),
+                "haiku".into(),
+                "New own turn".into(),
+            )
+            .unwrap();
+        let next = restored
+            .finish(
+                &source.id,
+                &nonce,
+                Ok(crate::chat_api::Reply {
+                    text: "New own answer".into(),
+                    completed: true,
+                    note: None,
+                }),
+                true,
+            )
+            .unwrap();
+        let next_review = restored
+            .prepare_automatic_transfer(&next, cli(), "sonnet".into(), None)
+            .unwrap()
+            .unwrap();
+        assert_ne!(next_review.nonce, manual.nonce);
+        assert_eq!(next_review.source_revision, next.revision);
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
-    fn chat_transfer_discloses_missing_instruction_evidence_for_cli_source(){
-        let root=std::env::temp_dir().join(format!("capy-transfer-guides-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
-        let source=store.create("Review loaded instructions".into(),cli(),"haiku".into()).unwrap();
-        let review=store.prepare_transfer(&source.id,api(),"model".into()).unwrap();
-        assert!(review.summary.guides.contains("não forneceu evidência de CLAUDE.md/imports"));
-        assert!(review.summary.guides.contains("Revise e cite os caminhos/seções"));
+    fn chat_automatic_review_revalidates_source_and_preserves_incompatible_review() {
+        let root = std::env::temp_dir().join(format!("capy-auto-drift-{}", uuid::Uuid::new_v4()));
+        let store = Store::load(root.clone());
+        let source = completed(&store);
+        for field in ["revision", "account", "billing", "model", "state"] {
+            let mut expected = source.clone();
+            match field {
+                "revision" => expected.revision += 1,
+                "account" => expected.target.account = "different@example.invalid".into(),
+                "billing" => expected.target.billing = "api".into(),
+                "model" => expected.model = "sonnet".into(),
+                _ => expected.state = "failed".into(),
+            }
+            assert!(
+                store
+                    .prepare_automatic_transfer(&expected, cli(), "sonnet".into(), None)
+                    .unwrap()
+                    .is_none(),
+                "{field}"
+            );
+            assert!(!root.join(format!("{}.review.json", source.id)).exists());
+        }
+        let nonce = uuid::Uuid::new_v4().to_string();
+        let working = store
+            .begin(
+                &source.id,
+                source.revision,
+                nonce,
+                "haiku".into(),
+                "Own pending turn".into(),
+            )
+            .unwrap();
+        assert!(store
+            .prepare_automatic_transfer(&source, cli(), "sonnet".into(), None)
+            .unwrap()
+            .is_none());
+        assert!(store
+            .prepare_automatic_transfer(&working, cli(), "sonnet".into(), None)
+            .unwrap()
+            .is_none());
+        store.recover_interrupted().unwrap();
+        let unknown = store.get(&source.id).unwrap();
+        assert!(store
+            .prepare_automatic_transfer(&unknown, cli(), "sonnet".into(), None)
+            .unwrap()
+            .is_none());
+        let other = completed(&store);
+        let path = root.join(format!("{}.review.json", other.id));
+        let bytes = b"{\"futureReviewVersion\":2}";
+        std::fs::write(&path, bytes).unwrap();
+        assert!(store
+            .prepare_automatic_transfer(&other, cli(), "sonnet".into(), None)
+            .is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        assert_eq!(store.list().unwrap().len(), 2);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn chat_transfer_keeps_lost_results_after_success_and_edited_summary() {
+        let root =
+            std::env::temp_dir().join(format!("capy-transfer-gaps-{}", uuid::Uuid::new_v4()));
+        let store = Store::load(root.clone());
+        let chat = store
+            .create("Uncertain result".into(), api(), "model".into())
+            .unwrap();
+        let send = uuid::Uuid::new_v4().to_string();
+        store
+            .begin(
+                &chat.id,
+                0,
+                send.clone(),
+                "model".into(),
+                "First instruction".into(),
+            )
+            .unwrap();
+        store.recover_interrupted().unwrap();
+        let lost = store.get(&chat.id).unwrap();
+        let prepared = store
+            .prepare_recovery(&chat.id, lost.revision, false)
+            .unwrap();
+        let approval = prepared.recovery_review.unwrap().nonce;
+        let reviewed = store
+            .approve_recovery(
+                &chat.id,
+                prepared.revision,
+                &approval,
+                true,
+                &chat.target,
+                false,
+            )
+            .unwrap();
+        let next = uuid::Uuid::new_v4().to_string();
+        store
+            .begin(
+                &chat.id,
+                reviewed.revision,
+                next.clone(),
+                "model".into(),
+                "Different instruction".into(),
+            )
+            .unwrap();
+        store
+            .finish(
+                &chat.id,
+                &next,
+                Ok(crate::chat_api::Reply {
+                    text: "A later confirmed answer".into(),
+                    completed: true,
+                    note: None,
+                }),
+                false,
+            )
+            .unwrap();
+        let source = store.get(&chat.id).unwrap();
+        assert!(source.last_error.is_none());
+        assert_eq!(source.state, "completed");
+        let target = api();
+        let review = store
+            .prepare_transfer(&chat.id, target.clone(), "model".into())
+            .unwrap();
+        assert_eq!(review.uncertain_messages, vec![0]);
+        assert!(review
+            .summary
+            .state
+            .contains("Mensagem 1: resultado indisponível"));
+        assert!(review.summary.state.contains("consumo pode ter ocorrido"));
+        assert!(review.summary.state.contains("A later confirmed answer"));
+        let mut edited = review.summary;
+        edited.state = "Latest answer received; continue the reviewed plan.".into();
+        let destination = store
+            .approve_transfer(
+                &chat.id,
+                &review.nonce,
+                edited,
+                true,
+                false,
+                &source.target,
+                &target,
+            )
+            .unwrap();
+        assert!(destination.messages[0]
+            .text
+            .contains("Latest answer received"));
+        assert!(destination.messages[0]
+            .text
+            .contains("Mensagem 1: resultado indisponível"));
+        assert!(destination.messages[0]
+            .text
+            .contains("Não repetir automaticamente"));
+        let restored = Store::load(root.clone());
+        let transferred = restored.get(&chat.id).unwrap();
+        assert_eq!(transferred.interruptions.len(), 1);
+        assert_eq!(transferred.interruptions[0].send_nonce, send);
+        assert_eq!(transferred.interruptions[0].approval_nonce, approval);
+        assert_eq!(transferred.messages.len(), 3);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn chat_transfer_discloses_missing_instruction_evidence_for_cli_source() {
+        let root =
+            std::env::temp_dir().join(format!("capy-transfer-guides-{}", uuid::Uuid::new_v4()));
+        let store = Store::load(root.clone());
+        let source = store
+            .create("Review loaded instructions".into(), cli(), "haiku".into())
+            .unwrap();
+        let review = store
+            .prepare_transfer(&source.id, api(), "model".into())
+            .unwrap();
+        assert!(review
+            .summary
+            .guides
+            .contains("não forneceu evidência de CLAUDE.md/imports"));
+        assert!(review
+            .summary
+            .guides
+            .contains("Revise e cite os caminhos/seções"));
         let loaded="Instruções observadas automaticamente:\n- C:/chat/CLAUDE.md [Project; session_start; pai: nenhum]\nTrecho capturado: preserve a saída";
-        let next=store.create("Review captured instructions".into(),cli(),"haiku".into()).unwrap();
-        let review=store.prepare_transfer_with_guides(&next.id,api(),"model".into(),Some(loaded)).unwrap();
+        let next = store
+            .create("Review captured instructions".into(), cli(), "haiku".into())
+            .unwrap();
+        let review = store
+            .prepare_transfer_with_guides(&next.id, api(), "model".into(), Some(loaded))
+            .unwrap();
         assert!(review.summary.guides.contains("C:/chat/CLAUDE.md"));
         assert!(review.summary.guides.contains("preserve a saída"));
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
-    fn chat_transfer_summary_renders_captured_instructions_and_collection_warning(){
-        let root=std::env::temp_dir().join(format!("capy-transfer-captured-guides-{}",uuid::Uuid::new_v4()));
-        let store=Store::load(root.join("chat"));let config=root.join("claude");let workspace=root.join("workspace");
-        std::fs::create_dir_all(&workspace).unwrap();let guide=workspace.join("CLAUDE.md");
-        std::fs::write(&guide,"Keep the validated local marker").unwrap();
-        let source=store.create("Captured guide proof".into(),cli(),"haiku".into()).unwrap();
-        crate::loaded_instructions::record(&config,&source.id,&workspace,crate::loaded_instructions::Instruction{
-            file_path:guide.to_string_lossy().into_owned(),memory_type:"Project".into(),load_reason:"session_start".into(),parent_file_path:None},100).unwrap();
-        let rendered=crate::loaded_instructions::render(&config,&source.id,&workspace).unwrap().unwrap();
-        let review=store.prepare_transfer_with_guides(&source.id,api(),"model".into(),Some(&rendered)).unwrap();
-        assert!(review.summary.guides.contains(&guide.to_string_lossy().to_string()));
-        assert!(review.summary.guides.contains("Keep the validated local marker"));
+    fn chat_transfer_summary_renders_captured_instructions_and_collection_warning() {
+        let root = std::env::temp_dir().join(format!(
+            "capy-transfer-captured-guides-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let store = Store::load(root.join("chat"));
+        let config = root.join("claude");
+        let workspace = root.join("workspace");
+        std::fs::create_dir_all(&workspace).unwrap();
+        let guide = workspace.join("CLAUDE.md");
+        std::fs::write(&guide, "Keep the validated local marker").unwrap();
+        let source = store
+            .create("Captured guide proof".into(), cli(), "haiku".into())
+            .unwrap();
+        crate::loaded_instructions::record(
+            &config,
+            &source.id,
+            &workspace,
+            crate::loaded_instructions::Instruction {
+                file_path: guide.to_string_lossy().into_owned(),
+                memory_type: "Project".into(),
+                load_reason: "session_start".into(),
+                parent_file_path: None,
+            },
+            100,
+        )
+        .unwrap();
+        let rendered = crate::loaded_instructions::render(&config, &source.id, &workspace)
+            .unwrap()
+            .unwrap();
+        let review = store
+            .prepare_transfer_with_guides(&source.id, api(), "model".into(), Some(&rendered))
+            .unwrap();
+        assert!(review
+            .summary
+            .guides
+            .contains(&guide.to_string_lossy().to_string()));
+        assert!(review
+            .summary
+            .guides
+            .contains("Keep the validated local marker"));
 
-        let failed=store.create("Missing guide proof".into(),cli(),"haiku".into()).unwrap();
-        crate::loaded_instructions::status(&config,&failed.id,"presence-unavailable").unwrap();
-        let warning=crate::loaded_instructions::render(&config,&failed.id,&workspace).unwrap().unwrap();
-        let review=store.prepare_transfer_with_guides(&failed.id,api(),"model".into(),Some(&warning)).unwrap();
+        let failed = store
+            .create("Missing guide proof".into(), cli(), "haiku".into())
+            .unwrap();
+        crate::loaded_instructions::status(&config, &failed.id, "presence-unavailable").unwrap();
+        let warning = crate::loaded_instructions::render(&config, &failed.id, &workspace)
+            .unwrap()
+            .unwrap();
+        let review = store
+            .prepare_transfer_with_guides(&failed.id, api(), "model".into(), Some(&warning))
+            .unwrap();
         assert!(review.summary.guides.contains("Coleta incompleta"));
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
-    fn chat_transfer_journal_rejects_changes_outside_transfer_and_preserves_files(){
-        let root=std::env::temp_dir().join(format!("capy-journal-metadata-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
-        let base=store.create("Original title".into(),cli(),"sonnet".into()).unwrap();
-        store.begin(&base.id,0,uuid::Uuid::new_v4().to_string(),"sonnet".into(),"Lost result".into()).unwrap();store.recover_interrupted().unwrap();
-        let unknown=store.get(&base.id).unwrap();let recovery=store.prepare_recovery(&base.id,unknown.revision,false).unwrap();
-        let source=store.approve_recovery(&base.id,recovery.revision,&recovery.recovery_review.unwrap().nonce,true,&base.target,false).unwrap();
-        let review=store.prepare_transfer(&source.id,api(),"model".into()).unwrap();
-        let destination=store.approve_transfer(&source.id,&review.nonce,review.summary,true,true,&source.target,&review.destination).unwrap();
-        let transferred=store.get(&source.id).unwrap();
-        let mut journal=Journal{before_source:source.clone(),source:transferred,destination,before_ids:vec![source.id.clone()],ids:store.ids.lock().unwrap().clone()};
-        journal.source.title="Changed outside approval".into();
+    fn chat_transfer_journal_rejects_changes_outside_transfer_and_preserves_files() {
+        let root =
+            std::env::temp_dir().join(format!("capy-journal-metadata-{}", uuid::Uuid::new_v4()));
+        let store = Store::load(root.clone());
+        let base = store
+            .create("Original title".into(), cli(), "sonnet".into())
+            .unwrap();
+        store
+            .begin(
+                &base.id,
+                0,
+                uuid::Uuid::new_v4().to_string(),
+                "sonnet".into(),
+                "Lost result".into(),
+            )
+            .unwrap();
+        store.recover_interrupted().unwrap();
+        let unknown = store.get(&base.id).unwrap();
+        let recovery = store
+            .prepare_recovery(&base.id, unknown.revision, false)
+            .unwrap();
+        let source = store
+            .approve_recovery(
+                &base.id,
+                recovery.revision,
+                &recovery.recovery_review.unwrap().nonce,
+                true,
+                &base.target,
+                false,
+            )
+            .unwrap();
+        let review = store
+            .prepare_transfer(&source.id, api(), "model".into())
+            .unwrap();
+        let destination = store
+            .approve_transfer(
+                &source.id,
+                &review.nonce,
+                review.summary,
+                true,
+                true,
+                &source.target,
+                &review.destination,
+            )
+            .unwrap();
+        let transferred = store.get(&source.id).unwrap();
+        let mut journal = Journal {
+            before_source: source.clone(),
+            source: transferred,
+            destination,
+            before_ids: vec![source.id.clone()],
+            ids: store.ids.lock().unwrap().clone(),
+        };
+        journal.source.title = "Changed outside approval".into();
         assert!(!validate_journal(&journal));
-        journal.source.title=source.title.clone();journal.source.interruptions.clear();assert!(!validate_journal(&journal));
+        journal.source.title = source.title.clone();
+        journal.source.interruptions.clear();
+        assert!(!validate_journal(&journal));
         // Partial commit: destination written, source/index still at the old state.
-        store.write(&source).unwrap();settings::write_json(&root.join("index.json"),&vec![source.id.clone()]).unwrap();
-        let path=root.join(format!("{}.json",source.id));let before=std::fs::read(&path).unwrap();
-        settings::write_json_limit(&root.join("transfer-pending.json"),&journal,8_388_608).unwrap();
-        assert!(recover(&root).is_err());assert_eq!(std::fs::read(&path).unwrap(),before);
-        assert!(root.join("transfer-pending.json").exists());std::fs::remove_dir_all(root).unwrap();
-    }
-    #[test]
-    fn chat_transfer_requires_revision_identity_billing_single_nonce(){
-        let root=std::env::temp_dir().join(format!("capy-transfer-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
-        let source=store.create("Task".into(),cli(),"sonnet".into()).unwrap();let target=api();
-        let review=store.prepare_transfer(&source.id,target.clone(),"chosen-model".into()).unwrap();
-        assert!(store.approve_transfer(&source.id,&review.nonce,review.summary.clone(),false,true,&source.target,&target).is_err());
-        assert!(store.approve_transfer(&source.id,&review.nonce,review.summary.clone(),true,false,&source.target,&target).is_err());
-        let mut drift=target.clone();drift.credential_revision=Some(uuid::Uuid::new_v4().to_string());
-        assert!(store.approve_transfer(&source.id,&review.nonce,review.summary.clone(),true,true,&source.target,&drift).is_err());
-        let mut wrong_source=source.target.clone();wrong_source.account="other@example.invalid".into();
-        assert!(store.approve_transfer(&source.id,&review.nonce,review.summary.clone(),true,true,&wrong_source,&target).is_err());
-        assert_eq!(store.transfer_review(&source.id).unwrap().nonce,review.nonce);
-        let previous=review.clone();let review=store.prepare_transfer(&source.id,target.clone(),"chosen-model".into()).unwrap();
-        assert_ne!(previous.nonce,review.nonce);
-        assert!(store.approve_transfer(&source.id,&previous.nonce,previous.summary,true,true,&source.target,&target).is_err());
-        let turn=uuid::Uuid::new_v4().to_string();store.begin(&source.id,0,turn.clone(),"sonnet".into(),"Use plan.md section API; retain compatibility".into()).unwrap();
-        assert!(store.prepare_transfer(&source.id,target.clone(),"chosen-model".into()).is_err());
-        store.finish(&source.id,&turn,Ok(crate::chat_api::Reply{text:"Decision: preserve API".into(),completed:true,note:None}),true).unwrap();
-        assert!(store.approve_transfer(&source.id,&review.nonce,review.summary,true,true,&source.target,&target).is_err());
-        let review=store.prepare_transfer(&source.id,target.clone(),"chosen-model".into()).unwrap();
-        assert!(review.summary.decisions.contains("plan.md"));assert!(review.summary.state.contains("preserve API"));
-        let destination=store.approve_transfer(&source.id,&review.nonce,review.summary.clone(),true,true,&source.target,&target).unwrap();
-        assert_eq!(destination.state,"working");assert!(destination.messages[0].text.contains("plan.md"));
-        assert_eq!(store.get(&source.id).unwrap().transferred_to.as_deref(),Some(destination.id.as_str()));
-        let restored=Store::load(root.clone());
-        assert!(restored.approve_transfer(&source.id,&review.nonce,review.summary,true,true,&source.target,&target).is_err());
-        assert_eq!(restored.list().unwrap().len(),2);restored.recover_interrupted().unwrap();assert_eq!(restored.get(&destination.id).unwrap().state,"unknown");
+        store.write(&source).unwrap();
+        settings::write_json(&root.join("index.json"), &vec![source.id.clone()]).unwrap();
+        let path = root.join(format!("{}.json", source.id));
+        let before = std::fs::read(&path).unwrap();
+        settings::write_json_limit(&root.join("transfer-pending.json"), &journal, 8_388_608)
+            .unwrap();
+        assert!(recover(&root).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        assert!(root.join("transfer-pending.json").exists());
         std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
-    fn chat_transfer_journal_recovers_commit_without_repeating_provider_call(){
-        let root=std::env::temp_dir().join(format!("capy-transfer-journal-{}",uuid::Uuid::new_v4()));let store=Store::load(root.clone());
-        let mut source=store.create("Task".into(),cli(),"sonnet".into()).unwrap();let before_source=source.clone();let mut destination=source.clone();
-        destination.id=uuid::Uuid::new_v4().to_string();destination.target=api();destination.state="working".into();destination.revision=1;
-        let nonce=uuid::Uuid::new_v4().to_string();destination.active_nonce=Some(nonce.clone());destination.used_nonces=vec![nonce];destination.messages=vec![crate::chat_api::Message{role:"user".into(),text:"Reviewed context".into()}];
-        source.state="transferred".into();source.transferred_to=Some(destination.id.clone());source.revision=1;
-        source.used_nonces.push(uuid::Uuid::new_v4().to_string());
-        let journal=Journal{before_source,source:source.clone(),destination:destination.clone(),before_ids:vec![source.id.clone()],ids:vec![source.id.clone(),destination.id.clone()]};
-        settings::write_json_limit(&root.join("transfer-pending.json"),&journal,8_388_608).unwrap();
-        settings::write_json_limit(&root.join(format!("{}.json",destination.id)),&destination,2_097_152).unwrap();
-        assert!(store.list().is_err());let recovered=Store::load(root.clone());
-        assert_eq!(recovered.list().unwrap().len(),2);assert_eq!(recovered.get(&source.id).unwrap().state,"transferred");
-        settings::write_json_limit(&root.join("transfer-pending.json"),&journal,8_388_608).unwrap();
-        let committed=Store::load(root.clone());assert_eq!(committed.list().unwrap().len(),2);
-        committed.recover_interrupted().unwrap();assert_eq!(committed.get(&destination.id).unwrap().state,"unknown");
-        assert!(!root.join("transfer-pending.json").exists());std::fs::remove_dir_all(root).unwrap();
+    fn chat_transfer_requires_revision_identity_billing_single_nonce() {
+        let root = std::env::temp_dir().join(format!("capy-transfer-{}", uuid::Uuid::new_v4()));
+        let store = Store::load(root.clone());
+        let source = store.create("Task".into(), cli(), "sonnet".into()).unwrap();
+        let target = api();
+        let review = store
+            .prepare_transfer(&source.id, target.clone(), "chosen-model".into())
+            .unwrap();
+        assert!(store
+            .approve_transfer(
+                &source.id,
+                &review.nonce,
+                review.summary.clone(),
+                false,
+                true,
+                &source.target,
+                &target
+            )
+            .is_err());
+        assert!(store
+            .approve_transfer(
+                &source.id,
+                &review.nonce,
+                review.summary.clone(),
+                true,
+                false,
+                &source.target,
+                &target
+            )
+            .is_err());
+        let mut drift = target.clone();
+        drift.credential_revision = Some(uuid::Uuid::new_v4().to_string());
+        assert!(store
+            .approve_transfer(
+                &source.id,
+                &review.nonce,
+                review.summary.clone(),
+                true,
+                true,
+                &source.target,
+                &drift
+            )
+            .is_err());
+        let mut wrong_source = source.target.clone();
+        wrong_source.account = "other@example.invalid".into();
+        assert!(store
+            .approve_transfer(
+                &source.id,
+                &review.nonce,
+                review.summary.clone(),
+                true,
+                true,
+                &wrong_source,
+                &target
+            )
+            .is_err());
+        assert_eq!(
+            store.transfer_review(&source.id).unwrap().nonce,
+            review.nonce
+        );
+        let previous = review.clone();
+        let review = store
+            .prepare_transfer(&source.id, target.clone(), "chosen-model".into())
+            .unwrap();
+        assert_ne!(previous.nonce, review.nonce);
+        assert!(store
+            .approve_transfer(
+                &source.id,
+                &previous.nonce,
+                previous.summary,
+                true,
+                true,
+                &source.target,
+                &target
+            )
+            .is_err());
+        let turn = uuid::Uuid::new_v4().to_string();
+        store
+            .begin(
+                &source.id,
+                0,
+                turn.clone(),
+                "sonnet".into(),
+                "Use plan.md section API; retain compatibility".into(),
+            )
+            .unwrap();
+        assert!(store
+            .prepare_transfer(&source.id, target.clone(), "chosen-model".into())
+            .is_err());
+        store
+            .finish(
+                &source.id,
+                &turn,
+                Ok(crate::chat_api::Reply {
+                    text: "Decision: preserve API".into(),
+                    completed: true,
+                    note: None,
+                }),
+                true,
+            )
+            .unwrap();
+        assert!(store
+            .approve_transfer(
+                &source.id,
+                &review.nonce,
+                review.summary,
+                true,
+                true,
+                &source.target,
+                &target
+            )
+            .is_err());
+        let review = store
+            .prepare_transfer(&source.id, target.clone(), "chosen-model".into())
+            .unwrap();
+        assert!(review.summary.decisions.contains("plan.md"));
+        assert!(review.summary.state.contains("preserve API"));
+        let destination = store
+            .approve_transfer(
+                &source.id,
+                &review.nonce,
+                review.summary.clone(),
+                true,
+                true,
+                &source.target,
+                &target,
+            )
+            .unwrap();
+        assert_eq!(destination.state, "working");
+        assert!(destination.messages[0].text.contains("plan.md"));
+        assert_eq!(
+            store.get(&source.id).unwrap().transferred_to.as_deref(),
+            Some(destination.id.as_str())
+        );
+        let restored = Store::load(root.clone());
+        assert!(restored
+            .approve_transfer(
+                &source.id,
+                &review.nonce,
+                review.summary,
+                true,
+                true,
+                &source.target,
+                &target
+            )
+            .is_err());
+        assert_eq!(restored.list().unwrap().len(), 2);
+        restored.recover_interrupted().unwrap();
+        assert_eq!(restored.get(&destination.id).unwrap().state, "unknown");
+        std::fs::remove_dir_all(root).unwrap();
     }
     #[test]
-    fn chat_transfer_in_progress_does_not_drop_another_conversation_result(){
-        use std::{sync::{Arc,mpsc},time::Duration};
-        let root=std::env::temp_dir().join(format!("capy-transfer-concurrent-{}",uuid::Uuid::new_v4()));let store=Arc::new(Store::load(root.clone()));
-        let chat=store.create("Concurrent".into(),cli(),"sonnet".into()).unwrap();let nonce=uuid::Uuid::new_v4().to_string();
-        store.begin(&chat.id,0,nonce.clone(),"sonnet".into(),"Hello".into()).unwrap();
-        let guard=store.ids.lock().unwrap();std::fs::write(root.join("transfer-pending.json"),b"owned concurrent write fixture").unwrap();
-        let (entered_tx,entered_rx)=mpsc::channel();let (tx,rx)=mpsc::channel();let worker=store.clone();let id=chat.id.clone();
-        let thread=std::thread::spawn(move||{entered_tx.send(()).unwrap();tx.send(worker.finish(&id,&nonce,Ok(crate::chat_api::Reply{text:"Retained response".into(),completed:true,note:None}),true)).unwrap();});
-        entered_rx.recv_timeout(Duration::from_secs(2)).unwrap();assert!(matches!(rx.recv_timeout(Duration::from_millis(150)),Err(mpsc::RecvTimeoutError::Timeout)));
-        std::fs::remove_file(root.join("transfer-pending.json")).unwrap();drop(guard);
-        let result=rx.recv_timeout(Duration::from_secs(2)).unwrap().unwrap();assert_eq!(result.state,"completed");assert_eq!(result.messages.last().unwrap().text,"Retained response");
-        thread.join().unwrap();std::fs::remove_dir_all(root).unwrap();
+    fn chat_transfer_journal_recovers_commit_without_repeating_provider_call() {
+        let root =
+            std::env::temp_dir().join(format!("capy-transfer-journal-{}", uuid::Uuid::new_v4()));
+        let store = Store::load(root.clone());
+        let mut source = store.create("Task".into(), cli(), "sonnet".into()).unwrap();
+        let before_source = source.clone();
+        let mut destination = source.clone();
+        destination.id = uuid::Uuid::new_v4().to_string();
+        destination.target = api();
+        destination.state = "working".into();
+        destination.revision = 1;
+        let nonce = uuid::Uuid::new_v4().to_string();
+        destination.active_nonce = Some(nonce.clone());
+        destination.used_nonces = vec![nonce];
+        destination.messages = vec![crate::chat_api::Message {
+            role: "user".into(),
+            text: "Reviewed context".into(),
+        }];
+        source.state = "transferred".into();
+        source.transferred_to = Some(destination.id.clone());
+        source.revision = 1;
+        source.used_nonces.push(uuid::Uuid::new_v4().to_string());
+        let journal = Journal {
+            before_source,
+            source: source.clone(),
+            destination: destination.clone(),
+            before_ids: vec![source.id.clone()],
+            ids: vec![source.id.clone(), destination.id.clone()],
+        };
+        settings::write_json_limit(&root.join("transfer-pending.json"), &journal, 8_388_608)
+            .unwrap();
+        settings::write_json_limit(
+            &root.join(format!("{}.json", destination.id)),
+            &destination,
+            2_097_152,
+        )
+        .unwrap();
+        assert!(store.list().is_err());
+        let recovered = Store::load(root.clone());
+        assert_eq!(recovered.list().unwrap().len(), 2);
+        assert_eq!(recovered.get(&source.id).unwrap().state, "transferred");
+        settings::write_json_limit(&root.join("transfer-pending.json"), &journal, 8_388_608)
+            .unwrap();
+        let committed = Store::load(root.clone());
+        assert_eq!(committed.list().unwrap().len(), 2);
+        committed.recover_interrupted().unwrap();
+        assert_eq!(committed.get(&destination.id).unwrap().state, "unknown");
+        assert!(!root.join("transfer-pending.json").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn chat_transfer_in_progress_does_not_drop_another_conversation_result() {
+        use std::{
+            sync::{mpsc, Arc},
+            time::Duration,
+        };
+        let root =
+            std::env::temp_dir().join(format!("capy-transfer-concurrent-{}", uuid::Uuid::new_v4()));
+        let store = Arc::new(Store::load(root.clone()));
+        let chat = store
+            .create("Concurrent".into(), cli(), "sonnet".into())
+            .unwrap();
+        let nonce = uuid::Uuid::new_v4().to_string();
+        store
+            .begin(&chat.id, 0, nonce.clone(), "sonnet".into(), "Hello".into())
+            .unwrap();
+        let guard = store.ids.lock().unwrap();
+        std::fs::write(
+            root.join("transfer-pending.json"),
+            b"owned concurrent write fixture",
+        )
+        .unwrap();
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (tx, rx) = mpsc::channel();
+        let worker = store.clone();
+        let id = chat.id.clone();
+        let thread = std::thread::spawn(move || {
+            entered_tx.send(()).unwrap();
+            tx.send(worker.finish(
+                &id,
+                &nonce,
+                Ok(crate::chat_api::Reply {
+                    text: "Retained response".into(),
+                    completed: true,
+                    note: None,
+                }),
+                true,
+            ))
+            .unwrap();
+        });
+        entered_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert!(matches!(
+            rx.recv_timeout(Duration::from_millis(150)),
+            Err(mpsc::RecvTimeoutError::Timeout)
+        ));
+        std::fs::remove_file(root.join("transfer-pending.json")).unwrap();
+        drop(guard);
+        let result = rx.recv_timeout(Duration::from_secs(2)).unwrap().unwrap();
+        assert_eq!(result.state, "completed");
+        assert_eq!(result.messages.last().unwrap().text, "Retained response");
+        thread.join().unwrap();
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

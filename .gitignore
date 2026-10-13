@@ -10,3 +10,7 @@
 /*.exe
 /.checks/discovery-local.json
 /.checks/activity-local.json
+*.key
+*.pem
+.env
+.env.*

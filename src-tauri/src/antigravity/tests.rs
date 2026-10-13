@@ -7,7 +7,7 @@ const ID: &str = "11111111-1111-1111-1111-111111111111";
 struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
-        let root = std::env::temp_dir().join(format!("capy-agy-{}",uuid::Uuid::new_v4()));
+        let root = std::env::temp_dir().join(format!("capy-agy-{}", uuid::Uuid::new_v4()));
         fs::create_dir_all(root.join("antigravity-cli/presence")).unwrap();
         Self(root)
     }

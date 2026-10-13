@@ -1,44 +1,44 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod activity;
+mod agy_usage;
+mod antigravity;
+mod antigravity_quotas;
 mod api_accounts;
-mod credential_vault;
 mod chat_api;
-mod chat_history;
 mod chat_cli;
 mod chat_cli_presence;
+mod chat_commands;
+mod chat_history;
+mod chat_presence;
 mod chat_process;
 mod chat_recovery;
-mod chat_commands;
-mod chat_presence;
-mod chat_transfer;
 mod chat_routing;
-mod exit_review;
-mod antigravity;
+mod chat_transfer;
 mod claude_activity;
 mod claude_interventions;
+mod claude_quotas;
+mod credential_vault;
 mod demo;
 mod discovery;
+mod exit_review;
 mod geometry;
-mod interventions;
-mod monitor;
-mod position;
-mod quotas;
-mod antigravity_quotas;
-mod agy_usage;
-mod quota_refresh;
-mod quota_policy;
-mod settings;
-mod profiles;
-mod claude_quotas;
-mod terminal;
-mod tasks;
-mod routing;
 mod handoff;
 mod handoff_context;
+mod interventions;
 mod loaded_instructions;
+mod monitor;
+mod position;
+mod profiles;
+mod quota_policy;
+mod quota_refresh;
+mod quotas;
+mod routing;
+mod settings;
 mod smoke;
 mod source_access;
+mod tasks;
+mod terminal;
 
 use geometry::{Area, Point};
 use std::{
@@ -211,7 +211,8 @@ fn show_pet(app: &tauri::AppHandle) -> Result<(), String> {
     let _ = pet.set_always_on_top(true);
     let _ = pet.unminimize();
     pet.show().map_err(|e| e.to_string())?;
-    app.emit("pet-visibility",true).map_err(|e|e.to_string())?;
+    app.emit("pet-visibility", true)
+        .map_err(|e| e.to_string())?;
     pet.set_focus().map_err(|e| e.to_string())
 }
 fn show_summary(app: &tauri::AppHandle) -> Result<(), String> {
@@ -243,7 +244,7 @@ fn show_panel(app: tauri::AppHandle) -> Result<(), String> {
     panel.center().map_err(|e| e.to_string())?;
     panel.show().map_err(|e| e.to_string())?;
     panel.set_focus().map_err(|e| e.to_string())?;
-    app.emit("attention-viewed",()).map_err(|e|e.to_string())
+    app.emit("attention-viewed", ()).map_err(|e| e.to_string())
 }
 #[tauri::command]
 fn hide_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
@@ -251,7 +252,10 @@ fn hide_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
         return Err("Janela desconhecida".into());
     }
     window(&app, &label)?.hide().map_err(|e| e.to_string())?;
-    if label=="pet"{app.emit("pet-visibility",false).map_err(|e|e.to_string())?;}
+    if label == "pet" {
+        app.emit("pet-visibility", false)
+            .map_err(|e| e.to_string())?;
+    }
     if label == "summary" || label == "pet" {
         window(&app, "summary")?.hide().map_err(|e| e.to_string())?;
         app.emit("summary-visibility", false)
@@ -294,7 +298,9 @@ fn spawn_cursor_monitor(app: tauri::AppHandle) {
         let mut last_emit = std::time::Instant::now();
         loop {
             std::thread::sleep(std::time::Duration::from_millis(60));
-            let Ok(pet) = window(&app, "pet") else { continue };
+            let Ok(pet) = window(&app, "pet") else {
+                continue;
+            };
             if !pet.is_visible().unwrap_or(false) {
                 std::thread::sleep(std::time::Duration::from_millis(300));
                 continue;
@@ -303,8 +309,12 @@ fn spawn_cursor_monitor(app: tauri::AppHandle) {
             if unsafe { GetCursorPos(&mut pt) } == 0 {
                 continue;
             }
-            let Ok(pet_pos) = pet.outer_position() else { continue };
-            let Ok(pet_size) = pet.outer_size() else { continue };
+            let Ok(pet_pos) = pet.outer_position() else {
+                continue;
+            };
+            let Ok(pet_size) = pet.outer_size() else {
+                continue;
+            };
             let center_x = pet_pos.x + (pet_size.width as i32) / 2;
             let center_y = pet_pos.y + (pet_size.height as i32) / 2;
             let dx = pt.x - center_x;
@@ -337,7 +347,9 @@ fn demo_snapshot(state: State<'_, DesktopState>) -> Result<demo::Snapshot, Strin
         .map_err(|_| "Estado indisponível".into())
 }
 #[tauri::command]
-fn refresh_quotas(service: State<'_, quota_refresh::Service>) -> Result<(), String> { service.request() }
+fn refresh_quotas(service: State<'_, quota_refresh::Service>) -> Result<(), String> {
+    service.request()
+}
 #[tauri::command]
 fn save_preferences(app: tauri::AppHandle, value: settings::Preferences) -> Result<(), String> {
     app.state::<settings::Store>().save(value.clone())?;
@@ -348,7 +360,8 @@ fn save_preferences(app: tauri::AppHandle, value: settings::Preferences) -> Resu
         data.preferences = value;
         data.clone()
     };
-    app.emit("demo-updated", snapshot).map_err(|e| e.to_string())
+    app.emit("demo-updated", snapshot)
+        .map_err(|e| e.to_string())
 }
 #[tauri::command]
 fn dismiss_quota_alert(app: tauri::AppHandle, id: String) -> Result<(), String> {
@@ -360,108 +373,232 @@ fn dismiss_quota_alert(app: tauri::AppHandle, id: String) -> Result<(), String> 
         data.quota_alerts = service.snapshot();
         data.clone()
     };
-    app.emit("demo-updated", snapshot).map_err(|e| e.to_string())
+    app.emit("demo-updated", snapshot)
+        .map_err(|e| e.to_string())
 }
 #[tauri::command]
-fn list_profiles(store: State<'_, profiles::Store>) -> Result<Vec<profiles::Profile>, String> { store.list() }
-#[tauri::command]
-fn add_profile(store: State<'_, profiles::Store>, label:String, existing:Option<PathBuf>, billing:String) -> Result<profiles::Profile,String> {
-    store.add(label,existing,billing)
+fn list_profiles(store: State<'_, profiles::Store>) -> Result<Vec<profiles::Profile>, String> {
+    store.list()
 }
 #[tauri::command]
-async fn profile_identity(app:tauri::AppHandle,id:String,cwd:Option<PathBuf>)->Result<profiles::Identity,String>{
-    let profile=app.state::<profiles::Store>().get(&id)?;
-    if cwd.as_ref().is_some_and(|p|!p.is_absolute()||!p.is_dir()){return Err("Pasta de trabalho inválida.".into());}
-    tauri::async_runtime::spawn_blocking(move||app.state::<profiles::Store>().probe(&profile,cwd.as_deref())).await.map_err(|_|"Vínculo com o CLI indisponível.".to_owned())?
+fn add_profile(
+    store: State<'_, profiles::Store>,
+    label: String,
+    existing: Option<PathBuf>,
+    billing: String,
+) -> Result<profiles::Profile, String> {
+    store.add(label, existing, billing)
 }
 #[tauri::command]
-fn login_profile(store:State<'_,profiles::Store>,id:String)->Result<(),String>{profiles::login(&store.get(&id)?,&store.root)}
-#[tauri::command]
-fn connect_claude_quotas(store:State<'_,profiles::Store>,id:String,enabled:bool)->Result<(),String>{claude_quotas::configure(&store.get(&id)?,enabled)}
-#[tauri::command]
-fn list_tasks(store:State<'_,Arc<tasks::Store>>)->Result<Vec<tasks::Task>,String>{store.list()}
-#[tauri::command]
-async fn start_task(app:tauri::AppHandle,request:tasks::Start)->Result<tasks::Task,String>{
-    let profile=app.state::<profiles::Store>().get(&request.profile_id)?;
-    let store=app.state::<Arc<tasks::Store>>().inner().clone();
-    let terminal=app.state::<Arc<terminal::Service>>().inner().clone();
-    let output_app=app.clone();let exit_app=app.clone();
-    tauri::async_runtime::spawn_blocking(move||{
-        let task=store.prepare(&profile,request)?;
-        let id=task.id.clone();
-        let exit=app.state::<exit_review::Service>();let _admission=exit.admit()?;
-        store.launch(task,&profile,&terminal,move|chunk|{let _=output_app.emit("terminal-output",chunk);},move||{let _=exit_app.emit("terminal-exited",&id);})
-    }).await.map_err(|_|"Não foi possível preparar a tarefa.".to_owned())?
-}
-#[tauri::command]
-fn terminal_replay(service:State<'_,Arc<terminal::Service>>,id:String)->Result<terminal::Replay,String>{service.replay(&id)}
-#[tauri::command]
-fn terminal_input(service:State<'_,Arc<terminal::Service>>,exit:State<'_,exit_review::Service>,id:String,data:String)->Result<(),String>{
-    exit.send_terminal_input(||service.input(&id,&data))
-}
-#[tauri::command]
-fn terminal_resize(service:State<'_,Arc<terminal::Service>>,id:String,cols:u16,rows:u16)->Result<(),String>{service.resize(&id,cols,rows)}
-#[tauri::command]
-fn terminal_interrupt(service:State<'_,Arc<terminal::Service>>,exit:State<'_,exit_review::Service>,id:String,confirmed:bool)->Result<(),String>{
-    if !confirmed{return Err("Confirme a interrupção da sessão selecionada.".into());}exit.send_terminal_input(||service.input(&id,"\u{1b}"))
-}
-#[tauri::command]
-fn terminal_model_picker(service:State<'_,Arc<terminal::Service>>,exit:State<'_,exit_review::Service>,id:String)->Result<(),String>{
-    exit.send_terminal_input(||service.input(&id,"\u{1b}p"))
-}
-fn exit_resources(app:&tauri::AppHandle)->Result<Vec<exit_review::Resource>,String>{
-    let active=app.state::<Arc<terminal::Service>>().active_ids()?;
-    let tasks=if active.is_empty(){Vec::new()}else{app.state::<Arc<tasks::Store>>().list()?};
-    let chats=app.state::<Arc<chat_history::Store>>().list().map_err(|error|format!("Histórico incompatível ou indisponível. A saída foi bloqueada; os arquivos foram preservados. {error}"))?;
-    exit_review::resources(chats,tasks,active)
-}
-#[tauri::command]
-fn prepare_exit_review(app:tauri::AppHandle)->Result<exit_review::Review,String>{
-    app.state::<exit_review::Service>().prepare(quotas::now_ms(),||exit_resources(&app))
-}
-#[tauri::command]
-fn cancel_exit_review(app:tauri::AppHandle,nonce:String)->Result<(),String>{app.state::<exit_review::Service>().cancel(&nonce)}
-#[tauri::command]
-fn confirm_exit(app:tauri::AppHandle,nonce:String,confirmed:bool)->Result<(),String>{
-    app.state::<exit_review::Service>().approve(&nonce,confirmed,quotas::now_ms(),||exit_resources(&app))?;
-    if let Err(error)=app.state::<Arc<terminal::Service>>().close_all(){
-        app.state::<exit_review::Service>().reopen_after_close_failure()?;return Err(error);
+async fn profile_identity(
+    app: tauri::AppHandle,
+    id: String,
+    cwd: Option<PathBuf>,
+) -> Result<profiles::Identity, String> {
+    let profile = app.state::<profiles::Store>().get(&id)?;
+    if cwd
+        .as_ref()
+        .is_some_and(|p| !p.is_absolute() || !p.is_dir())
+    {
+        return Err("Pasta de trabalho inválida.".into());
     }
-    if let Err(error)=persist_pet(&app){eprintln!("Position save: {error}");}
-    app.exit(0);Ok(())
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<profiles::Store>()
+            .probe(&profile, cwd.as_deref())
+    })
+    .await
+    .map_err(|_| "Vínculo com o CLI indisponível.".to_owned())?
 }
 #[tauri::command]
-fn request_exit(app:tauri::AppHandle)->Result<(),String>{
-    let review=match prepare_exit_review(app.clone()){
-        Ok(review)=>review,
-        Err(error)=>{show_panel(app.clone())?;app.emit("exit-review-error",&error).map_err(|emit|emit.to_string())?;return Err(error);}
+fn login_profile(store: State<'_, profiles::Store>, id: String) -> Result<(), String> {
+    profiles::login(&store.get(&id)?, &store.root)
+}
+#[tauri::command]
+fn connect_claude_quotas(
+    store: State<'_, profiles::Store>,
+    id: String,
+    enabled: bool,
+) -> Result<(), String> {
+    claude_quotas::configure(&store.get(&id)?, enabled)
+}
+#[tauri::command]
+fn list_tasks(store: State<'_, Arc<tasks::Store>>) -> Result<Vec<tasks::Task>, String> {
+    store.list()
+}
+#[tauri::command]
+async fn start_task(app: tauri::AppHandle, request: tasks::Start) -> Result<tasks::Task, String> {
+    let profile = app.state::<profiles::Store>().get(&request.profile_id)?;
+    let store = app.state::<Arc<tasks::Store>>().inner().clone();
+    let terminal = app.state::<Arc<terminal::Service>>().inner().clone();
+    let output_app = app.clone();
+    let exit_app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let task = store.prepare(&profile, request)?;
+        let id = task.id.clone();
+        let exit = app.state::<exit_review::Service>();
+        let _admission = exit.admit()?;
+        store.launch(
+            task,
+            &profile,
+            &terminal,
+            move |chunk| {
+                let _ = output_app.emit("terminal-output", chunk);
+            },
+            move || {
+                let _ = exit_app.emit("terminal-exited", &id);
+            },
+        )
+    })
+    .await
+    .map_err(|_| "Não foi possível preparar a tarefa.".to_owned())?
+}
+#[tauri::command]
+fn terminal_replay(
+    service: State<'_, Arc<terminal::Service>>,
+    id: String,
+) -> Result<terminal::Replay, String> {
+    service.replay(&id)
+}
+#[tauri::command]
+fn terminal_input(
+    service: State<'_, Arc<terminal::Service>>,
+    exit: State<'_, exit_review::Service>,
+    id: String,
+    data: String,
+) -> Result<(), String> {
+    exit.send_terminal_input(|| service.input(&id, &data))
+}
+#[tauri::command]
+fn terminal_resize(
+    service: State<'_, Arc<terminal::Service>>,
+    id: String,
+    cols: u16,
+    rows: u16,
+) -> Result<(), String> {
+    service.resize(&id, cols, rows)
+}
+#[tauri::command]
+fn terminal_interrupt(
+    service: State<'_, Arc<terminal::Service>>,
+    exit: State<'_, exit_review::Service>,
+    id: String,
+    confirmed: bool,
+) -> Result<(), String> {
+    if !confirmed {
+        return Err("Confirme a interrupção da sessão selecionada.".into());
+    }
+    exit.send_terminal_input(|| service.input(&id, "\u{1b}"))
+}
+#[tauri::command]
+fn terminal_model_picker(
+    service: State<'_, Arc<terminal::Service>>,
+    exit: State<'_, exit_review::Service>,
+    id: String,
+) -> Result<(), String> {
+    exit.send_terminal_input(|| service.input(&id, "\u{1b}p"))
+}
+fn exit_resources(app: &tauri::AppHandle) -> Result<Vec<exit_review::Resource>, String> {
+    let active = app.state::<Arc<terminal::Service>>().active_ids()?;
+    let tasks = if active.is_empty() {
+        Vec::new()
+    } else {
+        app.state::<Arc<tasks::Store>>().list()?
     };
-    if review.resources.is_empty(){return confirm_exit(app,review.nonce,true);}
+    let chats=app.state::<Arc<chat_history::Store>>().list().map_err(|error|format!("Histórico incompatível ou indisponível. A saída foi bloqueada; os arquivos foram preservados. {error}"))?;
+    exit_review::resources(chats, tasks, active)
+}
+#[tauri::command]
+fn prepare_exit_review(app: tauri::AppHandle) -> Result<exit_review::Review, String> {
+    app.state::<exit_review::Service>()
+        .prepare(quotas::now_ms(), || exit_resources(&app))
+}
+#[tauri::command]
+fn cancel_exit_review(app: tauri::AppHandle, nonce: String) -> Result<(), String> {
+    app.state::<exit_review::Service>().cancel(&nonce)
+}
+#[tauri::command]
+fn confirm_exit(app: tauri::AppHandle, nonce: String, confirmed: bool) -> Result<(), String> {
+    app.state::<exit_review::Service>()
+        .approve(&nonce, confirmed, quotas::now_ms(), || exit_resources(&app))?;
+    if let Err(error) = app.state::<Arc<terminal::Service>>().close_all() {
+        app.state::<exit_review::Service>()
+            .reopen_after_close_failure()?;
+        return Err(error);
+    }
+    if let Err(error) = persist_pet(&app) {
+        eprintln!("Position save: {error}");
+    }
+    app.exit(0);
+    Ok(())
+}
+#[tauri::command]
+fn request_exit(app: tauri::AppHandle) -> Result<(), String> {
+    let review = match prepare_exit_review(app.clone()) {
+        Ok(review) => review,
+        Err(error) => {
+            show_panel(app.clone())?;
+            app.emit("exit-review-error", &error)
+                .map_err(|emit| emit.to_string())?;
+            return Err(error);
+        }
+    };
+    if review.resources.is_empty() {
+        return confirm_exit(app, review.nonce, true);
+    }
     show_panel(app.clone())?;
-    app.emit("confirm-exit",review).map_err(|error|error.to_string())
+    app.emit("confirm-exit", review)
+        .map_err(|error| error.to_string())
 }
 #[tauri::command]
-fn list_handoffs(store:State<'_,Arc<handoff::Store>>)->Result<Vec<handoff::Review>,String>{store.list()}
-#[tauri::command]
-async fn prepare_handoff(app:tauri::AppHandle,source_id:String,destination_id:String,model:String)->Result<handoff::Review,String>{
-    let task=app.state::<Arc<tasks::Store>>().get(&source_id)?;
-    let source=app.state::<profiles::Store>().get(&task.profile_id)?;
-    let destination=app.state::<profiles::Store>().get(&destination_id)?;
-    let store=app.state::<Arc<handoff::Store>>().inner().clone();
-    tauri::async_runtime::spawn_blocking(move||store.prepare(&task,&source,&destination,model,false)).await.map_err(|_|"Não foi possível preparar a continuação.".to_owned())?
+fn list_handoffs(store: State<'_, Arc<handoff::Store>>) -> Result<Vec<handoff::Review>, String> {
+    store.list()
 }
 #[tauri::command]
-fn cancel_handoff(store:State<'_,Arc<handoff::Store>>,nonce:String)->Result<(),String>{store.cancel(&nonce)}
+async fn prepare_handoff(
+    app: tauri::AppHandle,
+    source_id: String,
+    destination_id: String,
+    model: String,
+) -> Result<handoff::Review, String> {
+    let task = app.state::<Arc<tasks::Store>>().get(&source_id)?;
+    let source = app.state::<profiles::Store>().get(&task.profile_id)?;
+    let destination = app.state::<profiles::Store>().get(&destination_id)?;
+    let store = app.state::<Arc<handoff::Store>>().inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        store.prepare(&task, &source, &destination, model, false)
+    })
+    .await
+    .map_err(|_| "Não foi possível preparar a continuação.".to_owned())?
+}
 #[tauri::command]
-async fn approve_handoff(app:tauri::AppHandle,nonce:String,summary:handoff::Summary,billing_confirmed:bool,mode:String)->Result<tasks::Task,String>{
-    let store=app.state::<Arc<handoff::Store>>().inner().clone();
-    let mut review=store.list()?.into_iter().find(|r|r.nonce==nonce).ok_or("Esta revisão já foi usada ou cancelada.")?;
-    let task=app.state::<Arc<tasks::Store>>().get(&review.source_task_id)?;
-    let source=app.state::<profiles::Store>().get(&task.profile_id)?;
-    let destination=app.state::<profiles::Store>().get(&review.destination_profile_id)?;
-    let task_store=app.state::<Arc<tasks::Store>>().inner().clone();
-    let terminal=app.state::<Arc<terminal::Service>>().inner().clone();
-    let output_app=app.clone();let exit_app=app.clone();
+fn cancel_handoff(store: State<'_, Arc<handoff::Store>>, nonce: String) -> Result<(), String> {
+    store.cancel(&nonce)
+}
+#[tauri::command]
+async fn approve_handoff(
+    app: tauri::AppHandle,
+    nonce: String,
+    summary: handoff::Summary,
+    billing_confirmed: bool,
+    mode: String,
+) -> Result<tasks::Task, String> {
+    let store = app.state::<Arc<handoff::Store>>().inner().clone();
+    let mut review = store
+        .list()?
+        .into_iter()
+        .find(|r| r.nonce == nonce)
+        .ok_or("Esta revisão já foi usada ou cancelada.")?;
+    let task = app
+        .state::<Arc<tasks::Store>>()
+        .get(&review.source_task_id)?;
+    let source = app.state::<profiles::Store>().get(&task.profile_id)?;
+    let destination = app
+        .state::<profiles::Store>()
+        .get(&review.destination_profile_id)?;
+    let task_store = app.state::<Arc<tasks::Store>>().inner().clone();
+    let terminal = app.state::<Arc<terminal::Service>>().inner().clone();
+    let output_app = app.clone();
+    let exit_app = app.clone();
     tauri::async_runtime::spawn_blocking(move||{
         let exit=app.state::<exit_review::Service>();let _admission=exit.admit()?;
         review.summary=summary.clone();
@@ -477,17 +614,36 @@ async fn approve_handoff(app:tauri::AppHandle,nonce:String,summary:handoff::Summ
     }).await.map_err(|_|"Não foi possível transferir a tarefa.".to_owned())?
 }
 #[tauri::command]
-async fn resume_task(app:tauri::AppHandle,id:String)->Result<(),String>{
-    let store=app.state::<Arc<tasks::Store>>().inner().clone();
-    let task=store.get(&id)?;let profile=app.state::<profiles::Store>().get(&task.profile_id)?;
-    tauri::async_runtime::spawn_blocking(move||{
-        let sources=discovery::Sources{claude:profile.config_dir.clone(),codex:PathBuf::new(),antigravity:PathBuf::new()};
-        if discovery::scan(&sources).sessions.iter().any(|s|s.id==format!("claude:{}",task.id)) {return Err("Esta conversa já está aberta. Use o terminal integrado ou o terminal original.".into());}
-        let identity=profiles::identity(&profile,Some(&task.cwd))?;
-        if identity.account!=task.account||identity.billing!=task.billing{return Err("A conta ou cobrança mudou. Verifique antes de continuar.".into());}
-        let exit=app.state::<exit_review::Service>();let _admission=exit.admit()?;
-        store.resume_external(&task,&profile)
-    }).await.map_err(|_|"Não foi possível abrir a conversa.".to_owned())?
+async fn resume_task(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    let store = app.state::<Arc<tasks::Store>>().inner().clone();
+    let task = store.get(&id)?;
+    let profile = app.state::<profiles::Store>().get(&task.profile_id)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let sources = discovery::Sources {
+            claude: profile.config_dir.clone(),
+            codex: PathBuf::new(),
+            antigravity: PathBuf::new(),
+        };
+        if discovery::scan(&sources)
+            .sessions
+            .iter()
+            .any(|s| s.id == format!("claude:{}", task.id))
+        {
+            return Err(
+                "Esta conversa já está aberta. Use o terminal integrado ou o terminal original."
+                    .into(),
+            );
+        }
+        let identity = profiles::identity(&profile, Some(&task.cwd))?;
+        if identity.account != task.account || identity.billing != task.billing {
+            return Err("A conta ou cobrança mudou. Verifique antes de continuar.".into());
+        }
+        let exit = app.state::<exit_review::Service>();
+        let _admission = exit.admit()?;
+        store.resume_external(&task, &profile)
+    })
+    .await
+    .map_err(|_| "Não foi possível abrir a conversa.".to_owned())?
 }
 fn intervention_source(
     app: &tauri::AppHandle,
@@ -504,10 +660,19 @@ fn intervention_source(
         .map_err(|_| "Esta sessão não está disponível para respostas reais.".into())
 }
 
-fn claude_intervention_identity(identity: &claude_interventions::Identity, request: &claude_interventions::protocol::Request) -> bool {
+fn claude_intervention_identity(
+    identity: &claude_interventions::Identity,
+    request: &claude_interventions::protocol::Request,
+) -> bool {
     discovery::process_birth(identity.hook_pid) == Some(identity.hook_birth)
-        && claude_activity::hook_ancestor(identity.hook_pid) == Some((identity.claude_pid, identity.claude_birth))
-        && claude_activity::intervention_presence(&request.session_id, &request.cwd, identity.claude_pid, identity.claude_birth)
+        && claude_activity::hook_ancestor(identity.hook_pid)
+            == Some((identity.claude_pid, identity.claude_birth))
+        && claude_activity::intervention_presence(
+            &request.session_id,
+            &request.cwd,
+            identity.claude_pid,
+            identity.claude_birth,
+        )
 }
 #[tauri::command]
 async fn connect_interventions(
@@ -537,10 +702,14 @@ async fn respond_intervention(
     response: serde_json::Value,
 ) -> Result<(), String> {
     if context.generation.starts_with("claude:") {
-        let service = app.state::<Option<Arc<claude_interventions::Service>>>()
-            .as_ref().cloned().ok_or("Respostas Claude indisponíveis. Confira o pedido na origem.")?;
+        let service = app
+            .state::<Option<Arc<claude_interventions::Service>>>()
+            .as_ref()
+            .cloned()
+            .ok_or("Respostas Claude indisponíveis. Confira o pedido na origem.")?;
         return tauri::async_runtime::spawn_blocking(move || service.respond(&context, response))
-            .await.map_err(|_| "A entrega não foi confirmada. Confira na origem.".to_owned())?;
+            .await
+            .map_err(|_| "A entrega não foi confirmada. Confira na origem.".to_owned())?;
     }
     let source = intervention_source(&app, &context.session_id)?;
     let service = app
@@ -552,7 +721,11 @@ async fn respond_intervention(
         .map_err(|_| "A entrega não foi confirmada. Confira na origem.".to_owned())?
 }
 #[tauri::command]
-async fn open_source(app:tauri::AppHandle,state: State<'_, DesktopState>, id: String) -> Result<(), String> {
+async fn open_source(
+    app: tauri::AppHandle,
+    state: State<'_, DesktopState>,
+    id: String,
+) -> Result<(), String> {
     let expected = {
         let snapshot = state.demo.lock().map_err(|_| "Estado indisponível")?;
         if snapshot.scenario != "real" {
@@ -565,15 +738,31 @@ async fn open_source(app:tauri::AppHandle,state: State<'_, DesktopState>, id: St
             .cloned()
             .ok_or("Sessão não encontrada. Atualize a lista.")?
     };
-    if expected.kind=="chat" {
-        if !state.ready.lock().map_err(|_|"Estado do painel indisponível.")?.contains("panel"){
-            return Err("O painel ainda está carregando. Tente abrir a conversa novamente em um instante.".into());
+    if expected.kind == "chat" {
+        if !state
+            .ready
+            .lock()
+            .map_err(|_| "Estado do painel indisponível.")?
+            .contains("panel")
+        {
+            return Err(
+                "O painel ainda está carregando. Tente abrir a conversa novamente em um instante."
+                    .into(),
+            );
         }
-        let chat_id=expected.id.strip_prefix("chat:").ok_or("Identidade de conversa inválida.")?;
-        let chat=app.state::<Arc<chat_history::Store>>().get(chat_id)?;
-        if chat.title!=expected.project||chat.target.provider!=expected.agent{return Err("A conversa mudou; atualize a lista.".into());}
+        let chat_id = expected
+            .id
+            .strip_prefix("chat:")
+            .ok_or("Identidade de conversa inválida.")?;
+        let chat = app.state::<Arc<chat_history::Store>>().get(chat_id)?;
+        if chat.title != expected.project || chat.target.provider != expected.agent {
+            return Err("A conversa mudou; atualize a lista.".into());
+        }
         show_panel(app.clone())?;
-        app.get_webview_window("panel").ok_or("Painel indisponível.")?.emit("chat-selected",&chat.id).map_err(|_|"Não foi possível selecionar a conversa.".to_owned())?;
+        app.get_webview_window("panel")
+            .ok_or("Painel indisponível.")?
+            .emit("chat-selected", &chat.id)
+            .map_err(|_| "Não foi possível selecionar a conversa.".to_owned())?;
         return Ok(());
     }
     tauri::async_runtime::spawn_blocking(move || {
@@ -613,7 +802,9 @@ fn demo_action(
     answer: String,
 ) -> Result<(), String> {
     if action == "motion" {
-        if !["true", "false"].contains(&answer.as_str()) { return Err("Preferência inválida.".into()); }
+        if !["true", "false"].contains(&answer.as_str()) {
+            return Err("Preferência inválida.".into());
+        }
         let mut prefs = app.state::<settings::Store>().get()?;
         prefs.reduce_motion = answer == "true";
         return save_preferences(app, prefs);
@@ -644,7 +835,12 @@ fn demo_action(
         data.clone()
     };
     if action == "scenario" && answer != "real" {
-        if let Some(service) = app.state::<Option<Arc<claude_interventions::Service>>>().as_ref() { service.reset(); }
+        if let Some(service) = app
+            .state::<Option<Arc<claude_interventions::Service>>>()
+            .as_ref()
+        {
+            service.reset();
+        }
     }
     app.emit("demo-updated", snapshot)
         .map_err(|e| e.to_string())
@@ -670,14 +866,21 @@ fn main() {
         return;
     }
     if args.iter().any(|a| a == "--help" || a == "-h") {
-        println!("Capy {} - Seu companheiro de trabalho", env!("CARGO_PKG_VERSION"));
+        println!(
+            "Capy {} - Seu companheiro de trabalho",
+            env!("CARGO_PKG_VERSION")
+        );
         println!("Uso: capy.exe [opções]");
         println!("Opções:");
         println!("  --version, -v        Exibe a versão");
         println!("  --help, -h           Exibe esta ajuda");
         return;
     }
-    if let Some(dir) = args.iter().position(|a| a == "--claude-statusline").and_then(|i| args.get(i+1)) {
+    if let Some(dir) = args
+        .iter()
+        .position(|a| a == "--claude-statusline")
+        .and_then(|i| args.get(i + 1))
+    {
         let _ = claude_quotas::hook(PathBuf::from(dir));
         return;
     }
@@ -710,12 +913,24 @@ fn main() {
     if let Some(at) = args.iter().position(|a| a == "--claude-intervention-probe") {
         #[cfg(feature = "intervention-proof")]
         {
-            let result = args.get(at + 1).zip(args.get(at + 2)).ok_or("Missing proof session/root".to_owned())
-                .and_then(|(session, root)| claude_intervention_probe(session, &PathBuf::from(root)));
-            if let Err(error) = result { eprintln!("{error}"); std::process::exit(1); }
+            let result = args
+                .get(at + 1)
+                .zip(args.get(at + 2))
+                .ok_or("Missing proof session/root".to_owned())
+                .and_then(|(session, root)| {
+                    claude_intervention_probe(session, &PathBuf::from(root))
+                });
+            if let Err(error) = result {
+                eprintln!("{error}");
+                std::process::exit(1);
+            }
         }
         #[cfg(not(feature = "intervention-proof"))]
-        { let _ = at; eprintln!("Claude probe requires isolated proof build."); std::process::exit(1); }
+        {
+            let _ = at;
+            eprintln!("Claude probe requires isolated proof build.");
+            std::process::exit(1);
+        }
         return;
     }
     if args.iter().any(|a| a == "--claude-intervention") {
@@ -723,7 +938,11 @@ fn main() {
         return;
     }
     if args.iter().any(|a| a == "--claude-hook") {
-        let lease=args.iter().position(|a|a=="--chat-lease").and_then(|i|args.get(i+1)).map(PathBuf::from);
+        let lease = args
+            .iter()
+            .position(|a| a == "--chat-lease")
+            .and_then(|i| args.get(i + 1))
+            .map(PathBuf::from);
         claude_activity::collect(lease.as_deref());
         return;
     }
@@ -766,14 +985,33 @@ fn main() {
         .position(|a| a == "--self-test")
         .and_then(|i| args.get(i + 1))
         .map(PathBuf::from);
-    let visual_root=args.iter().position(|a|a=="--visual-test").and_then(|i|args.get(i+1)).map(|arg|{
-        let root=PathBuf::from(arg).canonicalize().expect("A pasta de prova visual deve existir.");
-        let scratch=PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().expect("Workspace ausente").join("scratch").canonicalize().expect("Scratch ausente");
-        assert!(root.starts_with(scratch)&&root.file_name().and_then(|n|n.to_str()).is_some_and(|n|n.starts_with("capy-visual-")),"A prova visual deve ficar em scratch/capy-visual-*");
-        root
-    });
-    let test_mode = smoke_path.is_some()||visual_root.is_some();
+    let visual_root = args
+        .iter()
+        .position(|a| a == "--visual-test")
+        .and_then(|i| args.get(i + 1))
+        .map(|arg| {
+            let root = PathBuf::from(arg)
+                .canonicalize()
+                .expect("A pasta de prova visual deve existir.");
+            let scratch = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .expect("Workspace ausente")
+                .join("scratch")
+                .canonicalize()
+                .expect("Scratch ausente");
+            assert!(
+                root.starts_with(scratch)
+                    && root
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .is_some_and(|n| n.starts_with("capy-visual-")),
+                "A prova visual deve ficar em scratch/capy-visual-*"
+            );
+            root
+        });
+    let test_mode = smoke_path.is_some() || visual_root.is_some();
     let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(DesktopState {
             demo: Mutex::new(if test_mode {
                 demo::Snapshot::default()
@@ -845,9 +1083,9 @@ fn main() {
             ui_error
         ])
         .setup(move |app| {
-            let position_path = if let Some(root)=&visual_root{
+            let position_path = if let Some(root) = &visual_root {
                 root.join("position.json")
-            }else if test_mode {
+            } else if test_mode {
                 std::env::temp_dir()
                     .join(format!("capy-smoke-{}", std::process::id()))
                     .join("position.json")
@@ -867,18 +1105,38 @@ fn main() {
                 snapshot.preferences = prefs;
             }
             app.manage(settings);
-            app.manage(Arc::new(api_accounts::Store::load(position_path.with_file_name("api-accounts.json"))));
-            let chats=chat_history::Store::load(position_path.with_file_name("chat"));
-            if let Err(error)=chats.recover_interrupted(){
-                app.state::<DesktopState>().ui_errors.lock().map_err(|_|"Erros indisponíveis.")?.push(format!("Histórico de chat: {error}"));
+            app.manage(Arc::new(api_accounts::Store::load(
+                position_path.with_file_name("api-accounts.json"),
+            )));
+            let chats = chat_history::Store::load(position_path.with_file_name("chat"));
+            if let Err(error) = chats.recover_interrupted() {
+                app.state::<DesktopState>()
+                    .ui_errors
+                    .lock()
+                    .map_err(|_| "Erros indisponíveis.")?
+                    .push(format!("Histórico de chat: {error}"));
             }
             app.manage(Arc::new(chats));
             app.manage(chat_presence::Service::default());
-            app.manage(profiles::Store::load(position_path.parent().ok_or("Pasta de configuração indisponível.")?.to_path_buf()));
-            app.manage(Arc::new(tasks::Store::load(position_path.parent().ok_or("Pasta de configuração indisponível.")?.to_path_buf())));
+            app.manage(profiles::Store::load(
+                position_path
+                    .parent()
+                    .ok_or("Pasta de configuração indisponível.")?
+                    .to_path_buf(),
+            ));
+            app.manage(Arc::new(tasks::Store::load(
+                position_path
+                    .parent()
+                    .ok_or("Pasta de configuração indisponível.")?
+                    .to_path_buf(),
+            )));
             app.manage(Arc::new(terminal::Service::default()));
-            app.manage(Arc::new(handoff::Store::load(position_path.with_file_name("handoffs.json"))));
-            app.manage(quota_policy::Service::load(position_path.with_file_name("quota-alerts.json")));
+            app.manage(Arc::new(handoff::Store::load(
+                position_path.with_file_name("handoffs.json"),
+            )));
+            app.manage(quota_policy::Service::load(
+                position_path.with_file_name("quota-alerts.json"),
+            ));
             *app.state::<DesktopState>()
                 .preferences
                 .lock()
@@ -909,21 +1167,35 @@ fn main() {
             let claude_guard = app.handle().clone();
             let endpoint = if std::env::var_os("CAPY_CLAUDE_INTERVENTION_ROOT").is_some() {
                 claude_interventions::default_endpoint()
-            } else { position_path.with_file_name("claude-interventions.json") };
-            let claude_service = claude_interventions::Service::start(endpoint, move |identity, request| {
-                if !claude_intervention_identity(identity, request) {
-                    return false;
-                }
-                let state = claude_guard.state::<DesktopState>();
-                if !state.demo.lock().is_ok_and(|data| data.scenario == "real") { return false; }
-                let mut report = discovery::scan(&discovery::Sources::local());
-                let Ok(preferences) = state.preferences.lock() else { return false; };
-                preferences.apply(&mut report.sessions);
-                drop(preferences);
-                let valid = report.sessions.iter().any(|session| session.id == format!("claude:{}", request.session_id)
-                    && session.kind == "claude" && session.origin == request.cwd && !session.hidden);
-                valid && state.demo.lock().is_ok_and(|data| data.scenario == "real")
-            }).map(Arc::new).map_err(|error| eprintln!("Respostas Claude: {error}" )).ok();
+            } else {
+                position_path.with_file_name("claude-interventions.json")
+            };
+            let claude_service =
+                claude_interventions::Service::start(endpoint, move |identity, request| {
+                    if !claude_intervention_identity(identity, request) {
+                        return false;
+                    }
+                    let state = claude_guard.state::<DesktopState>();
+                    if !state.demo.lock().is_ok_and(|data| data.scenario == "real") {
+                        return false;
+                    }
+                    let mut report = discovery::scan(&discovery::Sources::local());
+                    let Ok(preferences) = state.preferences.lock() else {
+                        return false;
+                    };
+                    preferences.apply(&mut report.sessions);
+                    drop(preferences);
+                    let valid = report.sessions.iter().any(|session| {
+                        session.id == format!("claude:{}", request.session_id)
+                            && session.kind == "claude"
+                            && session.origin == request.cwd
+                            && !session.hidden
+                    });
+                    valid && state.demo.lock().is_ok_and(|data| data.scenario == "real")
+                })
+                .map(Arc::new)
+                .map_err(|error| eprintln!("Respostas Claude: {error}"))
+                .ok();
             app.manage(claude_service);
             monitor::schedule(app.handle().clone());
             let menu = Menu::with_items(
@@ -997,7 +1269,12 @@ fn main() {
         .run(|app, event| {
             if matches!(event, tauri::RunEvent::ExitRequested { .. }) {
                 app.state::<Arc<interventions::service::Service>>().stop();
-                if let Some(service) = app.state::<Option<Arc<claude_interventions::Service>>>().as_ref() { service.stop(); }
+                if let Some(service) = app
+                    .state::<Option<Arc<claude_interventions::Service>>>()
+                    .as_ref()
+                {
+                    service.stop();
+                }
                 if let Err(e) = persist_pet(app) {
                     eprintln!("Position save: {e}");
                 }
@@ -1009,22 +1286,44 @@ fn main() {
 fn claude_intervention_probe(session: &str, root: &std::path::Path) -> Result<(), String> {
     use std::io::{BufRead, Write};
     let proof_root = std::fs::canonicalize(root).map_err(|e| e.to_string())?;
-    let scratch = std::fs::canonicalize(std::env::current_dir().map_err(|e| e.to_string())?.join("scratch")).map_err(|e| e.to_string())?;
-    if !discovery::uuid(session) || !proof_root.starts_with(&scratch)
-        || !proof_root.file_name().and_then(|name| name.to_str()).is_some_and(|name| name.starts_with("claude-capy-")) {
+    let scratch = std::fs::canonicalize(
+        std::env::current_dir()
+            .map_err(|e| e.to_string())?
+            .join("scratch"),
+    )
+    .map_err(|e| e.to_string())?;
+    if !discovery::uuid(session)
+        || !proof_root.starts_with(&scratch)
+        || !proof_root
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with("claude-capy-"))
+    {
         return Err("Only own scratch/claude-capy-* proof roots are accepted.".into());
     }
     let expected_session = session.to_owned();
     let expected_root = proof_root.clone();
-    let service = claude_interventions::Service::start(proof_root.join("claude-interventions.json"), move |identity, request| {
-        request.session_id == expected_session && std::path::Path::new(&request.cwd).canonicalize().ok().as_ref() == Some(&expected_root)
-            && claude_intervention_identity(identity, request)
-    })?;
+    let service = claude_interventions::Service::start(
+        proof_root.join("claude-interventions.json"),
+        move |identity, request| {
+            request.session_id == expected_session
+                && std::path::Path::new(&request.cwd)
+                    .canonicalize()
+                    .ok()
+                    .as_ref()
+                    == Some(&expected_root)
+                && claude_intervention_identity(identity, request)
+        },
+    )?;
     let (input, receiver) = std::sync::mpsc::sync_channel::<String>(8);
     std::thread::spawn(move || {
         for line in std::io::stdin().lock().lines() {
-            let Ok(line) = line else { break; };
-            if input.send(line).is_err() { break; }
+            let Ok(line) = line else {
+                break;
+            };
+            if input.send(line).is_err() {
+                break;
+            }
         }
     });
     let mut emitted = HashSet::new();
@@ -1034,19 +1333,33 @@ fn claude_intervention_probe(session: &str, root: &std::path::Path) -> Result<()
     while started.elapsed() < std::time::Duration::from_secs(200) {
         for request in service.snapshot() {
             if emitted.insert(request.context.nonce.clone()) {
-                println!("{}", serde_json::json!({"event":"request","request":request}));
+                println!(
+                    "{}",
+                    serde_json::json!({"event":"request","request":request})
+                );
                 let _ = std::io::stdout().flush();
             }
         }
         match receiver.recv_timeout(std::time::Duration::from_millis(100)) {
             Ok(line) => {
-                let command: serde_json::Value = serde_json::from_str(&line).map_err(|e| e.to_string())?;
-                let context = serde_json::from_value(command["context"].clone()).map_err(|e| e.to_string())?;
+                let command: serde_json::Value =
+                    serde_json::from_str(&line).map_err(|e| e.to_string())?;
+                let context = serde_json::from_value(command["context"].clone())
+                    .map_err(|e| e.to_string())?;
                 let result = service.respond(&context, command["response"].clone());
-                println!("{}", match result { Ok(()) => serde_json::json!({"event":"resolved"}), Err(message) => serde_json::json!({"event":"rejected","message":message}) });
+                println!(
+                    "{}",
+                    match result {
+                        Ok(()) => serde_json::json!({"event":"resolved"}),
+                        Err(message) => serde_json::json!({"event":"rejected","message":message}),
+                    }
+                );
                 let _ = std::io::stdout().flush();
             }
-            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => { service.stop(); return Ok(()); }
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                service.stop();
+                return Ok(());
+            }
             Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
         }
     }

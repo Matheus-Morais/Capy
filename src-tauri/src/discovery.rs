@@ -87,17 +87,23 @@ pub(crate) fn session(agent: &str, kind: &str, id: &str, cwd: &str) -> Session {
         let p = std::path::Path::new(cwd);
         p == home || {
             let s1 = cwd.replace('/', "\\").trim_end_matches('\\').to_lowercase();
-            let s2 = home.to_string_lossy().replace('/', "\\").trim_end_matches('\\').to_lowercase();
+            let s2 = home
+                .to_string_lossy()
+                .replace('/', "\\")
+                .trim_end_matches('\\')
+                .to_lowercase();
             !s1.is_empty() && s1 == s2
         }
     };
     let username = std::env::var("USERNAME").unwrap_or_default();
-    let candidate = cwd.trim_end_matches(['/', '\\'])
+    let candidate = cwd
+        .trim_end_matches(['/', '\\'])
         .rsplit(['/', '\\'])
         .next()
         .filter(|p| !p.is_empty())
         .unwrap_or(cwd);
-    let project = if is_home || (!username.is_empty() && candidate.eq_ignore_ascii_case(&username)) {
+    let project = if is_home || (!username.is_empty() && candidate.eq_ignore_ascii_case(&username))
+    {
         "Workspace Geral".to_string()
     } else {
         candidate.to_string()

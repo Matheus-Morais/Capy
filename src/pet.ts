@@ -11,6 +11,7 @@ import { desktopCommand, native, showError, snapshot, subscribe, subscribeVisibi
 import { PetBehavior, hoverGaze } from './pet-behavior';
 import { playPetSound } from './pet-sound';
 import { PetLifeEngine } from './pet-life';
+import { checkAndApplyUpdates } from './updater';
 
 let currentSkin = (typeof localStorage !== 'undefined' && localStorage.getItem('capy_pet_skin')) || 'v5';
 let currentHat = (typeof localStorage !== 'undefined' && localStorage.getItem('capy_hat')) || 'none';
@@ -39,7 +40,7 @@ const DEV_TIPS = [
 
 const artworkContainer = document.getElementById('petArtwork')!;
 const button = document.getElementById('petToggle') as HTMLButtonElement;
-button.title = 'Capy · Atalhos: V (skins), 1-3 (roupas/fantasias), 4 (amiguinhos), 5 (clima), J (dica), L (saúde), T (dançar), A (andar), R (girar/spin), E (espreguiçar), G (rebolar), Z (bater pata), 0 (limpar), C (carinho), B (bocejo), S (sacudir), K (café), W (ofurô), P (lofi), O (laranja), H (high-five), D (sonho), M (lanche).';
+button.title = 'Capy · Atalhos: V (skins), 1-3 (roupas/fantasias), 4 (amiguinhos), 5 (clima), U (atualizar), J (dica), L (saúde), T (dançar), A (andar), R (girar/spin), E (espreguiçar), G (rebolar), Z (bater pata), 0 (limpar), C (carinho), B (bocejo), S (sacudir), K (café), W (ofurô), P (lofi), O (laranja), H (high-five), D (sonho), M (lanche).';
 
 function applyWardrobe(hat?: string, clothes?: string, costume?: string) {
   if (hat !== undefined) currentHat = hat;
@@ -418,6 +419,13 @@ button.addEventListener('keydown', event => {
     if (latest?.preferences?.sounds) playPetSound('crunch');
     return;
   }
+  if (key === 'u') {
+    event.preventDefault();
+    showSpeechBubble('Verificando atualizações... 🔍', 3000);
+    if (latest?.preferences?.sounds) playPetSound('sparkle');
+    void checkAndApplyUpdates((msg, duration) => showSpeechBubble(msg, duration), true).catch(() => {});
+    return;
+  }
   if (key === '1') {
     event.preventDefault();
     const nextIdx = (HATS.indexOf(currentHat) + 1) % HATS.length;
@@ -513,6 +521,9 @@ async function start() {
         lifeEngine.setGlobalGaze(event.payload.x, event.payload.y);
       }
     });
+    setTimeout(() => {
+      void checkAndApplyUpdates((msg, duration) => showSpeechBubble(msg, duration)).catch(() => {});
+    }, 15_000);
   }
   document.body.classList.toggle('pet-paused',document.hidden||!windowVisible);
   render(await snapshot());

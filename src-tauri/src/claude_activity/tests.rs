@@ -109,19 +109,42 @@ fn event_contract() {
     }
 }
 #[test]
-fn instructions_loaded_invalid_metadata_records_failure_without_losing_later_evidence(){
-    let f=Fixture::new();let cwd=f.sources.claude.join("project");fs::create_dir(&cwd).unwrap();let cwd_text=cwd.to_string_lossy().into_owned();
+fn instructions_loaded_invalid_metadata_records_failure_without_losing_later_evidence() {
+    let f = Fixture::new();
+    let cwd = f.sources.claude.join("project");
+    fs::create_dir(&cwd).unwrap();
+    let cwd_text = cwd.to_string_lossy().into_owned();
     let h:Hook=serde_json::from_value(serde_json::json!({"session_id":ID,"cwd":cwd_text,"hook_event_name":"InstructionsLoaded","file_path":7,"memory_type":"Project","load_reason":"session_start"})).unwrap();
-    assert!(capture_instruction(&f.sources,&h,100).is_err());
-    assert!(crate::loaded_instructions::load(&f.sources.claude,ID,&cwd).unwrap().is_none());
-    assert!(crate::loaded_instructions::collection_warning(&f.sources.claude,ID).unwrap().contains("Coleta incompleta"));
+    assert!(capture_instruction(&f.sources, &h, 100).is_err());
+    assert!(
+        crate::loaded_instructions::load(&f.sources.claude, ID, &cwd)
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        crate::loaded_instructions::collection_warning(&f.sources.claude, ID)
+            .unwrap()
+            .contains("Coleta incompleta")
+    );
     let missing:Hook=serde_json::from_value(serde_json::json!({"session_id":ID,"cwd":cwd_text,"hook_event_name":"InstructionsLoaded","file_path":"C:/guide.md","load_reason":"session_start"})).unwrap();
-    assert!(capture_instruction(&f.sources,&missing,150).is_err());
-    let guide=cwd.join("CLAUDE.md");fs::write(&guide,"Retain the valid event").unwrap();
+    assert!(capture_instruction(&f.sources, &missing, 150).is_err());
+    let guide = cwd.join("CLAUDE.md");
+    fs::write(&guide, "Retain the valid event").unwrap();
     let valid:Hook=serde_json::from_value(serde_json::json!({"session_id":ID,"cwd":cwd_text,"hook_event_name":"InstructionsLoaded","file_path":guide,"memory_type":"Project","load_reason":"session_start"})).unwrap();
-    capture_instruction(&f.sources,&valid,200).unwrap();
-    assert!(crate::loaded_instructions::load(&f.sources.claude,ID,&cwd).unwrap().unwrap().guides.iter().any(|g|g.text.as_deref()==Some("Retain the valid event")));
-    assert!(crate::loaded_instructions::collection_warning(&f.sources.claude,ID).unwrap().contains("Coleta incompleta"));
+    capture_instruction(&f.sources, &valid, 200).unwrap();
+    assert!(
+        crate::loaded_instructions::load(&f.sources.claude, ID, &cwd)
+            .unwrap()
+            .unwrap()
+            .guides
+            .iter()
+            .any(|g| g.text.as_deref() == Some("Retain the valid event"))
+    );
+    assert!(
+        crate::loaded_instructions::collection_warning(&f.sources.claude, ID)
+            .unwrap()
+            .contains("Coleta incompleta")
+    );
 }
 #[test]
 fn identity_expiry_and_limits() {
@@ -226,25 +249,72 @@ fn bounded_metadata_and_order() {
 }
 
 #[test]
-fn handoff_boundary_never_uses_stop_that_another_hook_can_block(){
-    let f=Fixture::new();
-    let cwd=f.sources.claude.canonicalize().unwrap();
-    let pid=std::process::id();let birth=discovery::process_birth(pid).unwrap();
-    let at=now_ms().saturating_sub(1_001);
-    let path=directory(&f.sources).join(format!("{ID}.boundary.json"));
-    for event in ["Stop","PreToolUse","UserPromptSubmit","PermissionRequest","SessionEnd"]{
-        let receipt=TurnReceipt{version:1,session_id:ID.into(),cwd:cwd.to_string_lossy().into_owned(),pid,proc_start:birth.to_string(),at_ms:at,event:event.into()};
-        fs::write(&path,serde_json::to_vec(&receipt).unwrap()).unwrap();
-        assert!(turn_boundary(&f.sources.claude,ID,&cwd.to_string_lossy(),now_ms()).is_none(),"{event}");
+fn handoff_boundary_never_uses_stop_that_another_hook_can_block() {
+    let f = Fixture::new();
+    let cwd = f.sources.claude.canonicalize().unwrap();
+    let pid = std::process::id();
+    let birth = discovery::process_birth(pid).unwrap();
+    let at = now_ms().saturating_sub(1_001);
+    let path = directory(&f.sources).join(format!("{ID}.boundary.json"));
+    for event in [
+        "Stop",
+        "PreToolUse",
+        "UserPromptSubmit",
+        "PermissionRequest",
+        "SessionEnd",
+    ] {
+        let receipt = TurnReceipt {
+            version: 1,
+            session_id: ID.into(),
+            cwd: cwd.to_string_lossy().into_owned(),
+            pid,
+            proc_start: birth.to_string(),
+            at_ms: at,
+            event: event.into(),
+        };
+        fs::write(&path, serde_json::to_vec(&receipt).unwrap()).unwrap();
+        assert!(
+            turn_boundary(&f.sources.claude, ID, &cwd.to_string_lossy(), now_ms()).is_none(),
+            "{event}"
+        );
     }
-    for event in ["idle_prompt","StopFailure"]{
-        let receipt=TurnReceipt{version:1,session_id:ID.into(),cwd:cwd.to_string_lossy().into_owned(),pid,proc_start:birth.to_string(),at_ms:at,event:event.into()};
-        fs::write(&path,serde_json::to_vec(&receipt).unwrap()).unwrap();
-        let boundary=turn_boundary(&f.sources.claude,ID,&cwd.to_string_lossy(),now_ms()).unwrap();
-        assert!(boundary_unchanged(&f.sources.claude,ID,&cwd.to_string_lossy(),&boundary));
-        assert!(turn_boundary(&f.sources.claude,ID,&cwd.to_string_lossy(),at+TTL_MS+1).is_none());
-        let resumed=TurnReceipt{at_ms:at+1,event:"UserPromptSubmit".into(),..receipt};
-        fs::write(&path,serde_json::to_vec(&resumed).unwrap()).unwrap();
-        assert!(!boundary_unchanged(&f.sources.claude,ID,&cwd.to_string_lossy(),&boundary));
+    for event in ["idle_prompt", "StopFailure"] {
+        let receipt = TurnReceipt {
+            version: 1,
+            session_id: ID.into(),
+            cwd: cwd.to_string_lossy().into_owned(),
+            pid,
+            proc_start: birth.to_string(),
+            at_ms: at,
+            event: event.into(),
+        };
+        fs::write(&path, serde_json::to_vec(&receipt).unwrap()).unwrap();
+        let boundary =
+            turn_boundary(&f.sources.claude, ID, &cwd.to_string_lossy(), now_ms()).unwrap();
+        assert!(boundary_unchanged(
+            &f.sources.claude,
+            ID,
+            &cwd.to_string_lossy(),
+            &boundary
+        ));
+        assert!(turn_boundary(
+            &f.sources.claude,
+            ID,
+            &cwd.to_string_lossy(),
+            at + TTL_MS + 1
+        )
+        .is_none());
+        let resumed = TurnReceipt {
+            at_ms: at + 1,
+            event: "UserPromptSubmit".into(),
+            ..receipt
+        };
+        fs::write(&path, serde_json::to_vec(&resumed).unwrap()).unwrap();
+        assert!(!boundary_unchanged(
+            &f.sources.claude,
+            ID,
+            &cwd.to_string_lossy(),
+            &boundary
+        ));
     }
 }

@@ -19,10 +19,10 @@ struct Hook {
     hook_event_name: String,
     agent_id: Option<String>,
     notification_type: Option<String>,
-    file_path:Option<serde_json::Value>,
-    memory_type:Option<serde_json::Value>,
-    load_reason:Option<serde_json::Value>,
-    parent_file_path:Option<serde_json::Value>,
+    file_path: Option<serde_json::Value>,
+    memory_type: Option<serde_json::Value>,
+    load_reason: Option<serde_json::Value>,
+    parent_file_path: Option<serde_json::Value>,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -89,16 +89,54 @@ fn event_state(h: &Hook) -> Option<&'static str> {
         _ => "unknown",
     })
 }
-fn capture_instruction(sources:&Sources,h:&Hook,at_ms:u64)->Result<(),()>{
-    let text=|value:&Option<serde_json::Value>|value.as_ref().and_then(serde_json::Value::as_str).map(str::to_owned);
-    let parent=match &h.parent_file_path{None=>Some(None),Some(value)=>value.as_str().map(|s|Some(s.to_owned()))};
-    let instruction=match (text(&h.file_path),text(&h.memory_type),text(&h.load_reason),parent){
-        (Some(file_path),Some(memory_type),Some(load_reason),Some(parent_file_path))=>crate::loaded_instructions::Instruction{file_path,memory_type,load_reason,parent_file_path},
-        _=>{let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,"record-failed");return Err(());}
+fn capture_instruction(sources: &Sources, h: &Hook, at_ms: u64) -> Result<(), ()> {
+    let text = |value: &Option<serde_json::Value>| {
+        value
+            .as_ref()
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
     };
-    let result=crate::loaded_instructions::record(&sources.claude,&h.session_id,Path::new(&h.cwd),instruction,at_ms);
-    let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,if result.is_ok(){"recorded"}else{"record-failed"});
-    result.map_err(|_|())
+    let parent = match &h.parent_file_path {
+        None => Some(None),
+        Some(value) => value.as_str().map(|s| Some(s.to_owned())),
+    };
+    let instruction = match (
+        text(&h.file_path),
+        text(&h.memory_type),
+        text(&h.load_reason),
+        parent,
+    ) {
+        (Some(file_path), Some(memory_type), Some(load_reason), Some(parent_file_path)) => {
+            crate::loaded_instructions::Instruction {
+                file_path,
+                memory_type,
+                load_reason,
+                parent_file_path,
+            }
+        }
+        _ => {
+            let _ =
+                crate::loaded_instructions::status(&sources.claude, &h.session_id, "record-failed");
+            return Err(());
+        }
+    };
+    let result = crate::loaded_instructions::record(
+        &sources.claude,
+        &h.session_id,
+        Path::new(&h.cwd),
+        instruction,
+        at_ms,
+    );
+    let _ = crate::loaded_instructions::status(
+        &sources.claude,
+        &h.session_id,
+        if result.is_ok() {
+            "recorded"
+        } else {
+            "record-failed"
+        },
+    );
+    result.map_err(|_| ())
 }
 fn matches(o: &Observation, p: &Presence) -> bool {
     o.version == 1
@@ -171,7 +209,7 @@ fn cleanup(dir: &Path, birth: impl Fn(u32) -> Option<u64>) {
     }
 }
 
-pub fn collect(chat_lease:Option<&Path>) {
+pub fn collect(chat_lease: Option<&Path>) {
     // Hook failures never influence Claude's permission flow and never expose its input.
     let at_ms = now_ms();
     let _ = (|| -> Result<(), ()> {
@@ -187,27 +225,54 @@ pub fn collect(chat_lease:Option<&Path>) {
             return Ok(());
         }
         let (pid, start) = process::claude_ancestor().ok_or(())?;
-        let presence_path=sources.claude.join("sessions").join(format!("{pid}.json"));
-        let proc_start=match File::open(&presence_path){
-            Ok(file)=>{
-                let p:Presence=read_json(file,RECORD_LIMIT)?;
-                if p.pid!=pid||p.session_id!=h.session_id||p.cwd!=h.cwd||p.proc_start!=start.to_string(){
-                    if h.hook_event_name=="InstructionsLoaded"{let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,"presence-mismatch");}
+        let presence_path = sources.claude.join("sessions").join(format!("{pid}.json"));
+        let proc_start = match File::open(&presence_path) {
+            Ok(file) => {
+                let p: Presence = read_json(file, RECORD_LIMIT)?;
+                if p.pid != pid
+                    || p.session_id != h.session_id
+                    || p.cwd != h.cwd
+                    || p.proc_start != start.to_string()
+                {
+                    if h.hook_event_name == "InstructionsLoaded" {
+                        let _ = crate::loaded_instructions::status(
+                            &sources.claude,
+                            &h.session_id,
+                            "presence-mismatch",
+                        );
+                    }
                     return Err(());
                 }
                 p.proc_start
             }
-            Err(error) if error.kind()==std::io::ErrorKind::NotFound=>{
-                if chat_lease.is_some_and(|path|crate::chat_cli_presence::valid_for_config(path,&sources.claude,&h.session_id,&h.cwd,pid,start,discovery::process_birth)){start.to_string()}
-                else{
-                    if h.hook_event_name=="InstructionsLoaded"{let _=crate::loaded_instructions::status(&sources.claude,&h.session_id,"presence-unavailable");}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                if chat_lease.is_some_and(|path| {
+                    crate::chat_cli_presence::valid_for_config(
+                        path,
+                        &sources.claude,
+                        &h.session_id,
+                        &h.cwd,
+                        pid,
+                        start,
+                        discovery::process_birth,
+                    )
+                }) {
+                    start.to_string()
+                } else {
+                    if h.hook_event_name == "InstructionsLoaded" {
+                        let _ = crate::loaded_instructions::status(
+                            &sources.claude,
+                            &h.session_id,
+                            "presence-unavailable",
+                        );
+                    }
                     return Err(());
                 }
             }
-            Err(_)=>return Err(()),
+            Err(_) => return Err(()),
         };
-        if h.hook_event_name=="InstructionsLoaded"{
-            return capture_instruction(&sources,&h,at_ms);
+        if h.hook_event_name == "InstructionsLoaded" {
+            return capture_instruction(&sources, &h, at_ms);
         }
         let dir = directory(&sources);
         fs::create_dir_all(&dir).map_err(|_| ())?;
@@ -219,59 +284,153 @@ pub fn collect(chat_lease:Option<&Path>) {
             return Err(());
         }
         cleanup(&dir, discovery::process_birth);
-        let observation=Observation {
-                version: 1,
-                session_id: h.session_id.clone(),
-                cwd: h.cwd.clone(),
-                pid,
-                proc_start: proc_start.clone(),
-                at_ms,
-                state: state.into(),
-            };
-        let receipt=TurnReceipt{version:1,session_id:h.session_id.clone(),cwd:h.cwd,pid,proc_start:observation.proc_start.clone(),at_ms,
-            event:if h.hook_event_name=="Notification" && h.notification_type.as_deref()==Some("idle_prompt") {"idle_prompt".into()}else{h.hook_event_name}};
-        write_turn_receipt(&dir.join(format!("{}.boundary.json",h.session_id)),&receipt)?;
-        write_observation(&dir.join(format!("{}.json",h.session_id)),&observation)
+        let observation = Observation {
+            version: 1,
+            session_id: h.session_id.clone(),
+            cwd: h.cwd.clone(),
+            pid,
+            proc_start: proc_start.clone(),
+            at_ms,
+            state: state.into(),
+        };
+        let receipt = TurnReceipt {
+            version: 1,
+            session_id: h.session_id.clone(),
+            cwd: h.cwd,
+            pid,
+            proc_start: observation.proc_start.clone(),
+            at_ms,
+            event: if h.hook_event_name == "Notification"
+                && h.notification_type.as_deref() == Some("idle_prompt")
+            {
+                "idle_prompt".into()
+            } else {
+                h.hook_event_name
+            },
+        };
+        write_turn_receipt(
+            &dir.join(format!("{}.boundary.json", h.session_id)),
+            &receipt,
+        )?;
+        write_observation(&dir.join(format!("{}.json", h.session_id)), &observation)
     })();
 }
 
 pub fn enrich(sources: &Sources, report: &mut Report) {
     enrich_with(sources, report, now_ms(), discovery::process_birth);
 }
-#[derive(Clone,Serialize,Deserialize,PartialEq)]
-#[serde(rename_all="camelCase")]
-pub struct Boundary { pub at_ms:u64, pub pid:u32, pub proc_start:String }
-#[derive(Serialize,Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Boundary {
+    pub at_ms: u64,
+    pub pid: u32,
+    pub proc_start: String,
+}
+#[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct TurnReceipt {version:u8,session_id:String,cwd:String,pid:u32,proc_start:String,at_ms:u64,event:String}
-fn write_turn_receipt(path:&Path,receipt:&TurnReceipt)->Result<(),()>{
-    if path.exists()&&!fs::symlink_metadata(path).is_ok_and(|m|m.file_type().is_file()){return Err(());}
-    let mut file=OpenOptions::new().create(true).truncate(false).read(true).write(true).open(path).map_err(|_|())?;
-    file.try_lock().map_err(|_|())?;
-    if read_json::<TurnReceipt>(&mut file,RECORD_LIMIT).is_ok_and(|old|old.pid==receipt.pid&&old.proc_start==receipt.proc_start&&old.at_ms>=receipt.at_ms){return Ok(());}
-    let bytes=serde_json::to_vec(receipt).map_err(|_|())?;
-    file.seek(SeekFrom::Start(0)).map_err(|_|())?;file.set_len(0).map_err(|_|())?;file.write_all(&bytes).map_err(|_|())
+struct TurnReceipt {
+    version: u8,
+    session_id: String,
+    cwd: String,
+    pid: u32,
+    proc_start: String,
+    at_ms: u64,
+    event: String,
 }
-pub fn turn_boundary(config_dir:&Path,session_id:&str,cwd:&str,now:u64)->Option<Boundary>{
-    let observation=boundary_observation(config_dir,session_id,cwd)?;
-    if !now.checked_sub(observation.at_ms).is_some_and(|age|(1_000..=TTL_MS).contains(&age)){return None;}
-    if observation.proc_start.parse::<u64>().ok().and_then(|start|discovery::process_birth(observation.pid).map(|actual|actual==start))!=Some(true){return None;}
-    Some(Boundary{at_ms:observation.at_ms,pid:observation.pid,proc_start:observation.proc_start})
+fn write_turn_receipt(path: &Path, receipt: &TurnReceipt) -> Result<(), ()> {
+    if path.exists() && !fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_file()) {
+        return Err(());
+    }
+    let mut file = OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(path)
+        .map_err(|_| ())?;
+    file.try_lock().map_err(|_| ())?;
+    if read_json::<TurnReceipt>(&mut file, RECORD_LIMIT).is_ok_and(|old| {
+        old.pid == receipt.pid && old.proc_start == receipt.proc_start && old.at_ms >= receipt.at_ms
+    }) {
+        return Ok(());
+    }
+    let bytes = serde_json::to_vec(receipt).map_err(|_| ())?;
+    file.seek(SeekFrom::Start(0)).map_err(|_| ())?;
+    file.set_len(0).map_err(|_| ())?;
+    file.write_all(&bytes).map_err(|_| ())
 }
-fn boundary_observation(config_dir:&Path,session_id:&str,cwd:&str)->Option<TurnReceipt>{
-    if !uuid(session_id)||config_dir.join("capy-activity/disabled").exists(){return None;}
-    let path=config_dir.join("capy-activity").join(format!("{session_id}.boundary.json"));
-    if !fs::symlink_metadata(&path).is_ok_and(|m|m.file_type().is_file()){return None;}
-    let file=File::open(path).ok()?;file.try_lock_shared().ok()?;
-    let observation:TurnReceipt=read_json(file,RECORD_LIMIT).ok()?;
-    let same_cwd=Path::new(&observation.cwd).canonicalize().ok().is_some_and(|actual|Path::new(cwd).canonicalize().is_ok_and(|expected|actual==expected));
-    if observation.version!=1||observation.session_id!=session_id||!same_cwd||!matches!(observation.event.as_str(),"StopFailure"|"idle_prompt"){return None;}
+pub fn turn_boundary(config_dir: &Path, session_id: &str, cwd: &str, now: u64) -> Option<Boundary> {
+    let observation = boundary_observation(config_dir, session_id, cwd)?;
+    if !now
+        .checked_sub(observation.at_ms)
+        .is_some_and(|age| (1_000..=TTL_MS).contains(&age))
+    {
+        return None;
+    }
+    if observation
+        .proc_start
+        .parse::<u64>()
+        .ok()
+        .and_then(|start| discovery::process_birth(observation.pid).map(|actual| actual == start))
+        != Some(true)
+    {
+        return None;
+    }
+    Some(Boundary {
+        at_ms: observation.at_ms,
+        pid: observation.pid,
+        proc_start: observation.proc_start,
+    })
+}
+fn boundary_observation(config_dir: &Path, session_id: &str, cwd: &str) -> Option<TurnReceipt> {
+    if !uuid(session_id) || config_dir.join("capy-activity/disabled").exists() {
+        return None;
+    }
+    let path = config_dir
+        .join("capy-activity")
+        .join(format!("{session_id}.boundary.json"));
+    if !fs::symlink_metadata(&path).is_ok_and(|m| m.file_type().is_file()) {
+        return None;
+    }
+    let file = File::open(path).ok()?;
+    file.try_lock_shared().ok()?;
+    let observation: TurnReceipt = read_json(file, RECORD_LIMIT).ok()?;
+    let same_cwd = Path::new(&observation.cwd)
+        .canonicalize()
+        .ok()
+        .is_some_and(|actual| {
+            Path::new(cwd)
+                .canonicalize()
+                .is_ok_and(|expected| actual == expected)
+        });
+    if observation.version != 1
+        || observation.session_id != session_id
+        || !same_cwd
+        || !matches!(observation.event.as_str(), "StopFailure" | "idle_prompt")
+    {
+        return None;
+    }
     Some(observation)
 }
-pub fn boundary_unchanged(config_dir:&Path,session_id:&str,cwd:&str,expected:&Boundary)->bool{
-    let Some(observation)=boundary_observation(config_dir,session_id,cwd)else{return false;};
-    observation.at_ms==expected.at_ms&&observation.pid==expected.pid&&observation.proc_start==expected.proc_start
-        && expected.proc_start.parse::<u64>().ok().is_some_and(|start|discovery::process_birth(expected.pid).is_none_or(|actual|actual==start))
+pub fn boundary_unchanged(
+    config_dir: &Path,
+    session_id: &str,
+    cwd: &str,
+    expected: &Boundary,
+) -> bool {
+    let Some(observation) = boundary_observation(config_dir, session_id, cwd) else {
+        return false;
+    };
+    observation.at_ms == expected.at_ms
+        && observation.pid == expected.pid
+        && observation.proc_start == expected.proc_start
+        && expected
+            .proc_start
+            .parse::<u64>()
+            .ok()
+            .is_some_and(|start| {
+                discovery::process_birth(expected.pid).is_none_or(|actual| actual == start)
+            })
 }
 fn enrich_with(
     sources: &Sources,
@@ -347,33 +506,61 @@ pub(crate) mod process;
 
 pub(crate) fn hook_ancestor(pid: u32) -> Option<(u32, u64)> {
     #[cfg(windows)]
-    { process::ancestor_named_from(pid, &["claude.exe"]) }
+    {
+        process::ancestor_named_from(pid, &["claude.exe"])
+    }
     #[cfg(not(windows))]
-    { let _ = pid; None }
+    {
+        let _ = pid;
+        None
+    }
 }
 
 pub(crate) fn intervention_presence(session_id: &str, cwd: &str, pid: u32, birth: u64) -> bool {
-    if !uuid(session_id) || discovery::process_birth(pid) != Some(birth) { return false; }
+    if !uuid(session_id) || discovery::process_birth(pid) != Some(birth) {
+        return false;
+    }
     let sources = Sources::local();
-    if directory(&sources).join("disabled").exists() { return false; }
+    if directory(&sources).join("disabled").exists() {
+        return false;
+    }
     let marker = directory(&sources).join("responses-enabled");
-    let Ok(marker_meta) = fs::symlink_metadata(&marker) else { return false; };
-    if !marker_meta.is_file() || marker_meta.file_type().is_symlink() { return false; }
+    let Ok(marker_meta) = fs::symlink_metadata(&marker) else {
+        return false;
+    };
+    if !marker_meta.is_file() || marker_meta.file_type().is_symlink() {
+        return false;
+    }
     #[cfg(windows)]
     {
         use std::os::windows::fs::MetadataExt;
-        if marker_meta.file_attributes() & 0x400 != 0 { return false; }
+        if marker_meta.file_attributes() & 0x400 != 0 {
+            return false;
+        }
     }
     let path = sources.claude.join("sessions").join(format!("{pid}.json"));
-    let Ok(meta) = fs::symlink_metadata(&path) else { return false; };
-    if meta.file_type().is_symlink() || !meta.is_file() { return false; }
+    let Ok(meta) = fs::symlink_metadata(&path) else {
+        return false;
+    };
+    if meta.file_type().is_symlink() || !meta.is_file() {
+        return false;
+    }
     #[cfg(windows)]
     {
         use std::os::windows::fs::MetadataExt;
-        if meta.file_attributes() & 0x400 != 0 { return false; }
+        if meta.file_attributes() & 0x400 != 0 {
+            return false;
+        }
     }
-    File::open(path).ok().and_then(|file| read_json::<Presence>(file, RECORD_LIMIT).ok())
-        .is_some_and(|p| p.pid == pid && p.session_id == session_id && p.cwd == cwd && p.proc_start == birth.to_string())
+    File::open(path)
+        .ok()
+        .and_then(|file| read_json::<Presence>(file, RECORD_LIMIT).ok())
+        .is_some_and(|p| {
+            p.pid == pid
+                && p.session_id == session_id
+                && p.cwd == cwd
+                && p.proc_start == birth.to_string()
+        })
 }
 #[cfg(not(windows))]
 mod process {
